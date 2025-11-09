@@ -17,7 +17,8 @@
                     type: 'POST',
                     data: {
                         action: 'kaa_mall_get_bundle_prices',
-                        network: network
+                        network: network,
+                        nonce: kaa_mall_params.nonce
                     },
                     success: function(response) {
                         if (response.success) {
@@ -48,20 +49,22 @@
                         data: {
                             action: 'kaa_mall_verify_paystack_transaction',
                             reference: response.reference,
-                            amount: amount
+                            amount: amount,
+                            nonce: kaa_mall_params.nonce
                         },
                         success: function(response) {
                             if (response.success) {
-                                alert('Top-up successful!');
-                                location.reload();
+                                update_wallet_balance();
+                                load_recent_orders();
+                                show_notification('Top-up successful!', 'success');
                             } else {
-                                alert('An error occurred: ' + response.data.message);
+                                show_notification('An error occurred: ' + response.data.message, 'error');
                             }
                         }
                     });
                 },
                 onClose: function(){
-                    alert('Transaction was not completed, window closed.');
+                    show_notification('Transaction was not completed, window closed.', 'error');
                 },
             });
             handler.openIframe();
@@ -71,21 +74,53 @@
         $('#kaa-mall-bundle-form').on('submit', function(e) {
             e.preventDefault();
 
+            var payment_method = $(this).find('input[name="payment_method"]:checked').val();
             var formData = $(this).serialize();
 
-            $.ajax({
-                url: kaa_mall_params.ajax_url,
-                type: 'POST',
-                data: formData + '&action=kaa_mall_purchase_bundle',
-                success: function(response) {
-                    if (response.success) {
-                        alert('Bundle purchase successful!');
-                        location.reload();
-                    } else {
-                        alert('An error occurred: ' + response.data.message);
+            if (payment_method === 'wallet') {
+                $.ajax({
+                    url: kaa_mall_params.ajax_url,
+                    type: 'POST',
+                    data: formData + '&action=kaa_mall_purchase_bundle&nonce=' + kaa_mall_params.nonce,
+                    success: function(response) {
+                        if (response.success) {
+                            update_wallet_balance();
+                            load_recent_orders();
+                            show_notification('Bundle purchase successful!', 'success');
+                        } else {
+                            show_notification('An error occurred: ' + response.data.message, 'error');
+                        }
                     }
-                }
-            });
+                });
+            } else {
+                var bundle_price = $('select[name="bundle"] option:selected').text().split('(₵')[1].split(')')[0];
+                var handler = PaystackPop.setup({
+                    key: kaa_mall_params.paystack_public_key,
+                    email: kaa_mall_params.user_email,
+                    amount: bundle_price * 100, // in pesewas
+                    ref: '' + Math.floor((Math.random() * 1000000000) + 1),
+                    callback: function(response){
+                        // Verify the transaction
+                        $.ajax({
+                            url: kaa_mall_params.ajax_url,
+                            type: 'POST',
+                            data: formData + '&action=kaa_mall_purchase_bundle_paystack&reference=' + response.reference + '&nonce=' + kaa_mall_params.nonce,
+                            success: function(response) {
+                                if (response.success) {
+                                    load_recent_orders();
+                                    show_notification('Bundle purchase successful!', 'success');
+                                } else {
+                                    show_notification('An error occurred: ' + response.data.message, 'error');
+                                }
+                            }
+                        });
+                    },
+                    onClose: function(){
+                        show_notification('Transaction was not completed, window closed.', 'error');
+                    },
+                });
+                handler.openIframe();
+            }
         });
 
         // Handle AFA registration form submission
@@ -97,13 +132,14 @@
             $.ajax({
                 url: kaa_mall_params.ajax_url,
                 type: 'POST',
-                data: formData + '&action=kaa_mall_afa_registration',
+                data: formData + '&action=kaa_mall_afa_registration&nonce=' + kaa_mall_params.nonce,
                 success: function(response) {
                     if (response.success) {
-                        alert('AFA registration successful!');
-                        location.reload();
+                        update_wallet_balance();
+                        load_recent_orders();
+                        show_notification('AFA registration successful!', 'success');
                     } else {
-                        alert('An error occurred: ' + response.data.message);
+                        show_notification('An error occurred: ' + response.data.message, 'error');
                     }
                 }
             });
@@ -114,7 +150,8 @@
                 url: kaa_mall_params.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'kaa_mall_get_recent_orders'
+                    action: 'kaa_mall_get_recent_orders',
+                    nonce: kaa_mall_params.nonce
                 },
                 success: function(response) {
                     if (response.success) {
@@ -136,6 +173,32 @@
                     }
                 }
             });
+        }
+
+        function update_wallet_balance() {
+            $.ajax({
+                url: kaa_mall_params.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'kaa_mall_get_wallet_balance',
+                    nonce: kaa_mall_params.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('.wallet-balance p').text('₵' + response.data);
+                    }
+                }
+            });
+        }
+
+        function show_notification(message, type) {
+            var notification = $('<div class="kaa-mall-notification ' + type + '">' + message + '</div>');
+            $('.kaa-mall-portal').prepend(notification);
+            setTimeout(function() {
+                notification.fadeOut(500, function() {
+                    $(this).remove();
+                });
+            }, 3000);
         }
     });
 

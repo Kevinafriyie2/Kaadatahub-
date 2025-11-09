@@ -11,10 +11,13 @@ class Kaa_Mall_Public {
         add_shortcode( 'kaa_user_portal', array( $this, 'render_user_portal' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
         add_action( 'wp_ajax_kaa_mall_verify_paystack_transaction', array( $this, 'verify_paystack_transaction' ) );
+        add_action( 'wp_ajax_nopriv_kaa_mall_verify_paystack_transaction', array( $this, 'verify_paystack_transaction' ) );
         add_action( 'wp_ajax_kaa_mall_purchase_bundle', array( $this, 'purchase_bundle' ) );
+        add_action( 'wp_ajax_kaa_mall_purchase_bundle_paystack', array( $this, 'purchase_bundle_paystack' ) );
         add_action( 'wp_ajax_kaa_mall_get_bundle_prices', array( $this, 'get_bundle_prices' ) );
         add_action( 'wp_ajax_kaa_mall_afa_registration', array( $this, 'afa_registration' ) );
         add_action( 'wp_ajax_kaa_mall_get_recent_orders', array( $this, 'get_recent_orders' ) );
+        add_action( 'wp_ajax_kaa_mall_get_wallet_balance', array( $this, 'ajax_get_wallet_balance' ) );
     }
 
     public function enqueue_scripts() {
@@ -27,6 +30,7 @@ class Kaa_Mall_Public {
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'paystack_public_key' => get_option( 'kaa_mall_paystack_public_key' ),
             'user_email' => $user->user_email,
+            'nonce' => wp_create_nonce( 'kaa_mall_nonce' ),
         ) );
     }
 
@@ -35,15 +39,23 @@ class Kaa_Mall_Public {
         return empty( $balance ) ? 0.00 : floatval( $balance );
     }
 
+    public function ajax_get_wallet_balance() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        $user_id = get_current_user_id();
+        $balance = $this->get_wallet_balance( $user_id );
+        wp_send_json_success( number_format( $balance, 2 ) );
+    }
+
     private function get_product_by_name( $product_name ) {
-        $product_id = post_exists( $product_name, '', '', 'product' );
-        if ( $product_id ) {
-            return wc_get_product( $product_id );
+        $product = get_page_by_title( $product_name, OBJECT, 'product' );
+        if ( $product ) {
+            return wc_get_product( $product->ID );
         }
         return null;
     }
 
     public function get_bundle_prices() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $network = sanitize_text_field( $_POST['network'] );
         $prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
         $prices = array();
@@ -60,8 +72,8 @@ class Kaa_Mall_Public {
     }
 
     public function verify_paystack_transaction() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $reference = sanitize_text_field( $_POST['reference'] );
-        $amount = floatval( $_POST['amount'] );
 
         $secret_key = get_option( 'kaa_mall_paystack_secret_key' );
 
@@ -85,6 +97,7 @@ class Kaa_Mall_Public {
 
         $result = json_decode($response);
         if ( 'success' === $result->data->status ) {
+            $amount = $result->data->amount / 100; // Convert from pesewas
             $user_id = get_current_user_id();
             $current_balance = $this->get_wallet_balance( $user_id );
             $new_balance = $current_balance + $amount;
@@ -107,6 +120,7 @@ class Kaa_Mall_Public {
     }
 
     public function purchase_bundle() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $network = sanitize_text_field( $_POST['network'] );
         $bundle = sanitize_text_field( $_POST['bundle'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
@@ -154,7 +168,75 @@ class Kaa_Mall_Public {
         wp_send_json_success();
     }
 
+    public function purchase_bundle_paystack() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        $network = sanitize_text_field( $_POST['network'] );
+        $bundle = sanitize_text_field( $_POST['bundle'] );
+        $phone_number = sanitize_text_field( $_POST['phone_number'] );
+        $reference = sanitize_text_field( $_POST['reference'] );
+
+        $prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
+        $prices = array();
+        if ( ! empty( $prices_str ) ) {
+            $lines = explode( "\n", $prices_str );
+            foreach ( $lines as $line ) {
+                $parts = explode( '=', $line );
+                if ( count( $parts ) == 2 ) {
+                    $prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
+                }
+            }
+        }
+
+        if ( ! isset( $prices[ $bundle ] ) ) {
+            wp_send_json_error( array( 'message' => 'Invalid bundle selected.' ) );
+        }
+        $bundle_price = $prices[ $bundle ];
+
+        $secret_key = get_option( 'kaa_mall_paystack_secret_key' );
+
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => "https://api.paystack.co/transaction/verify/" . rawurlencode($reference),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                "accept: application/json",
+                "authorization: Bearer $secret_key",
+                "cache-control: no-cache"
+            ],
+        ));
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            wp_send_json_error( array( 'message' => 'An error occurred while verifying the transaction.' ) );
+        }
+
+        $result = json_decode($response);
+        if ( 'success' === $result->data->status ) {
+            $user_id = get_current_user_id();
+
+            $product = $this->get_product_by_name( 'Data Bundle' );
+            if ( $product ) {
+                $order = wc_create_order();
+                $order->set_customer_id( $user_id );
+                $order->add_product( $product, 1, array( 'subtotal' => $bundle_price, 'total' => $bundle_price ) );
+                $order->set_total( $bundle_price );
+                $order->set_status( 'processing' ); // Or your preferred status
+                $order->update_meta_data( 'Network', $network );
+                $order->update_meta_data( 'Bundle', $bundle );
+                $order->update_meta_data( 'Phone Number', $phone_number );
+                $order->save();
+            }
+
+            wp_send_json_success();
+        } else {
+            wp_send_json_error( array( 'message' => 'Transaction verification failed.' ) );
+        }
+    }
+
     public function afa_registration() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $full_name = sanitize_text_field( $_POST['full_name'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
         $location = sanitize_text_field( $_POST['location'] );
@@ -190,6 +272,7 @@ class Kaa_Mall_Public {
     }
 
     public function get_recent_orders() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $user_id = get_current_user_id();
         $args = array(
             'customer_id' => $user_id,
@@ -251,6 +334,10 @@ class Kaa_Mall_Public {
                             <!-- Options will be populated by JS -->
                         </select>
                         <input type="tel" name="phone_number" placeholder="Phone Number" required>
+                        <div class="payment-method">
+                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet</label>
+                            <label><input type="radio" name="payment_method" value="paystack"> Paystack</label>
+                        </div>
                         <button type="submit">Purchase Bundle</button>
                     </form>
                 </div>

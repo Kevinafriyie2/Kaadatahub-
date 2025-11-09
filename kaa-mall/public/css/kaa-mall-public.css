@@ -1,64 +1,157 @@
+:root {
+    --primary-color: #4a90e2;
+    --primary-hover-color: #357ABD;
+    --background-color: #f7f8fc;
+    --card-background-color: #ffffff;
+    --text-color: #333;
+    --heading-color: #1a1a1a;
+    --border-color: #e6e6e6;
+    --shadow-color: rgba(0, 0, 0, 0.08);
+}
+
 .kaa-mall-portal {
-    font-family: sans-serif;
-    color: #333;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    padding: 20px;
+    border-radius: 12px;
 }
 
 .kaa-mall-header {
-    background: linear-gradient(to right, #6a11cb, #2575fc);
+    background: linear-gradient(135deg, #5a67d8, #9f7aea);
     color: white;
-    padding: 20px;
+    padding: 30px 20px;
     text-align: center;
     border-radius: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.kaa-mall-header h2 {
+    margin: 0;
+    font-size: 2em;
+    font-weight: 600;
 }
 
 .kaa-mall-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
 }
 
 .kaa-mall-card {
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    padding: 20px;
+    background: var(--card-background-color);
+    border-radius: 12px;
+    box-shadow: 0 5px 15px var(--shadow-color);
+    padding: 25px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kaa-mall-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px var(--shadow-color);
 }
 
 .kaa-mall-card h3 {
     margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--heading-color);
+    font-size: 1.4em;
+    font-weight: 600;
 }
 
-.kaa-mall-card input, .kaa-mall-card select, .kaa-mall-card button {
+.kaa-mall-card input,
+.kaa-mall-card select,
+.kaa-mall-card button {
     width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1em;
+    box-sizing: border-box; /* Ensures padding doesn't affect width */
+}
+
+.kaa-mall-card input:focus,
+.kaa-mall-card select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
 }
 
 .kaa-mall-card button {
-    background-color: #2575fc;
+    background-color: var(--primary-color);
     color: white;
     border: none;
     cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+.kaa-mall-card button:hover {
+    background-color: var(--primary-hover-color);
+}
+
+.wallet-balance p {
+    font-size: 2.5em;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 10px 0 20px;
 }
 
 .recent-orders {
-    margin-top: 20px;
+    background-color: var(--card-background-color);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px var(--shadow-color);
+}
+
+.recent-orders h3 {
+    margin-top: 0;
+    font-size: 1.6em;
+    color: var(--heading-color);
 }
 
 .recent-orders table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 20px;
 }
 
 .recent-orders th, .recent-orders td {
-    border: 1px solid #ddd;
-    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+    padding: 15px;
     text-align: left;
 }
 
 .recent-orders th {
-    background-color: #f2f2f2;
+    background-color: #f9fafb;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+}
+
+.recent-orders tr:last-child td {
+    border-bottom: none;
+}
+
+.recent-orders tr:hover {
+    background-color: #f7f8fc;
+}
+
+.kaa-mall-notification {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    color: #fff;
+    font-weight: 600;
+}
+
+.kaa-mall-notification.success {
+    background-color: #28a745;
+}
+
+.kaa-mall-notification.error {
+    background-color: #dc3545;
 }

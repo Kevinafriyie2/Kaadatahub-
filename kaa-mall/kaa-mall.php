@@ -20,6 +20,22 @@ if ( ! defined( 'WPINC' ) ) {
 define( 'KAA_MALL_VERSION', '1.0.0' );
 
 /**
+ * Check if WooCommerce is active
+ */
+if ( ! in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+    add_action( 'admin_notices', 'kaa_mall_woocommerce_not_active_notice' );
+    return;
+}
+
+function kaa_mall_woocommerce_not_active_notice() {
+    ?>
+    <div class="error">
+        <p><?php _e( 'KAA Mall requires WooCommerce to be installed and active. Please install and activate WooCommerce.', 'kaa-mall' ); ?></p>
+    </div>
+    <?php
+}
+
+/**
  * The core plugin class that is used to define internationalization,
  * admin-specific hooks, and public-facing site hooks.
  */

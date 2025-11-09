@@ -87,7 +87,11 @@ class Kaa_Mall_Admin {
     }
 
     private function get_all_user_wallet_balances() {
-        $users = get_users();
+        $args = array(
+            'meta_key' => '_kaa_mall_wallet_balance',
+            'meta_compare' => 'EXISTS'
+        );
+        $users = get_users( $args );
         $balances = array();
         foreach ( $users as $user ) {
             $balance = get_user_meta( $user->ID, '_kaa_mall_wallet_balance', true );
