@@ -13,6 +13,24 @@ class Kaa_Mall_Admin {
         add_action( 'admin_init', array( $this, 'register_settings' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ) );
         add_action( 'admin_post_kaa_mall_top_up_wallet', array( $this, 'handle_top_up_wallet' ) );
+        add_action( 'admin_post_kaa_mall_bulk_update_order_status', array( $this, 'handle_bulk_update_order_status' ) );
+        add_action( 'admin_post_kaa_mall_mark_withdrawal_paid', array( $this, 'handle_mark_withdrawal_paid' ) );
+    }
+
+    public function handle_mark_withdrawal_paid() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        $request_id = intval( $_GET['request_id'] );
+        wp_update_post( array(
+            'ID' => $request_id,
+            'post_status' => 'publish',
+        ) );
+
+        $redirect_url = add_query_arg( 'message', 'Withdrawal marked as paid.', wp_get_referer() );
+        wp_redirect( $redirect_url );
+        exit;
     }
 
     public function enqueue_styles() {
@@ -129,7 +147,39 @@ class Kaa_Mall_Admin {
             'post_status' => 'any',
             'numberposts' => -1,
         );
+
+        if ( isset( $_REQUEST['s'] ) && ! empty( $_REQUEST['s'] ) ) {
+            $args['s'] = sanitize_text_field( $_REQUEST['s'] );
+        }
+
         return get_posts( $args );
+    }
+
+    public function handle_bulk_update_order_status() {
+        if ( ! isset( $_POST['kaa_mall_bulk_update_order_status_nonce'] ) || ! wp_verify_nonce( $_POST['kaa_mall_bulk_update_order_status_nonce'], 'kaa_mall_bulk_update_order_status_nonce' ) ) {
+            wp_die( 'Security check failed.' );
+        }
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        if ( isset( $_POST['order_ids'] ) && isset( $_POST['bulk_action'] ) && $_POST['bulk_action'] != '-1' ) {
+            $order_ids = array_map( 'intval', $_POST['order_ids'] );
+            $new_status = sanitize_text_field( $_POST['bulk_action'] );
+
+            foreach ( $order_ids as $order_id ) {
+                $order = wc_get_order( $order_id );
+                $order->update_status( $new_status );
+            }
+
+            $redirect_url = add_query_arg( 'message', 'Orders updated successfully.', wp_get_referer() );
+        } else {
+            $redirect_url = add_query_arg( 'message', 'No orders or action selected.', wp_get_referer() );
+        }
+
+        wp_redirect( $redirect_url );
+        exit;
     }
 
     private function get_all_user_wallet_balances() {
@@ -156,6 +206,15 @@ class Kaa_Mall_Admin {
         return get_users( $args );
     }
 
+    private function get_withdrawal_requests() {
+        $args = array(
+            'post_type'   => 'kaa_withdrawal',
+            'post_status' => 'pending',
+            'numberposts' => -1,
+        );
+        return get_posts( $args );
+    }
+
     public function render_admin_portal() {
         if ( ! current_user_can( 'manage_options' ) ) {
             return 'You do not have permission to view this page.';
@@ -169,6 +228,7 @@ class Kaa_Mall_Admin {
         $wallet_balances = $this->get_all_user_wallet_balances();
         $all_users = $this->get_all_users();
         $all_resellers = $this->get_all_resellers();
+        $withdrawal_requests = $this->get_withdrawal_requests();
 
         ob_start();
         ?>
@@ -337,11 +397,61 @@ class Kaa_Mall_Admin {
             </div>
 
             <div class="admin-section" style="grid-column: 1 / -1;">
-                <h3>All Orders</h3>
+                <h3>Withdrawal Requests</h3>
                 <table>
                     <thead>
                         <tr>
-                            <th>Order ID</th>
+                            <th>Date</th>
+                            <th>Reseller</th>
+                            <th>Amount</th>
+                            <th>Payment Details</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $withdrawal_requests as $request ) :
+                            $reseller = get_user_by( 'id', $request->post_author );
+                            ?>
+                            <tr>
+                                <td><?php echo get_the_date( 'Y-m-d H:i:s', $request ); ?></td>
+                                <td><?php echo esc_html( $reseller->display_name ); ?></td>
+                                <td><?php echo wc_price( get_post_meta( $request->ID, '_withdrawal_amount', true ) ); ?></td>
+                                <td><?php echo esc_html( get_post_meta( $request->ID, '_payment_details', true ) ); ?></td>
+                                <td><a href="<?php echo esc_url( add_query_arg( array('action' => 'kaa_mall_mark_withdrawal_paid', 'request_id' => $request->ID), admin_url('admin-post.php') ) ); ?>" class="button">Mark as Paid</a></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="admin-section" style="grid-column: 1 / -1;">
+                <h3>All Orders</h3>
+                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                    <input type="hidden" name="action" value="kaa_mall_bulk_update_order_status">
+                    <?php wp_nonce_field( 'kaa_mall_bulk_update_order_status_nonce', 'kaa_mall_bulk_update_order_status_nonce' ); ?>
+
+                    <div style="margin-bottom: 20px; display: flex; justify-content: space-between;">
+                        <div>
+                            <select name="bulk_action">
+                                <option value="-1">Bulk Actions</option>
+                                <option value="processing">Mark Processing</option>
+                                <option value="completed">Mark Completed</option>
+                                <option value="on-hold">Mark On-Hold</option>
+                                <option value="cancelled">Mark Cancelled</option>
+                            </select>
+                            <button type="submit" class="button">Apply</button>
+                        </div>
+                        <div>
+                            <input type="text" name="s" placeholder="Search orders..." value="<?php echo isset($_REQUEST['s']) ? esc_attr($_REQUEST['s']) : ''; ?>">
+                            <button type="submit" class="button">Search</button>
+                        </div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="select-all-orders"></th>
+                                <th>Order ID</th>
                             <th>Date</th>
                             <th>Customer</th>
                             <th>Total</th>
@@ -359,7 +469,8 @@ class Kaa_Mall_Admin {
                             $reseller_id = $order->get_meta( '_reseller_id' );
                             ?>
                             <tr>
-                                <td><?php echo $order->get_id(); ?></td>
+                                <td><input type="checkbox" name="order_ids[]" value="<?php echo $order->get_id(); ?>"></td>
+                                <td><a href="<?php echo get_edit_post_link( $order->get_id() ); ?>"><?php echo $order->get_id(); ?></a></td>
                                 <td><?php echo $date_created ? $date_created->date_i18n( 'Y-m-d H:i:s' ) : 'N/A'; ?></td>
                                 <td><?php echo $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(); ?></td>
                                 <td><?php echo $order->get_formatted_order_total(); ?></td>
@@ -378,8 +489,17 @@ class Kaa_Mall_Admin {
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                </form>
             </div>
         </div>
+        <script>
+            jQuery(document).ready(function($) {
+                $('#select-all-orders').on('click', function() {
+                    var checkboxes = $(this).closest('table').find('tbody input[type="checkbox"]');
+                    checkboxes.prop('checked', $(this).is(':checked'));
+                });
+            });
+        </script>
         <?php
         return ob_get_clean();
     }

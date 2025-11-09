@@ -35,14 +35,17 @@ class Kaa_Mall_Auth {
         if ( is_wp_error( $user_id ) ) {
             wp_send_json_error( array( 'message' => $user_id->get_error_message() ) );
         } else {
-            wp_send_json_success( array( 'message' => 'Registration successful! You can now log in.' ) );
+            // Automatically log the user in
+            wp_set_current_user( $user_id, $username );
+            wp_set_auth_cookie( $user_id );
+            wp_send_json_success( array( 'message' => 'Registration successful! Redirecting...', 'redirect_url' => get_option('kaa_mall_user_portal_url') ) );
         }
     }
 
     public function render_auth_portal() {
         if ( is_user_logged_in() ) {
-            // Optionally, you could redirect them to the user portal here.
-            return '<p>You are already logged in.</p>';
+            wp_redirect( get_option('kaa_mall_user_portal_url') );
+            exit;
         }
 
         ob_start();
@@ -133,7 +136,7 @@ class Kaa_Mall_Auth {
 
             <div id="login" class="auth-tab-content active">
                 <h3>Login</h3>
-                <?php wp_login_form( array('redirect' => get_permalink()) ); ?>
+                <?php wp_login_form( array('redirect' => get_option('kaa_mall_user_portal_url')) ); ?>
             </div>
 
             <div id="register" class="auth-tab-content">

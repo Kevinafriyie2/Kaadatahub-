@@ -732,10 +732,12 @@ class Kaa_Mall_Public {
                 <table>
                     <thead>
                         <tr>
+                            <th>Order ID</th>
                             <th>Date</th>
                             <th>Bundle</th>
                             <th>Phone</th>
                             <th>Amount</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody></tbody>

@@ -27,6 +27,38 @@
             $('.network-tab-content').removeClass('active');
             $('#reseller-prices-' + network).addClass('active');
         });
+
+        $('#kaa-mall-shop-name-form').on('submit', function(e) {
+            e.preventDefault();
+
+            var form = $(this);
+            var data = form.serialize() + '&action=kaa_mall_save_shop_name&nonce=' + kaa_mall_reseller_params.nonce;
+
+            $.post(kaa_mall_reseller_params.ajax_url, data, function(response) {
+                if (response.success) {
+                    alert(response.data.message);
+                    window.location.reload();
+                } else {
+                    alert('An error occurred: ' + response.data.message);
+                }
+            });
+        });
+
+        $('#kaa-mall-withdrawal-form').on('submit', function(e) {
+            e.preventDefault();
+
+            var form = $(this);
+            var data = form.serialize() + '&action=kaa_mall_request_withdrawal&nonce=' + kaa_mall_reseller_params.nonce;
+
+            $.post(kaa_mall_reseller_params.ajax_url, data, function(response) {
+                if (response.success) {
+                    alert(response.data.message);
+                    window.location.reload();
+                } else {
+                    alert('An error occurred: ' + response.data.message);
+                }
+            });
+        });
     });
 
 })(jQuery);

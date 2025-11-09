@@ -6,6 +6,8 @@ class Kaa_Mall_Reseller {
         add_shortcode( 'kaa_reseller_portal', array( $this, 'render_reseller_portal' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
         add_action( 'wp_ajax_kaa_mall_save_reseller_prices', array( $this, 'save_reseller_prices' ) );
+        add_action( 'wp_ajax_kaa_mall_save_shop_name', array( $this, 'save_shop_name' ) );
+        add_action( 'wp_ajax_kaa_mall_request_withdrawal', array( $this, 'request_withdrawal' ) );
     }
 
     public function enqueue_scripts() {
@@ -42,6 +44,70 @@ class Kaa_Mall_Reseller {
         update_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, $reseller_prices );
 
         wp_send_json_success( array( 'message' => 'Prices updated successfully.' ) );
+    }
+
+    public function save_shop_name() {
+        check_ajax_referer( 'kaa_mall_reseller_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'reseller' ) ) {
+            wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
+        }
+
+        $shop_name = sanitize_title( $_POST['shop_name'] );
+        $reseller_id = get_current_user_id();
+
+        // Check if shop name is unique
+        $existing_user = get_users( array(
+            'meta_key' => '_kaa_mall_shop_name',
+            'meta_value' => $shop_name,
+            'exclude' => array( $reseller_id ),
+        ) );
+
+        if ( ! empty( $existing_user ) ) {
+            wp_send_json_error( array( 'message' => 'This shop name is already taken. Please choose another one.' ) );
+        }
+
+        update_user_meta( $reseller_id, '_kaa_mall_shop_name', $shop_name );
+
+        wp_send_json_success( array( 'message' => 'Shop name updated successfully.' ) );
+    }
+
+    public function request_withdrawal() {
+        check_ajax_referer( 'kaa_mall_reseller_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'reseller' ) ) {
+            wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
+        }
+
+        $amount = floatval( $_POST['amount'] );
+        $payment_details = sanitize_textarea_field( $_POST['payment_details'] );
+        $reseller_id = get_current_user_id();
+        $profit_balance = $this->get_profit_wallet_balance( $reseller_id );
+
+        if ( $amount <= 0 || $amount > $profit_balance ) {
+            wp_send_json_error( array( 'message' => 'Invalid withdrawal amount.' ) );
+        }
+
+        // Create a new withdrawal request post
+        $post_id = wp_insert_post( array(
+            'post_title' => 'Withdrawal Request - ' . wc_price( $amount ),
+            'post_type' => 'kaa_withdrawal',
+            'post_status' => 'pending',
+            'post_author' => $reseller_id,
+        ) );
+
+        if ( $post_id ) {
+            update_post_meta( $post_id, '_withdrawal_amount', $amount );
+            update_post_meta( $post_id, '_payment_details', $payment_details );
+
+            // Deduct from profit wallet
+            $new_profit_balance = $profit_balance - $amount;
+            update_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', $new_profit_balance );
+
+            wp_send_json_success( array( 'message' => 'Withdrawal request submitted successfully.' ) );
+        } else {
+            wp_send_json_error( array( 'message' => 'Could not submit withdrawal request.' ) );
+        }
     }
 
     private function get_admin_prices( $network ) {
@@ -160,9 +226,33 @@ class Kaa_Mall_Reseller {
                 </div>
 
                 <div class="reseller-card">
+                    <h3>Request Withdrawal</h3>
+                    <form id="kaa-mall-withdrawal-form">
+                        <p>
+                            <label for="withdrawal_amount">Amount</label>
+                            <input type="number" name="amount" id="withdrawal_amount" step="0.01" min="1" max="<?php echo esc_attr($profit_balance); ?>" required>
+                        </p>
+                        <p>
+                            <label for="payment_details">Payment Details (e.g., Mobile Money Number)</label>
+                            <textarea name="payment_details" id="payment_details" rows="3" required></textarea>
+                        </p>
+                        <button type="submit">Request Withdrawal</button>
+                    </form>
+                </div>
+
+                <div class="reseller-card">
+                    <h3>Your Shop Name</h3>
+                    <p>Set your unique shop name.</p>
+                    <form id="kaa-mall-shop-name-form">
+                        <input type="text" name="shop_name" value="<?php echo esc_attr( get_user_meta( $reseller_id, '_kaa_mall_shop_name', true ) ); ?>" placeholder="e.g., my-data-shop">
+                        <button type="submit">Save Shop Name</button>
+                    </form>
+                </div>
+
+                <div class="reseller-card">
                     <h3>Your Referral Link</h3>
                     <p>Share this link with your customers.</p>
-                    <input type="text" value="<?php echo esc_url( add_query_arg( 'ref', get_current_user_id(), get_option( 'kaa_mall_user_portal_url' ) ) ); ?>" readonly>
+                    <input type="text" value="<?php echo esc_url( home_url( '/shop/' . get_user_meta( $reseller_id, '_kaa_mall_shop_name', true ) ) ); ?>" readonly>
                 </div>
 
                 <div class="reseller-card" style="grid-column: 1 / -1;">

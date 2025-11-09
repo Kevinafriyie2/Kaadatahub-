@@ -195,17 +195,20 @@
                         $.each(response.data, function(index, order) {
                             var order_date = new Date(order.date);
                             var formatted_date = order_date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + order_date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                            var order_link = kaa_mall_params.ajax_url.replace('admin-ajax.php', 'post.php?post=' + order.reference + '&action=edit');
                             orders_table.append(
                                 '<tr>' +
+                                '<td><a href="' + order_link + '">' + order.reference + '</a></td>' +
                                 '<td>' + formatted_date + '</td>' +
                                 '<td>' + (order.bundle || 'N/A') + '</td>' +
                                 '<td>' + (order.phone || 'N/A') + '</td>' +
                                 '<td>GH₵' + parseFloat(order.amount).toFixed(2) + '</td>' +
+                                '<td>' + order.status + '</td>' +
                                 '</tr>'
                             );
                         });
                     } else {
-                        orders_table.append('<tr><td colspan="4">No recent orders found.</td></tr>');
+                        orders_table.append('<tr><td colspan="6">No recent orders found.</td></tr>');
                     }
                 }
             });

@@ -21,7 +21,7 @@
             $.post(kaa_mall_auth_params.ajax_url, data, function(response) {
                 if (response.success) {
                     alert(response.data.message);
-                    window.location.reload();
+                    window.location.href = response.data.redirect_url;
                 } else {
                     alert('An error occurred: ' + response.data.message);
                 }

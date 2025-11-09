@@ -12,6 +12,50 @@ class Kaa_Mall {
         $this->load_dependencies();
         $this->define_admin_hooks();
         $this->define_public_hooks();
+        add_action( 'init', array( $this, 'add_rewrite_rules' ) );
+        add_action( 'init', array( $this, 'register_withdrawal_post_type' ) );
+    }
+
+    public function register_withdrawal_post_type() {
+        register_post_type( 'kaa_withdrawal',
+            array(
+                'labels'      => array(
+                    'name'          => __( 'Withdrawals', 'kaa-mall' ),
+                    'singular_name' => __( 'Withdrawal', 'kaa-mall' ),
+                ),
+                'public'      => false,
+                'show_ui'     => true,
+                'show_in_menu'=> 'kaa_mall',
+                'supports'    => array( 'title' ),
+                'capabilities' => array(
+                    'create_posts' => 'do_not_allow', // Disable creation from admin UI
+                ),
+                'map_meta_cap' => true,
+            )
+        );
+    }
+
+    public function add_rewrite_rules() {
+        add_rewrite_rule( '^shop/([^/]*)/?$', 'index.php?shop_name=$matches[1]', 'top' );
+        add_filter( 'query_vars', function( $query_vars ) {
+            $query_vars[] = 'shop_name';
+            return $query_vars;
+        } );
+        add_action( 'template_redirect', function() {
+            $shop_name = get_query_var( 'shop_name' );
+            if ( $shop_name ) {
+                $users = get_users( array(
+                    'meta_key' => '_kaa_mall_shop_name',
+                    'meta_value' => $shop_name,
+                ) );
+                if ( ! empty( $users ) ) {
+                    $reseller_id = $users[0]->ID;
+                    $redirect_url = add_query_arg( 'ref', $reseller_id, get_option( 'kaa_mall_user_portal_url' ) );
+                    wp_redirect( $redirect_url );
+                    exit;
+                }
+            }
+        } );
     }
 
     private function load_dependencies() {
