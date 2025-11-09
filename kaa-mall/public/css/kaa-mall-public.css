@@ -1,12 +1,12 @@
 :root {
-    --primary-color: #4a90e2;
-    --primary-hover-color: #357ABD;
-    --background-color: #f7f8fc;
-    --card-background-color: #ffffff;
-    --text-color: #333;
-    --heading-color: #1a1a1a;
-    --border-color: #e6e6e6;
-    --shadow-color: rgba(0, 0, 0, 0.08);
+    --primary-color: #ffc107;
+    --secondary-color: #8a2be2;
+    --background-color: #121212;
+    --card-background-color: #1e1e1e;
+    --text-color: #e0e0e0;
+    --heading-color: #ffffff;
+    --border-color: #333333;
+    --shadow-color: rgba(0, 0, 0, 0.5);
 }
 
 .kaa-mall-portal {
@@ -14,144 +14,194 @@
     background-color: var(--background-color);
     color: var(--text-color);
     padding: 20px;
-    border-radius: 12px;
+    max-width: 500px;
+    margin: 0 auto;
 }
 
 .kaa-mall-header {
-    background: linear-gradient(135deg, #5a67d8, #9f7aea);
+    background: linear-gradient(135deg, #ff8c00, #ffc107);
     color: white;
-    padding: 30px 20px;
+    padding: 20px;
     text-align: center;
-    border-radius: 8px;
-    margin-bottom: 30px;
+    border-radius: 12px;
+    margin-bottom: 20px;
 }
 
-.kaa-mall-header h2 {
+.kaa-mall-header h1 {
     margin: 0;
-    font-size: 2em;
-    font-weight: 600;
+    font-size: 1.8em;
 }
 
-.kaa-mall-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 25px;
-    margin-bottom: 30px;
+.kaa-mall-header p {
+    margin: 5px 0 0;
+    font-size: 1em;
 }
 
 .kaa-mall-card {
     background: var(--card-background-color);
     border-radius: 12px;
     box-shadow: 0 5px 15px var(--shadow-color);
-    padding: 25px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.kaa-mall-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px var(--shadow-color);
-}
-
-.kaa-mall-card h3 {
-    margin-top: 0;
+    padding: 20px;
     margin-bottom: 20px;
-    color: var(--heading-color);
-    font-size: 1.4em;
-    font-weight: 600;
 }
 
-.kaa-mall-card input,
-.kaa-mall-card select,
-.kaa-mall-card button {
+.wallet-balance {
+    background: linear-gradient(135deg, #8a2be2, #4a00e0);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wallet-balance-details span {
+    display: block;
+    color: white;
+}
+
+.wallet-balance-details .balance-amount {
+    font-size: 2em;
+    font-weight: bold;
+}
+
+.top-up-wallet-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.data-bundles .network-tabs {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.data-bundles .tab-link {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 10px;
+    font-size: 1em;
+}
+
+.data-bundles .tab-link.active {
+    border-bottom: 2px solid var(--primary-color);
+    color: var(--primary-color);
+}
+
+.network-tab-content {
+    display: none;
+}
+
+.network-tab-content.active {
+    display: block;
+}
+
+.bundle-form label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.bundle-form input,
+.bundle-form select,
+.bundle-form button {
     width: 100%;
     padding: 12px;
     margin-bottom: 15px;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 8px;
+    background-color: #2c2c2c;
+    color: var(--text-color);
     font-size: 1em;
-    box-sizing: border-box; /* Ensures padding doesn't affect width */
+    box-sizing: border-box;
 }
 
-.kaa-mall-card input:focus,
-.kaa-mall-card select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
-}
-
-.kaa-mall-card button {
+.bundle-form button {
     background-color: var(--primary-color);
-    color: white;
-    border: none;
+    color: #121212;
+    font-weight: bold;
     cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.2s ease;
 }
 
-.kaa-mall-card button:hover {
-    background-color: var(--primary-hover-color);
+.payment-method label {
+    display: inline-block;
+    margin-right: 20px;
 }
 
-.wallet-balance p {
-    font-size: 2.5em;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin: 10px 0 20px;
+.afa-registration {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
 }
 
-.recent-orders {
-    background-color: var(--card-background-color);
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 5px 15px var(--shadow-color);
+.afa-registration h3,
+.afa-registration p {
+    color: white;
+    text-align: center;
 }
 
-.recent-orders h3 {
-    margin-top: 0;
-    font-size: 1.6em;
-    color: var(--heading-color);
+#kaa-mall-afa-form label {
+    display: block;
+    margin-bottom: 5px;
+    color: white;
 }
 
-.recent-orders table {
+#kaa-mall-afa-form input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: none;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+#kaa-mall-afa-form button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--primary-color);
+    color: #121212;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.registration-fee {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    color: white;
+}
+
+.purchase-history table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
 }
 
-.recent-orders th, .recent-orders td {
-    border-bottom: 1px solid var(--border-color);
-    padding: 15px;
+.purchase-history th,
+.purchase-history td {
+    padding: 10px;
     text-align: left;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.recent-orders th {
-    background-color: #f9fafb;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.85em;
-    letter-spacing: 0.5px;
+.purchase-history th {
+    font-weight: bold;
 }
 
-.recent-orders tr:last-child td {
-    border-bottom: none;
+.need-help {
+    text-align: center;
 }
 
-.recent-orders tr:hover {
-    background-color: #f7f8fc;
-}
-
-.kaa-mall-notification {
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 6px;
-    color: #fff;
-    font-weight: 600;
-}
-
-.kaa-mall-notification.success {
-    background-color: #28a745;
-}
-
-.kaa-mall-notification.error {
-    background-color: #dc3545;
+.contact-admin-btn {
+    display: inline-block;
+    background-color: #25d366;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
 }

@@ -303,73 +303,109 @@ class Kaa_Mall_Public {
             return 'Please log in to access the portal.';
         }
 
-        $user_id = get_current_user_id();
-        $wallet_balance = $this->get_wallet_balance( $user_id );
-
         ob_start();
         ?>
         <div class="kaa-mall-portal">
             <div class="kaa-mall-header">
-                <h2>Welcome to Kaa Mall Portal</h2>
+                <h1>Data Bundle Store</h1>
+                <p>Instant Data Top-up for All Networks</p>
             </div>
-            <div class="kaa-mall-cards">
-                <div class="kaa-mall-card wallet-balance">
-                    <h3>Your Wallet Balance</h3>
-                    <p>₵<?php echo number_format( $wallet_balance, 2 ); ?></p>
-                    <form id="kaa-mall-topup-form">
-                        <input type="number" step="0.01" min="1.00" name="topup_amount" placeholder="Amount" required>
-                        <button type="submit" class="top-up-wallet">Top-up Wallet</button>
-                    </form>
+
+            <div class="kaa-mall-card wallet-balance">
+                <div class="wallet-balance-details">
+                    <span>Wallet Balance</span>
+                    <span class="balance-amount"></span>
                 </div>
-                <div class="kaa-mall-card data-bundles">
-                    <h3>Buy Data Bundles</h3>
-                    <form id="kaa-mall-bundle-form">
-                        <select name="network" required>
-                            <option value="">Select Network</option>
-                            <option value="mtn">MTN</option>
-                            <option value="airteltigo">AirtelTigo</option>
-                            <option value="vodafone">Vodafone</option>
-                        </select>
-                        <select name="bundle" required>
-                            <!-- Options will be populated by JS -->
-                        </select>
-                        <input type="tel" name="phone_number" placeholder="Phone Number" required>
+                <button class="top-up-wallet-btn">Top Up Wallet</button>
+            </div>
+
+            <div class="kaa-mall-card data-bundles">
+                <div class="network-tabs">
+                    <button class="tab-link active" data-network="mtn">MTN</button>
+                    <button class="tab-link" data-network="airteltigo">AirtelTigo</button>
+                    <button class="tab-link" data-network="vodafone">Vodafone</button>
+                </div>
+                <div id="mtn" class="network-tab-content active">
+                    <form class="bundle-form" data-network="mtn">
+                        <label>MTN Phone Number</label>
+                        <input type="tel" name="phone_number" placeholder="0241234567" required>
+                        <label>Select Bundle</label>
+                        <select name="bundle" required></select>
+                        <label>Payment Method</label>
                         <div class="payment-method">
-                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet</label>
-                            <label><input type="radio" name="payment_method" value="paystack"> Paystack</label>
+                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                            <label><input type="radio" name="payment_method" value="paystack"> Paystack (Card/Mobile Money)</label>
                         </div>
-                        <button type="submit">Purchase Bundle</button>
+                        <button type="submit">Buy MTN Bundle</button>
                     </form>
                 </div>
-                <div class="kaa-mall-card afa-registration">
-                    <h3>AFA Registration (₵13.00)</h3>
-                    <form id="kaa-mall-afa-form">
-                        <input type="text" name="full_name" placeholder="Full Name" required>
-                        <input type="tel" name="phone_number" placeholder="Phone Number" required>
-                        <input type="text" name="location" placeholder="Location" required>
-                        <input type="text" name="ghana_card" placeholder="Ghana Card Number" required>
-                        <button type="submit">Register for AFA</button>
+                <div id="airteltigo" class="network-tab-content">
+                    <form class="bundle-form" data-network="airteltigo">
+                        <label>AirtelTigo Phone Number</label>
+                        <input type="tel" name="phone_number" placeholder="0241234567" required>
+                        <label>Select Bundle</label>
+                        <select name="bundle" required></select>
+                        <label>Payment Method</label>
+                        <div class="payment-method">
+                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                            <label><input type="radio" name="payment_method" value="paystack"> Paystack (Card/Mobile Money)</label>
+                        </div>
+                        <button type="submit">Buy AirtelTigo Bundle</button>
+                    </form>
+                </div>
+                <div id="vodafone" class="network-tab-content">
+                    <form class="bundle-form" data-network="vodafone">
+                        <label>Vodafone Phone Number</label>
+                        <input type="tel" name="phone_number" placeholder="0241234567" required>
+                        <label>Select Bundle</label>
+                        <select name="bundle" required></select>
+                        <label>Payment Method</label>
+                        <div class="payment-method">
+                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                            <label><input type="radio" name="payment_method" value="paystack"> Paystack (Card/Mobile Money)</label>
+                        </div>
+                        <button type="submit">Buy Vodafone Bundle</button>
                     </form>
                 </div>
             </div>
-            <div class="recent-orders">
-                <h3>Recent Orders</h3>
+
+            <div class="kaa-mall-card afa-registration">
+                <h3>AFA Bundle Registration</h3>
+                <p>Register for AFA bundles and get amazing benefits!</p>
+                <form id="kaa-mall-afa-form">
+                    <label>Full Name</label>
+                    <input type="text" name="full_name" placeholder="Enter your full name" required>
+                    <label>Location</label>
+                    <input type="text" name="location" placeholder="Enter your location" required>
+                    <label>ID Ghana Card Number</label>
+                    <input type="text" name="ghana_card" placeholder="GHA-XXXXXXXXX-X" required>
+                    <div class="registration-fee">
+                        <span>Registration Fee</span>
+                        <span>GH₵13.00</span>
+                    </div>
+                    <button type="submit">Register Now - GH₵13</button>
+                </form>
+            </div>
+
+            <div class="kaa-mall-card purchase-history">
+                <h3>Purchase History</h3>
                 <table>
                     <thead>
                         <tr>
-                            <th>Reference</th>
                             <th>Date</th>
-                            <th>Network</th>
                             <th>Bundle</th>
                             <th>Phone</th>
                             <th>Amount</th>
-                            <th>Status</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- Orders will be populated by JS -->
-                    </tbody>
+                    <tbody></tbody>
                 </table>
+            </div>
+
+            <div class="kaa-mall-card need-help">
+                <h3>Need Help?</h3>
+                <p>Our support team is here to help you 24/7</p>
+                <a href="#" class="contact-admin-btn">Contact the Admin</a>
             </div>
         </div>
         <?php

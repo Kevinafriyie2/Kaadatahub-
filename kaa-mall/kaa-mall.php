@@ -19,14 +19,6 @@ if ( ! defined( 'WPINC' ) ) {
 // Define plugin version.
 define( 'KAA_MALL_VERSION', '1.0.0' );
 
-/**
- * Check if WooCommerce is active
- */
-if ( ! in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
-    add_action( 'admin_notices', 'kaa_mall_woocommerce_not_active_notice' );
-    return;
-}
-
 function kaa_mall_woocommerce_not_active_notice() {
     ?>
     <div class="error">
@@ -34,12 +26,6 @@ function kaa_mall_woocommerce_not_active_notice() {
     </div>
     <?php
 }
-
-/**
- * The core plugin class that is used to define internationalization,
- * admin-specific hooks, and public-facing site hooks.
- */
-require plugin_dir_path( __FILE__ ) . 'includes/class-kaa-mall.php';
 
 /**
  * Begins execution of the plugin.
@@ -76,4 +62,17 @@ function deactivate_kaa_mall() {
 register_activation_hook( __FILE__, 'activate_kaa_mall' );
 register_deactivation_hook( __FILE__, 'deactivate_kaa_mall' );
 
-run_kaa_mall();
+/**
+ * Initialize the plugin.
+ */
+function init_kaa_mall() {
+    if ( ! class_exists( 'WooCommerce' ) ) {
+        add_action( 'admin_notices', 'kaa_mall_woocommerce_not_active_notice' );
+        return;
+    }
+
+    require plugin_dir_path( __FILE__ ) . 'includes/class-kaa-mall.php';
+    run_kaa_mall();
+}
+
+add_action( 'plugins_loaded', 'init_kaa_mall' );
