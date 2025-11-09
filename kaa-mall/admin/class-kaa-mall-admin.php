@@ -16,7 +16,7 @@ class Kaa_Mall_Admin {
     }
 
     public function enqueue_styles() {
-        wp_enqueue_style( 'kaa-mall-admin', plugin_dir_url( __FILE__ ) . 'css/kaa-mall-admin.css', array(), $this->version, 'all' );
+        // Styles are now inlined in the shortcode output.
     }
 
     private function get_wallet_balance( $user_id ) {
@@ -150,6 +150,87 @@ class Kaa_Mall_Admin {
 
         ob_start();
         ?>
+        <style>
+            :root {
+                --primary-color: #4a90e2;
+                --primary-hover-color: #357ABD;
+                --background-color: #f7f8fc;
+                --card-background-color: #ffffff;
+                --text-color: #333;
+                --heading-color: #1a1a1a;
+                --border-color: #e6e6e6;
+                --shadow-color: rgba(0, 0, 0, 0.08);
+            }
+
+            .kaa-mall-admin-portal {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                color: var(--text-color);
+            }
+
+            .kaa-mall-admin-portal h2 {
+                font-size: 2em;
+                font-weight: 600;
+                color: var(--heading-color);
+                margin-bottom: 30px;
+            }
+
+            .admin-section {
+                background: var(--card-background-color);
+                border-radius: 12px;
+                box-shadow: 0 5px 15px var(--shadow-color);
+                padding: 25px;
+                margin-bottom: 25px;
+            }
+
+            .admin-section h3 {
+                margin-top: 0;
+                margin-bottom: 20px;
+                color: var(--heading-color);
+                font-size: 1.4em;
+                font-weight: 600;
+            }
+
+            .admin-section table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .admin-section th, .admin-section td {
+                border-bottom: 1px solid var(--border-color);
+                padding: 15px;
+                text-align: left;
+            }
+
+            .admin-section th {
+                background-color: #f9fafb;
+                font-weight: 600;
+                text-transform: uppercase;
+                font-size: 0.85em;
+                letter-spacing: 0.5px;
+            }
+
+            .admin-section tr:last-child td {
+                border-bottom: none;
+            }
+
+            .admin-section tr:hover {
+                background-color: #f7f8fc;
+            }
+
+            .admin-section a {
+                background-color: var(--primary-color);
+                color: white;
+                padding: 10px 15px;
+                border-radius: 6px;
+                text-decoration: none;
+                font-weight: 600;
+                transition: background-color 0.2s ease;
+            }
+
+            .admin-section a:hover {
+                background-color: var(--primary-hover-color);
+            }
+        </style>
         <div class="kaa-mall-admin-portal">
             <h2>Admin Dashboard</h2>
             <div class="admin-section">
