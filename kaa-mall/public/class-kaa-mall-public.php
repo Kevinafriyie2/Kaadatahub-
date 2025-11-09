@@ -14,6 +14,7 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_nopriv_kaa_mall_verify_paystack_transaction', array( $this, 'verify_paystack_transaction' ) );
         add_action( 'wp_ajax_kaa_mall_purchase_bundle', array( $this, 'purchase_bundle' ) );
         add_action( 'wp_ajax_kaa_mall_purchase_bundle_paystack', array( $this, 'purchase_bundle_paystack' ) );
+        add_action( 'wp_ajax_nopriv_kaa_mall_purchase_bundle_paystack', array( $this, 'purchase_bundle_paystack' ) );
         add_action( 'wp_ajax_kaa_mall_get_bundle_prices', array( $this, 'get_bundle_prices' ) );
         add_action( 'wp_ajax_kaa_mall_afa_registration', array( $this, 'afa_registration' ) );
         add_action( 'wp_ajax_kaa_mall_get_recent_orders', array( $this, 'get_recent_orders' ) );
@@ -138,6 +139,12 @@ class Kaa_Mall_Public {
 
     public function purchase_bundle() {
         check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'You must be logged in to make a purchase using your wallet.' ) );
+            return;
+        }
+
         $network = sanitize_text_field( $_POST['network'] );
         $bundle = sanitize_text_field( $_POST['bundle'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
@@ -212,6 +219,12 @@ class Kaa_Mall_Public {
         $bundle = sanitize_text_field( $_POST['bundle'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
         $reference = sanitize_text_field( $_POST['reference'] );
+        $email = is_user_logged_in() ? wp_get_current_user()->user_email : sanitize_email( $_POST['email'] );
+
+        if ( ! is_user_logged_in() && ! is_email( $email ) ) {
+            wp_send_json_error( array( 'message' => 'A valid email is required for guest checkout.' ) );
+            return;
+        }
 
         $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
         $admin_prices = array();
@@ -261,12 +274,18 @@ class Kaa_Mall_Public {
 
         $result = json_decode($response);
         if ( 'success' === $result->data->status ) {
-            $user_id = get_current_user_id();
+            $user_id = is_user_logged_in() ? get_current_user_id() : 0;
 
             $product = $this->get_product_by_name( 'Data Bundle' );
             if ( $product ) {
                 $order = wc_create_order();
-                $order->set_customer_id( $user_id );
+
+                if ( $user_id ) {
+                    $order->set_customer_id( $user_id );
+                } else {
+                    $order->set_billing_email( $email );
+                }
+
                 $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
                 $order->set_total( $final_price );
                 $order->set_status( 'processing' );
@@ -296,6 +315,12 @@ class Kaa_Mall_Public {
 
     public function afa_registration() {
         check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'You must be logged in to perform this action.' ) );
+            return;
+        }
+
         $full_name = sanitize_text_field( $_POST['full_name'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
         $location = sanitize_text_field( $_POST['location'] );
@@ -379,7 +404,14 @@ class Kaa_Mall_Public {
     }
 
     public function render_user_portal() {
-        if ( ! is_user_logged_in() ) {
+        if ( isset( $_GET['ref'] ) ) {
+            $reseller_id = intval( $_GET['ref'] );
+            if ( get_user_by( 'id', $reseller_id ) ) {
+                WC()->session->set( 'kaa_mall_reseller_id', $reseller_id );
+            }
+        }
+
+        if ( ! is_user_logged_in() && ! WC()->session->get( 'kaa_mall_reseller_id' ) ) {
             ob_start();
             ?>
             <style>
@@ -422,13 +454,6 @@ class Kaa_Mall_Public {
             </div>
             <?php
             return ob_get_clean();
-        }
-
-        if ( isset( $_GET['ref'] ) ) {
-            $reseller_id = intval( $_GET['ref'] );
-            if ( get_user_by( 'id', $reseller_id ) ) {
-                WC()->session->set( 'kaa_mall_reseller_id', $reseller_id );
-            }
         }
 
         ob_start();
@@ -656,6 +681,7 @@ class Kaa_Mall_Public {
                 <p>Instant Data Top-up for All Networks</p>
             </div>
 
+            <?php if ( is_user_logged_in() ) : ?>
             <div class="kaa-mall-card wallet-balance">
                 <div class="wallet-balance-details">
                     <span>Wallet Balance</span>
@@ -663,6 +689,7 @@ class Kaa_Mall_Public {
                 </div>
                 <button class="top-up-wallet-btn">Top Up Wallet</button>
             </div>
+            <?php endif; ?>
 
             <div class="kaa-mall-card data-bundles">
                 <div class="network-tabs">
@@ -672,48 +699,67 @@ class Kaa_Mall_Public {
                 </div>
                 <div id="mtn" class="network-tab-content active">
                     <form class="bundle-form" data-network="mtn">
+                        <?php if ( ! is_user_logged_in() ) : ?>
+                            <label>Your Email</label>
+                            <input type="email" name="email" placeholder="Enter your email" required>
+                        <?php endif; ?>
                         <label>MTN Phone Number</label>
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
                         <label>Payment Method</label>
                         <div class="payment-method">
+                            <?php if ( is_user_logged_in() ) : ?>
                             <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                            <label><input type="radio" name="payment_method" value="paystack"> Paystack (Card/Mobile Money)</label>
+                            <?php endif; ?>
+                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
                         </div>
                         <button type="submit">Buy MTN Bundle</button>
                     </form>
                 </div>
                 <div id="airteltigo" class="network-tab-content">
                     <form class="bundle-form" data-network="airteltigo">
+                        <?php if ( ! is_user_logged_in() ) : ?>
+                            <label>Your Email</label>
+                            <input type="email" name="email" placeholder="Enter your email" required>
+                        <?php endif; ?>
                         <label>AirtelTigo Phone Number</label>
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
                         <label>Payment Method</label>
                         <div class="payment-method">
+                            <?php if ( is_user_logged_in() ) : ?>
                             <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                            <label><input type="radio" name="payment_method" value="paystack"> Paystack (Card/Mobile Money)</label>
+                            <?php endif; ?>
+                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
                         </div>
                         <button type="submit">Buy AirtelTigo Bundle</button>
                     </form>
                 </div>
                 <div id="vodafone" class="network-tab-content">
                     <form class="bundle-form" data-network="vodafone">
+                        <?php if ( ! is_user_logged_in() ) : ?>
+                            <label>Your Email</label>
+                            <input type="email" name="email" placeholder="Enter your email" required>
+                        <?php endif; ?>
                         <label>Vodafone Phone Number</label>
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
                         <label>Payment Method</label>
                         <div class="payment-method">
+                            <?php if ( is_user_logged_in() ) : ?>
                             <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                            <label><input type="radio" name="payment_method" value="paystack"> Paystack (Card/Mobile Money)</label>
+                            <?php endif; ?>
+                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
                         </div>
                         <button type="submit">Buy Vodafone Bundle</button>
                     </form>
                 </div>
             </div>
 
+            <?php if ( is_user_logged_in() ) : ?>
             <div class="kaa-mall-card afa-registration">
                 <h3>AFA Bundle Registration</h3>
                 <p>Register for AFA bundles and get amazing benefits!</p>
@@ -748,6 +794,7 @@ class Kaa_Mall_Public {
                     <tbody></tbody>
                 </table>
             </div>
+            <?php endif; ?>
 
             <div class="kaa-mall-card need-help">
                 <h3>Need Help?</h3>

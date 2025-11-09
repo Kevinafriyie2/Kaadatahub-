@@ -149,7 +149,26 @@ class Kaa_Mall_Admin {
         );
 
         if ( isset( $_REQUEST['s'] ) && ! empty( $_REQUEST['s'] ) ) {
-            $args['s'] = sanitize_text_field( $_REQUEST['s'] );
+            $search_term = sanitize_text_field( $_REQUEST['s'] );
+
+            // Check if the search term is a reseller's name
+            $resellers = get_users( array(
+                'search'         => '*' . esc_attr( $search_term ) . '*',
+                'search_columns' => array( 'display_name' ),
+            ) );
+
+            if ( ! empty( $resellers ) ) {
+                $reseller_ids = wp_list_pluck( $resellers, 'ID' );
+                $args['meta_query'] = array(
+                    array(
+                        'key'     => '_reseller_id',
+                        'value'   => $reseller_ids,
+                        'compare' => 'IN',
+                    ),
+                );
+            } else {
+                $args['s'] = $search_term;
+            }
         }
 
         return get_posts( $args );
