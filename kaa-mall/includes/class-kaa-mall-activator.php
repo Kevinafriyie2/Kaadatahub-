@@ -6,6 +6,18 @@ class Kaa_Mall_Activator {
         self::create_virtual_product( 'Wallet Top-up' );
         self::create_virtual_product( 'Data Bundle' );
         self::create_virtual_product( 'AFA Registration' );
+        self::add_reseller_role();
+    }
+
+    private static function add_reseller_role() {
+        add_role(
+            'reseller',
+            __( 'Reseller', 'kaa-mall' ),
+            array(
+                'read' => true,
+                'level_0' => true,
+            )
+        );
     }
 
     private static function create_virtual_product( $product_name ) {

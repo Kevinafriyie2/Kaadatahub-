@@ -17,6 +17,7 @@ class Kaa_Mall {
     private function load_dependencies() {
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-kaa-mall-admin.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-public.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-reseller.php';
     }
 
     private function define_admin_hooks() {
@@ -25,6 +26,7 @@ class Kaa_Mall {
 
     private function define_public_hooks() {
         $plugin_public = new Kaa_Mall_Public( $this->get_plugin_name(), $this->get_version() );
+        $plugin_reseller = new Kaa_Mall_Reseller();
     }
 
     public function run() {

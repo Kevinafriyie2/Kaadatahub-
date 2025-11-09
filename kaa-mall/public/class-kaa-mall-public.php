@@ -166,6 +166,15 @@ class Kaa_Mall_Public {
             $order->update_meta_data( 'Network', $network );
             $order->update_meta_data( 'Bundle', $bundle );
             $order->update_meta_data( 'Phone Number', $phone_number );
+
+            $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+            if ( $reseller_id ) {
+                $order->update_meta_data( '_reseller_id', $reseller_id );
+                $commission_rate = get_option( 'kaa_mall_reseller_commission', 0 );
+                $commission_amount = ( $bundle_price * $commission_rate ) / 100;
+                $order->update_meta_data( '_commission_amount', $commission_amount );
+            }
+
             $order->save();
         }
 
@@ -230,6 +239,15 @@ class Kaa_Mall_Public {
                 $order->update_meta_data( 'Network', $network );
                 $order->update_meta_data( 'Bundle', $bundle );
                 $order->update_meta_data( 'Phone Number', $phone_number );
+
+                $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+                if ( $reseller_id ) {
+                    $order->update_meta_data( '_reseller_id', $reseller_id );
+                    $commission_rate = get_option( 'kaa_mall_reseller_commission', 0 );
+                    $commission_amount = ( $bundle_price * $commission_rate ) / 100;
+                    $order->update_meta_data( '_commission_amount', $commission_amount );
+                }
+
                 $order->save();
             }
 
@@ -269,6 +287,15 @@ class Kaa_Mall_Public {
             $order->update_meta_data( 'Phone Number', $phone_number );
             $order->update_meta_data( 'Location', $location );
             $order->update_meta_data( 'Ghana Card', $ghana_card );
+
+            $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+            if ( $reseller_id ) {
+                $order->update_meta_data( '_reseller_id', $reseller_id );
+                $commission_rate = get_option( 'kaa_mall_reseller_commission', 0 );
+                $commission_amount = ( $afa_fee * $commission_rate ) / 100;
+                $order->update_meta_data( '_commission_amount', $commission_amount );
+            }
+
             $order->save();
         }
 
@@ -305,6 +332,13 @@ class Kaa_Mall_Public {
     public function render_user_portal() {
         if ( ! is_user_logged_in() ) {
             return 'Please log in to access the portal.';
+        }
+
+        if ( isset( $_GET['ref'] ) ) {
+            $reseller_id = intval( $_GET['ref'] );
+            if ( get_user_by( 'id', $reseller_id ) ) {
+                WC()->session->set( 'kaa_mall_reseller_id', $reseller_id );
+            }
         }
 
         ob_start();

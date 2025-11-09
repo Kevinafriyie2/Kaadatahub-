@@ -68,6 +68,8 @@ class Kaa_Mall_Admin {
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_public_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_secret_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_business_email' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_reseller_commission' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_user_portal_url' );
     }
 
     public function render_settings_page() {
@@ -94,6 +96,18 @@ class Kaa_Mall_Admin {
                     <tr valign="top">
                     <th scope="row">Business Email</th>
                     <td><input type="email" name="kaa_mall_business_email" value="<?php echo esc_attr( get_option('kaa_mall_business_email') ); ?>" size="50" /></td>
+                    </tr>
+                </table>
+
+                <h3>Reseller Settings</h3>
+                <table class="form-table">
+                    <tr valign="top">
+                    <th scope="row">Commission Rate (%)</th>
+                    <td><input type="number" name="kaa_mall_reseller_commission" value="<?php echo esc_attr( get_option('kaa_mall_reseller_commission') ); ?>" size="10" /></td>
+                    </tr>
+                    <tr valign="top">
+                    <th scope="row">User Portal URL</th>
+                    <td><input type="text" name="kaa_mall_user_portal_url" value="<?php echo esc_attr( get_option('kaa_mall_user_portal_url') ); ?>" size="50" /></td>
                     </tr>
                 </table>
 
@@ -135,6 +149,13 @@ class Kaa_Mall_Admin {
         return get_users();
     }
 
+    private function get_all_resellers() {
+        $args = array(
+            'role' => 'reseller',
+        );
+        return get_users( $args );
+    }
+
     public function render_admin_portal() {
         if ( ! current_user_can( 'manage_options' ) ) {
             return 'You do not have permission to view this page.';
@@ -147,6 +168,7 @@ class Kaa_Mall_Admin {
         $all_orders = $this->get_all_orders();
         $wallet_balances = $this->get_all_user_wallet_balances();
         $all_users = $this->get_all_users();
+        $all_resellers = $this->get_all_resellers();
 
         ob_start();
         ?>
@@ -267,6 +289,7 @@ class Kaa_Mall_Admin {
                             <th>Customer</th>
                             <th>Total</th>
                             <th>Status</th>
+                            <th>Reseller</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -276,6 +299,7 @@ class Kaa_Mall_Admin {
                                 continue;
                             }
                             $date_created = $order->get_date_created();
+                            $reseller_id = $order->get_meta( '_reseller_id' );
                             ?>
                             <tr>
                                 <td><?php echo $order->get_id(); ?></td>
@@ -283,6 +307,16 @@ class Kaa_Mall_Admin {
                                 <td><?php echo $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(); ?></td>
                                 <td><?php echo $order->get_formatted_order_total(); ?></td>
                                 <td><?php echo wc_get_order_status_name( $order->get_status() ); ?></td>
+                                <td>
+                                    <?php
+                                    if ( $reseller_id ) {
+                                        $reseller = get_user_by( 'id', $reseller_id );
+                                        echo esc_html( $reseller->display_name );
+                                    } else {
+                                        echo 'N/A';
+                                    }
+                                    ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -310,6 +344,27 @@ class Kaa_Mall_Admin {
             <div class="admin-section">
                 <h3>Network Prices</h3>
                 <a href="<?php echo admin_url( 'admin.php?page=kaa_mall' ); ?>">Manage Prices</a>
+            </div>
+            <div class="admin-section">
+                <h3>All Resellers</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $all_resellers as $reseller ) : ?>
+                            <tr>
+                                <td><?php echo $reseller->ID; ?></td>
+                                <td><?php echo esc_html( $reseller->display_name ); ?></td>
+                                <td><?php echo esc_html( $reseller->user_email ); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
         <?php
