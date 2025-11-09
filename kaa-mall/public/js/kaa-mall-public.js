@@ -35,6 +35,7 @@
                 key: kaa_mall_params.paystack_public_key,
                 email: kaa_mall_params.user_email,
                 amount: amount * 100, // in pesewas
+                currency: kaa_mall_params.currency,
                 ref: '' + Math.floor((Math.random() * 1000000000) + 1),
                 callback: function(response) {
                     verify_paystack_topup(response.reference, amount);
@@ -107,6 +108,7 @@
                 key: kaa_mall_params.paystack_public_key,
                 email: kaa_mall_params.user_email,
                 amount: amount * 100,
+                currency: kaa_mall_params.currency,
                 ref: '' + Math.floor((Math.random() * 1000000000) + 1),
                 callback: function(response) {
                     $.ajax({

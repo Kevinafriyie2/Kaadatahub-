@@ -33,6 +33,7 @@ class Kaa_Mall_Public {
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'paystack_public_key' => get_option( 'kaa_mall_paystack_public_key' ),
             'user_email' => $user->user_email,
+            'currency' => get_woocommerce_currency(),
             'nonce' => wp_create_nonce( 'kaa_mall_nonce' ),
         ) );
     }
