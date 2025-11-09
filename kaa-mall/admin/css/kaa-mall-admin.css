@@ -1,0 +1,31 @@
+.kaa-mall-admin-portal {
+    font-family: sans-serif;
+    color: #333;
+}
+
+.admin-section {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.admin-section h3 {
+    margin-top: 0;
+}
+
+.admin-section table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-section th, .admin-section td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.admin-section th {
+    background-color: #f2f2f2;
+}
