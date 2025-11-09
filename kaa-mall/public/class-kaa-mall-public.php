@@ -61,18 +61,31 @@ class Kaa_Mall_Public {
     public function get_bundle_prices() {
         check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $network = sanitize_text_field( $_POST['network'] );
-        $prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
-        $prices = array();
-        if ( ! empty( $prices_str ) ) {
-            $lines = explode( "\n", $prices_str );
+
+        $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
+        $admin_prices = array();
+        if ( ! empty( $admin_prices_str ) ) {
+            $lines = explode( "\n", $admin_prices_str );
             foreach ( $lines as $line ) {
                 $parts = explode( '=', $line );
                 if ( count( $parts ) == 2 ) {
-                    $prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
+                    $admin_prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
                 }
             }
         }
-        wp_send_json_success( $prices );
+
+        $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+        if ( $reseller_id ) {
+            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
+            if ( ! empty( $reseller_prices ) ) {
+                // Merge reseller prices with admin prices, ensuring all bundles are available
+                $final_prices = array_merge( $admin_prices, $reseller_prices );
+                wp_send_json_success( $final_prices );
+                return;
+            }
+        }
+
+        wp_send_json_success( $admin_prices );
     }
 
     public function verify_paystack_transaction() {
@@ -129,50 +142,62 @@ class Kaa_Mall_Public {
         $bundle = sanitize_text_field( $_POST['bundle'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
 
-        $prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
-        $prices = array();
-        if ( ! empty( $prices_str ) ) {
-            $lines = explode( "\n", $prices_str );
+        $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
+        $admin_prices = array();
+        if ( ! empty( $admin_prices_str ) ) {
+            $lines = explode( "\n", $admin_prices_str );
             foreach ( $lines as $line ) {
                 $parts = explode( '=', $line );
                 if ( count( $parts ) == 2 ) {
-                    $prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
+                    $admin_prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
                 }
             }
         }
 
-        if ( ! isset( $prices[ $bundle ] ) ) {
+        if ( ! isset( $admin_prices[ $bundle ] ) ) {
             wp_send_json_error( array( 'message' => 'Invalid bundle selected.' ) );
         }
-        $bundle_price = $prices[ $bundle ];
+
+        $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+        $final_price = $admin_prices[ $bundle ];
+
+        if ( $reseller_id ) {
+            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
+            if ( ! empty( $reseller_prices ) && isset( $reseller_prices[ $bundle ] ) ) {
+                $final_price = $reseller_prices[ $bundle ];
+            }
+        }
 
         $user_id = get_current_user_id();
         $wallet_balance = $this->get_wallet_balance( $user_id );
 
-        if ( $wallet_balance < $bundle_price ) {
+        if ( $wallet_balance < $final_price ) {
             wp_send_json_error( array( 'message' => 'Insufficient wallet balance.' ) );
         }
 
-        $new_balance = $wallet_balance - $bundle_price;
+        $new_balance = $wallet_balance - $final_price;
         update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
 
         $product = $this->get_product_by_name( 'Data Bundle' );
         if ( $product ) {
             $order = wc_create_order();
             $order->set_customer_id( $user_id );
-            $order->add_product( $product, 1, array( 'subtotal' => $bundle_price, 'total' => $bundle_price ) );
-            $order->set_total( $bundle_price );
-            $order->set_status( 'processing' ); // Or your preferred status
+            $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
+            $order->set_total( $final_price );
+            $order->set_status( 'processing' );
             $order->update_meta_data( 'Network', $network );
             $order->update_meta_data( 'Bundle', $bundle );
             $order->update_meta_data( 'Phone Number', $phone_number );
 
-            $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
             if ( $reseller_id ) {
                 $order->update_meta_data( '_reseller_id', $reseller_id );
-                $commission_rate = get_option( 'kaa_mall_reseller_commission', 0 );
-                $commission_amount = ( $bundle_price * $commission_rate ) / 100;
-                $order->update_meta_data( '_commission_amount', $commission_amount );
+                $profit = $final_price - $admin_prices[ $bundle ];
+                if ( $profit > 0 ) {
+                    $order->update_meta_data( '_reseller_profit', $profit );
+                    $current_profit_balance = get_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', true );
+                    $new_profit_balance = floatval($current_profit_balance) + $profit;
+                    update_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', $new_profit_balance );
+                }
             }
 
             $order->save();
@@ -188,22 +213,31 @@ class Kaa_Mall_Public {
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
         $reference = sanitize_text_field( $_POST['reference'] );
 
-        $prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
-        $prices = array();
-        if ( ! empty( $prices_str ) ) {
-            $lines = explode( "\n", $prices_str );
+        $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
+        $admin_prices = array();
+        if ( ! empty( $admin_prices_str ) ) {
+            $lines = explode( "\n", $admin_prices_str );
             foreach ( $lines as $line ) {
                 $parts = explode( '=', $line );
                 if ( count( $parts ) == 2 ) {
-                    $prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
+                    $admin_prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
                 }
             }
         }
 
-        if ( ! isset( $prices[ $bundle ] ) ) {
+        if ( ! isset( $admin_prices[ $bundle ] ) ) {
             wp_send_json_error( array( 'message' => 'Invalid bundle selected.' ) );
         }
-        $bundle_price = $prices[ $bundle ];
+
+        $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+        $final_price = $admin_prices[ $bundle ];
+
+        if ( $reseller_id ) {
+            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
+            if ( ! empty( $reseller_prices ) && isset( $reseller_prices[ $bundle ] ) ) {
+                $final_price = $reseller_prices[ $bundle ];
+            }
+        }
 
         $secret_key = get_option( 'kaa_mall_paystack_secret_key' );
 
@@ -233,19 +267,22 @@ class Kaa_Mall_Public {
             if ( $product ) {
                 $order = wc_create_order();
                 $order->set_customer_id( $user_id );
-                $order->add_product( $product, 1, array( 'subtotal' => $bundle_price, 'total' => $bundle_price ) );
-                $order->set_total( $bundle_price );
-                $order->set_status( 'processing' ); // Or your preferred status
+                $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
+                $order->set_total( $final_price );
+                $order->set_status( 'processing' );
                 $order->update_meta_data( 'Network', $network );
                 $order->update_meta_data( 'Bundle', $bundle );
                 $order->update_meta_data( 'Phone Number', $phone_number );
 
-                $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
                 if ( $reseller_id ) {
                     $order->update_meta_data( '_reseller_id', $reseller_id );
-                    $commission_rate = get_option( 'kaa_mall_reseller_commission', 0 );
-                    $commission_amount = ( $bundle_price * $commission_rate ) / 100;
-                    $order->update_meta_data( '_commission_amount', $commission_amount );
+                    $profit = $final_price - $admin_prices[ $bundle ];
+                    if ( $profit > 0 ) {
+                        $order->update_meta_data( '_reseller_profit', $profit );
+                        $current_profit_balance = get_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', true );
+                        $new_profit_balance = floatval($current_profit_balance) + $profit;
+                        update_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', $new_profit_balance );
+                    }
                 }
 
                 $order->save();
@@ -264,36 +301,48 @@ class Kaa_Mall_Public {
         $location = sanitize_text_field( $_POST['location'] );
         $ghana_card = sanitize_text_field( $_POST['ghana_card'] );
 
-        $afa_fee = 13.00;
+        $afa_fee = 13.00; // This is a fixed admin price
+        $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+        $final_price = $afa_fee;
+
+        if($reseller_id) {
+            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_afa', true );
+            if ( ! empty( $reseller_prices ) && isset( $reseller_prices['registration'] ) ) {
+                $final_price = $reseller_prices['registration'];
+            }
+        }
 
         $user_id = get_current_user_id();
         $wallet_balance = $this->get_wallet_balance( $user_id );
 
-        if ( $wallet_balance < $afa_fee ) {
+        if ( $wallet_balance < $final_price ) {
             wp_send_json_error( array( 'message' => 'Insufficient wallet balance.' ) );
         }
 
-        $new_balance = $wallet_balance - $afa_fee;
+        $new_balance = $wallet_balance - $final_price;
         update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
 
         $product = $this->get_product_by_name( 'AFA Registration' );
         if ( $product ) {
             $order = wc_create_order();
             $order->set_customer_id( $user_id );
-            $order->add_product( $product, 1, array( 'subtotal' => $afa_fee, 'total' => $afa_fee ) );
-            $order->set_total( $afa_fee );
-            $order->set_status( 'processing' ); // Or your preferred status
+            $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
+            $order->set_total( $final_price );
+            $order->set_status( 'processing' );
             $order->update_meta_data( 'Full Name', $full_name );
             $order->update_meta_data( 'Phone Number', $phone_number );
             $order->update_meta_data( 'Location', $location );
             $order->update_meta_data( 'Ghana Card', $ghana_card );
 
-            $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
             if ( $reseller_id ) {
                 $order->update_meta_data( '_reseller_id', $reseller_id );
-                $commission_rate = get_option( 'kaa_mall_reseller_commission', 0 );
-                $commission_amount = ( $afa_fee * $commission_rate ) / 100;
-                $order->update_meta_data( '_commission_amount', $commission_amount );
+                $profit = $final_price - $afa_fee;
+                if( $profit > 0 ) {
+                    $order->update_meta_data( '_reseller_profit', $profit );
+                    $current_profit_balance = get_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', true );
+                    $new_profit_balance = floatval($current_profit_balance) + $profit;
+                    update_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', $new_profit_balance );
+                }
             }
 
             $order->save();
