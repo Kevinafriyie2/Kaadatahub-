@@ -18,6 +18,8 @@ class Kaa_Mall {
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-kaa-mall-admin.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-public.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-reseller.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-auth.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-portal-header.php';
     }
 
     private function define_admin_hooks() {
@@ -27,6 +29,7 @@ class Kaa_Mall {
     private function define_public_hooks() {
         $plugin_public = new Kaa_Mall_Public( $this->get_plugin_name(), $this->get_version() );
         $plugin_reseller = new Kaa_Mall_Reseller();
+        $plugin_auth = new Kaa_Mall_Auth();
     }
 
     public function run() {

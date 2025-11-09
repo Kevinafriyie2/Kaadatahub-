@@ -78,67 +78,138 @@ class Kaa_Mall_Reseller {
         $profit_balance = $this->get_profit_wallet_balance( $reseller_id );
 
         ob_start();
+
+        echo Kaa_Mall_Portal_Header::render();
         ?>
+        <style>
+            .kaa-mall-reseller-portal {
+                padding: 20px;
+                max-width: 1200px;
+                margin: 0 auto;
+                color: #333;
+            }
+            .reseller-header h2 {
+                font-size: 2.5em;
+                margin-bottom: 20px;
+                color: #1a1a1a;
+            }
+            .reseller-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+            }
+            .reseller-card {
+                background: #fff;
+                border-radius: 12px;
+                padding: 25px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            .reseller-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            }
+            .reseller-card h3 {
+                font-size: 1.4em;
+                margin-top: 0;
+                margin-bottom: 15px;
+                color: #1a1a1a;
+            }
+            .profit-balance {
+                font-size: 2.5em;
+                font-weight: bold;
+                color: #4a90e2;
+            }
+            .reseller-card input[type="text"], .reseller-card input[type="number"] {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #e6e6e6;
+                border-radius: 8px;
+            }
+            .reseller-card table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .reseller-card th, .reseller-card td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #e6e6e6;
+            }
+            .reseller-card button {
+                width: 100%;
+                padding: 12px;
+                border: none;
+                border-radius: 8px;
+                background-color: #4a90e2;
+                color: #fff;
+                font-weight: bold;
+                cursor: pointer;
+            }
+        </style>
+
         <div class="kaa-mall-reseller-portal">
-            <h2>Reseller Dashboard</h2>
-
-            <div class="reseller-section">
-                <h3>Your Profit Wallet</h3>
-                <p>Your current profit balance is:</p>
-                <p class="profit-balance" style="font-size: 2em; font-weight: bold;"><?php echo wc_price( $profit_balance ); ?></p>
+            <div class="reseller-header">
+                <h2>Reseller Dashboard</h2>
             </div>
 
-            <div class="reseller-section">
-                <h3>Your Referral Link</h3>
-                <p>Share this link with your customers. Your custom prices will be shown to anyone who visits this link.</p>
-                <input type="text" value="<?php echo esc_url( add_query_arg( 'ref', get_current_user_id(), get_option( 'kaa_mall_user_portal_url' ) ) ); ?>" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-
-            <div class="reseller-section">
-                <h3>Set Your Bundle Prices</h3>
-                <p>Set your own selling price for each bundle. Your profit is the difference between your price and our base price.</p>
-
-                <div class="network-tabs">
-                    <button class="tab-link active" data-network="mtn">MTN</button>
-                    <button class="tab-link" data-network="airteltigo">AirtelTigo</button>
-                    <button class="tab-link" data-network="vodafone">Vodafone</button>
+            <div class="reseller-grid">
+                <div class="reseller-card">
+                    <h3>Your Profit Wallet</h3>
+                    <p>Your current profit balance is:</p>
+                    <p class="profit-balance"><?php echo wc_price( $profit_balance ); ?></p>
                 </div>
 
-                <?php foreach ( array('mtn', 'airteltigo', 'vodafone') as $network ) : ?>
-                    <div id="reseller-prices-<?php echo $network; ?>" class="network-tab-content <?php echo $network === 'mtn' ? 'active' : ''; ?>">
-                        <form class="reseller-prices-form" data-network="<?php echo $network; ?>">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Bundle</th>
-                                        <th>Base Price</th>
-                                        <th>Your Selling Price</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php
-                                    $admin_prices = $this->get_admin_prices( $network );
-                                    $reseller_prices = $this->get_reseller_prices( $reseller_id, $network );
-                                    foreach ( $admin_prices as $bundle => $price ) :
-                                        $reseller_price = isset( $reseller_prices[ $bundle ] ) ? $reseller_prices[ $bundle ] : $price;
-                                        ?>
-                                        <tr>
-                                            <td><?php echo esc_html( $bundle ); ?></td>
-                                            <td><?php echo wc_price( $price ); ?></td>
-                                            <td><input type="number" name="prices[<?php echo esc_attr( $bundle ); ?>]" value="<?php echo esc_attr( $reseller_price ); ?>" step="0.01" min="<?php echo esc_attr( $price ); ?>"></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                            <button type="submit">Save <?php echo ucfirst($network); ?> Prices</button>
-                        </form>
-                    </div>
-                <?php endforeach; ?>
-            </div>
+                <div class="reseller-card">
+                    <h3>Your Referral Link</h3>
+                    <p>Share this link with your customers.</p>
+                    <input type="text" value="<?php echo esc_url( add_query_arg( 'ref', get_current_user_id(), get_option( 'kaa_mall_user_portal_url' ) ) ); ?>" readonly>
+                </div>
 
-            <div class="reseller-section">
-                <h3>Your Sales</h3>
-                <table>
+                <div class="reseller-card" style="grid-column: 1 / -1;">
+                    <h3>Set Your Bundle Prices</h3>
+                    <p>Set your own selling price for each bundle.</p>
+
+                    <div class="network-tabs">
+                        <button class="tab-link active" data-network="mtn">MTN</button>
+                        <button class="tab-link" data-network="airteltigo">AirtelTigo</button>
+                        <button class="tab-link" data-network="vodafone">Vodafone</button>
+                    </div>
+
+                    <?php foreach ( array('mtn', 'airteltigo', 'vodafone') as $network ) : ?>
+                        <div id="reseller-prices-<?php echo $network; ?>" class="network-tab-content <?php echo $network === 'mtn' ? 'active' : ''; ?>">
+                            <form class="reseller-prices-form" data-network="<?php echo $network; ?>">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Bundle</th>
+                                            <th>Base Price</th>
+                                            <th>Your Selling Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php
+                                        $admin_prices = $this->get_admin_prices( $network );
+                                        $reseller_prices = $this->get_reseller_prices( $reseller_id, $network );
+                                        foreach ( $admin_prices as $bundle => $price ) :
+                                            $reseller_price = isset( $reseller_prices[ $bundle ] ) ? $reseller_prices[ $bundle ] : $price;
+                                            ?>
+                                            <tr>
+                                                <td><?php echo esc_html( $bundle ); ?></td>
+                                                <td><?php echo wc_price( $price ); ?></td>
+                                                <td><input type="number" name="prices[<?php echo esc_attr( $bundle ); ?>]" value="<?php echo esc_attr( $reseller_price ); ?>" step="0.01" min="<?php echo esc_attr( $price ); ?>"></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                                <button type="submit">Save <?php echo ucfirst($network); ?> Prices</button>
+                            </form>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="reseller-card" style="grid-column: 1 / -1;">
+                    <h3>Your Sales</h3>
+                    <table>
                     <thead>
                         <tr>
                             <th>Order ID</th>

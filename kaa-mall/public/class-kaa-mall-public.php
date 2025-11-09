@@ -432,6 +432,9 @@ class Kaa_Mall_Public {
         }
 
         ob_start();
+
+        echo Kaa_Mall_Portal_Header::render();
+
         ?>
         <style>
             :root {

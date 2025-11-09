@@ -68,8 +68,8 @@ class Kaa_Mall_Admin {
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_public_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_secret_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_business_email' );
-        register_setting( 'kaa_mall_options', 'kaa_mall_reseller_commission' );
         register_setting( 'kaa_mall_options', 'kaa_mall_user_portal_url' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_reseller_portal_url' );
     }
 
     public function render_settings_page() {
@@ -99,15 +99,15 @@ class Kaa_Mall_Admin {
                     </tr>
                 </table>
 
-                <h3>Reseller Settings</h3>
+                <h3>Portal Page Settings</h3>
                 <table class="form-table">
                     <tr valign="top">
-                    <th scope="row">Commission Rate (%)</th>
-                    <td><input type="number" name="kaa_mall_reseller_commission" value="<?php echo esc_attr( get_option('kaa_mall_reseller_commission') ); ?>" size="10" /></td>
+                        <th scope="row">User Portal URL</th>
+                        <td><input type="text" name="kaa_mall_user_portal_url" value="<?php echo esc_attr( get_option('kaa_mall_user_portal_url') ); ?>" size="50" /></td>
                     </tr>
                     <tr valign="top">
-                    <th scope="row">User Portal URL</th>
-                    <td><input type="text" name="kaa_mall_user_portal_url" value="<?php echo esc_attr( get_option('kaa_mall_user_portal_url') ); ?>" size="50" /></td>
+                        <th scope="row">Reseller Portal URL</th>
+                        <td><input type="text" name="kaa_mall_reseller_portal_url" value="<?php echo esc_attr( get_option('kaa_mall_reseller_portal_url') ); ?>" size="50" /></td>
                     </tr>
                 </table>
 
@@ -196,6 +196,12 @@ class Kaa_Mall_Admin {
                 margin-bottom: 30px;
             }
 
+            .admin-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                gap: 25px;
+            }
+
             .admin-section {
                 background: var(--card-background-color);
                 border-radius: 12px;
@@ -255,31 +261,82 @@ class Kaa_Mall_Admin {
         </style>
         <div class="kaa-mall-admin-portal">
             <h2>Admin Dashboard</h2>
-            <div class="admin-section">
-                <h3>Top Up User Wallet</h3>
-                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-                    <input type="hidden" name="action" value="kaa_mall_top_up_wallet">
-                    <?php wp_nonce_field( 'kaa_mall_top_up_wallet_nonce', 'kaa_mall_top_up_wallet_nonce' ); ?>
-                    <table class="form-table">
-                        <tr valign="top">
-                            <th scope="row">Select User</th>
-                            <td>
-                                <select name="user_id">
-                                    <?php foreach ( $all_users as $user ) : ?>
-                                        <option value="<?php echo $user->ID; ?>"><?php echo esc_html( $user->display_name ); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr valign="top">
-                            <th scope="row">Amount</th>
-                            <td><input type="number" name="amount" step="0.01" min="0.01" required /></td>
-                        </tr>
+
+            <div class="admin-grid">
+                <div class="admin-section">
+                    <h3>Top Up User Wallet</h3>
+                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                        <input type="hidden" name="action" value="kaa_mall_top_up_wallet">
+                        <?php wp_nonce_field( 'kaa_mall_top_up_wallet_nonce', 'kaa_mall_top_up_wallet_nonce' ); ?>
+                        <table class="form-table">
+                            <tr valign="top">
+                                <th scope="row">Select User</th>
+                                <td>
+                                    <select name="user_id">
+                                        <?php foreach ( $all_users as $user ) : ?>
+                                            <option value="<?php echo $user->ID; ?>"><?php echo esc_html( $user->display_name ); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr valign="top">
+                                <th scope="row">Amount</th>
+                                <td><input type="number" name="amount" step="0.01" min="0.01" required /></td>
+                            </tr>
+                        </table>
+                        <?php submit_button( 'Top Up Wallet' ); ?>
+                    </form>
+                </div>
+
+                <div class="admin-section">
+                    <h3>User Wallet Balances</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $wallet_balances as $user => $balance ) : ?>
+                                <tr>
+                                    <td><?php echo $user; ?></td>
+                                    <td>₵<?php echo number_format( $balance, 2 ); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
                     </table>
-                    <?php submit_button( 'Top Up Wallet' ); ?>
-                </form>
+                </div>
+
+                <div class="admin-section">
+                    <h3>All Resellers</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $all_resellers as $reseller ) : ?>
+                                <tr>
+                                    <td><?php echo $reseller->ID; ?></td>
+                                    <td><?php echo esc_html( $reseller->display_name ); ?></td>
+                                    <td><?php echo esc_html( $reseller->user_email ); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="admin-section">
+                    <h3>Network Prices</h3>
+                    <a href="<?php echo admin_url( 'admin.php?page=kaa_mall' ); ?>">Manage Prices</a>
+                </div>
             </div>
-            <div class="admin-section">
+
+            <div class="admin-section" style="grid-column: 1 / -1;">
                 <h3>All Orders</h3>
                 <table>
                     <thead>
@@ -317,50 +374,6 @@ class Kaa_Mall_Admin {
                                     }
                                     ?>
                                 </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <div class="admin-section">
-                <h3>User Wallet Balances</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Balance</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ( $wallet_balances as $user => $balance ) : ?>
-                            <tr>
-                                <td><?php echo $user; ?></td>
-                                <td>₵<?php echo number_format( $balance, 2 ); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <div class="admin-section">
-                <h3>Network Prices</h3>
-                <a href="<?php echo admin_url( 'admin.php?page=kaa_mall' ); ?>">Manage Prices</a>
-            </div>
-            <div class="admin-section">
-                <h3>All Resellers</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ( $all_resellers as $reseller ) : ?>
-                            <tr>
-                                <td><?php echo $reseller->ID; ?></td>
-                                <td><?php echo esc_html( $reseller->display_name ); ?></td>
-                                <td><?php echo esc_html( $reseller->user_email ); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
