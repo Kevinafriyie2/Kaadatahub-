@@ -191,6 +191,9 @@ class Kaa_Mall_Admin {
                     <tbody>
                         <?php foreach ( $all_orders as $order_post ) :
                             $order = wc_get_order( $order_post->ID );
+                            if ( ! $order ) {
+                                continue;
+                            }
                             $date_created = $order->get_date_created();
                             ?>
                             <tr>

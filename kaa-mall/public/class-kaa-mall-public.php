@@ -21,9 +21,18 @@ class Kaa_Mall_Public {
     }
 
     public function enqueue_scripts() {
-        wp_enqueue_style( 'kaa-mall-public', plugin_dir_url( __FILE__ ) . 'css/kaa-mall-public.css', array(), $this->version, 'all' );
+        $css_file_path = plugin_dir_path( __FILE__ ) . 'css/kaa-mall-public.css';
+        $css_file_url = plugin_dir_url( __FILE__ ) . 'css/kaa-mall-public.css';
+        $css_version = filemtime( $css_file_path );
+
+        wp_enqueue_style( 'kaa-mall-public', $css_file_url, array(), $css_version, 'all' );
+
+        $js_file_path = plugin_dir_path( __FILE__ ) . 'js/kaa-mall-public.js';
+        $js_file_url = plugin_dir_url( __FILE__ ) . 'js/kaa-mall-public.js';
+        $js_version = filemtime( $js_file_path );
+
         wp_enqueue_script( 'paystack-inline', 'https://js.paystack.co/v1/inline.js', array(), $this->version, false );
-        wp_enqueue_script( 'kaa-mall-public', plugin_dir_url( __FILE__ ) . 'js/kaa-mall-public.js', array( 'jquery', 'paystack-inline' ), $this->version, false );
+        wp_enqueue_script( 'kaa-mall-public', $js_file_url, array( 'jquery', 'paystack-inline' ), $js_version, false );
 
         $user = wp_get_current_user();
         wp_localize_script( 'kaa-mall-public', 'kaa_mall_params', array(
