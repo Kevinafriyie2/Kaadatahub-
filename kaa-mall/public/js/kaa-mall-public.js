@@ -2,6 +2,11 @@
     'use strict';
 
     $(function() {
+        // Handle hamburger menu toggle
+        $('.hamburger-menu').on('click', function() {
+            $('.header-nav').toggleClass('active');
+        });
+
         // Initial setup on page load
         update_wallet_balance();
         load_recent_orders();

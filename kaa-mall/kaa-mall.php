@@ -76,3 +76,15 @@ function init_kaa_mall() {
 }
 
 add_action( 'plugins_loaded', 'init_kaa_mall' );
+
+/**
+ * Temp: Set the correct user portal URL on activation.
+ * This is a temporary fix to ensure the redirect works.
+ */
+function kaa_mall_set_default_options() {
+    $correct_url = 'https://kaadatahub.shop/users-portal-new/';
+    if ( get_option( 'kaa_mall_user_portal_url' ) !== $correct_url ) {
+        update_option( 'kaa_mall_user_portal_url', $correct_url );
+    }
+}
+add_action( 'init', 'kaa_mall_set_default_options' );

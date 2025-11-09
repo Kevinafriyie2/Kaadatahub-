@@ -44,119 +44,243 @@ class Kaa_Mall_Auth {
 
     public function render_auth_portal() {
         if ( is_user_logged_in() ) {
-            wp_redirect( get_option('kaa_mall_user_portal_url') );
+            $redirect_url = get_option('kaa_mall_user_portal_url', home_url());
+            wp_redirect( $redirect_url );
             exit;
         }
 
         ob_start();
         ?>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
+            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
             .kaa-auth-portal {
-                max-width: 400px;
-                margin: 40px auto;
-                padding: 30px;
-                background-color: #1e1e1e;
-                border-radius: 12px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-                color: #e0e0e0;
+                font-family: 'Poppins', sans-serif;
+                max-width: 420px;
+                margin: 50px auto;
+                padding: 40px;
+                background-color: #ffffff;
+                border-radius: 24px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+                color: #555;
             }
+
+            .auth-header {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+
+            .auth-header .icon {
+                font-size: 48px;
+                color: #6a5af9;
+                margin-bottom: 15px;
+            }
+
+            .auth-header h1 {
+                font-size: 28px;
+                font-weight: 700;
+                color: #333;
+                margin: 0;
+            }
+
+            .auth-header p {
+                color: #888;
+                margin-top: 5px;
+            }
+
+            .auth-info-box {
+                background-color: #eef2ff;
+                border-left: 4px solid #6a5af9;
+                padding: 15px;
+                margin-bottom: 30px;
+                border-radius: 8px;
+                font-size: 14px;
+            }
+             .auth-info-box .new-badge {
+                background-color: #6a5af9;
+                color: white;
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                margin-left: 5px;
+                font-weight: 600;
+            }
+
             .auth-tabs {
                 display: flex;
-                margin-bottom: 25px;
-                border-bottom: 1px solid #333;
+                background-color: #f4f4f7;
+                border-radius: 12px;
+                padding: 5px;
+                margin-bottom: 30px;
             }
+
             .auth-tabs .tab-link {
+                flex: 1;
                 background: none;
                 border: none;
-                color: #a0a0a0;
+                color: #555;
                 cursor: pointer;
-                padding: 15px 20px;
-                font-size: 1.1em;
+                padding: 12px;
+                font-size: 16px;
                 font-weight: 600;
-                transition: color 0.2s ease, border-bottom 0.2s ease;
-                border-bottom: 3px solid transparent;
+                border-radius: 8px;
+                transition: all 0.3s ease;
             }
+
             .auth-tabs .tab-link.active {
-                color: #ffc107;
-                border-bottom-color: #ffc107;
+                background-color: #ffffff;
+                color: #6a5af9;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             }
+
             .auth-tab-content {
                 display: none;
             }
+
             .auth-tab-content.active {
                 display: block;
             }
-            .kaa-auth-portal h3 {
-                text-align: center;
-                color: #ffffff;
-                margin-bottom: 25px;
-                font-size: 1.8em;
+
+            .form-group {
+                position: relative;
+                margin-bottom: 20px;
             }
-            .kaa-auth-portal form label {
-                display: block;
-                margin-bottom: 8px;
-                font-weight: 600;
+
+            .form-group .form-icon {
+                position: absolute;
+                top: 50%;
+                left: 15px;
+                transform: translateY(-50%);
+                color: #aaa;
             }
-            .kaa-auth-portal form input[type="text"],
-            .kaa-auth-portal form input[type="email"],
-            .kaa-auth-portal form input[type="password"] {
+
+            .form-group input[type="text"],
+            .form-group input[type="email"],
+            .form-group input[type="password"] {
                 width: 100%;
-                padding: 12px;
-                margin-bottom: 15px;
-                border: 1px solid #333;
-                border-radius: 8px;
-                background-color: #2c2c2c;
-                color: #e0e0e0;
-                font-size: 1em;
+                padding: 14px 14px 14px 45px;
+                border: 1px solid #ddd;
+                border-radius: 12px;
+                background-color: #f9f9f9;
+                color: #333;
+                font-size: 15px;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease;
                 box-sizing: border-box;
             }
-            .kaa-auth-portal form button,
-            .kaa-auth-portal form input[type="submit"] {
-                width: 100%;
-                padding: 12px;
-                border: none;
-                border-radius: 8px;
-                background-color: #ffc107;
-                color: #121212;
-                font-weight: bold;
-                cursor: pointer;
-                font-size: 1.1em;
-                transition: background-color 0.2s ease;
+
+            .form-group input:focus {
+                outline: none;
+                border-color: #6a5af9;
+                box-shadow: 0 0 0 3px rgba(106, 90, 249, 0.2);
             }
-            .kaa-auth-portal form button:hover,
-            .kaa-auth-portal form input[type="submit"]:hover {
-                background-color: #ffdb6e;
+
+            .form-group .password-toggle {
+                position: absolute;
+                top: 50%;
+                right: 15px;
+                transform: translateY(-50%);
+                color: #aaa;
+                cursor: pointer;
+            }
+
+            .form-options {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+                font-size: 14px;
+            }
+
+            .form-options .remember-me {
+                display: flex;
+                align-items: center;
+            }
+
+            .form-options .remember-me input {
+                margin-right: 8px;
+            }
+
+            .form-options a {
+                color: #6a5af9;
+                text-decoration: none;
+                font-weight: 500;
+            }
+
+            .form-submit-button {
+                width: 100%;
+                padding: 15px;
+                border: none;
+                border-radius: 12px;
+                background: linear-gradient(to right, #6a5af9, #8a7dfc);
+                color: #ffffff;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 16px;
+                transition: all 0.3s ease;
+                box-shadow: 0 5px 15px rgba(106, 90, 249, 0.3);
+            }
+            .form-submit-button:hover {
+                 transform: translateY(-2px);
+                 box-shadow: 0 8px 20px rgba(106, 90, 249, 0.4);
             }
         </style>
         <div class="kaa-auth-portal">
+            <div class="auth-header">
+                <div class="icon"><i class="fas fa-user-circle"></i></div>
+                <h1>WELCOME TO KAA MALL</h1>
+                <p>Your shopping destination in Ghana</p>
+            </div>
+
+            <div class="auth-info-box">
+                <span><i class="fas fa-info-circle"></i> <strong>Sign in</strong> if you have an account.</span><br>
+                <span><strong>Sign up</strong> if you're new. <span class="new-badge">NEW</span></span>
+            </div>
+
             <div class="auth-tabs">
-                <button class="tab-link active" data-tab="login">Login</button>
-                <button class="tab-link" data-tab="register">Register</button>
+                <button class="tab-link active" data-tab="login">Sign In</button>
+                <button class="tab-link" data-tab="register">Sign Up</button>
             </div>
 
             <div id="login" class="auth-tab-content active">
-                <h3>Login</h3>
-                <?php wp_login_form( array('redirect' => get_option('kaa_mall_user_portal_url')) ); ?>
+                <form id="kaa-mall-login-form" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>" method="post">
+                    <div class="form-group">
+                        <i class="fas fa-envelope form-icon"></i>
+                        <input type="text" name="log" id="user_login" placeholder="Email or Username" required>
+                    </div>
+                    <div class="form-group">
+                        <i class="fas fa-lock form-icon"></i>
+                        <input type="password" name="pwd" id="user_pass" placeholder="Password" required>
+                        <i class="fas fa-eye password-toggle"></i>
+                    </div>
+                    <div class="form-options">
+                        <div class="remember-me">
+                            <input type="checkbox" name="rememberme" id="rememberme" value="forever">
+                            <label for="rememberme">Remember me</label>
+                        </div>
+                        <a href="<?php echo esc_url( wp_lostpassword_url() ); ?>">Forgot password?</a>
+                    </div>
+                    <input type="hidden" name="redirect_to" value="<?php echo esc_url( get_option('kaa_mall_user_portal_url') ); ?>">
+                    <button type="submit" class="form-submit-button">Sign In &rarr;</button>
+                </form>
             </div>
 
             <div id="register" class="auth-tab-content">
-                <h3>Register</h3>
                 <form id="kaa-mall-register-form">
-                    <p>
-                        <label for="reg_username">Username</label>
-                        <input type="text" name="username" id="reg_username" required>
-                    </p>
-                    <p>
-                        <label for="reg_email">Email</label>
-                        <input type="email" name="email" id="reg_email" required>
-                    </p>
-                    <p>
-                        <label for="reg_password">Password</label>
-                        <input type="password" name="password" id="reg_password" required>
-                    </p>
-                    <p>
-                        <button type="submit">Register</button>
-                    </p>
+                    <div class="form-group">
+                        <i class="fas fa-user form-icon"></i>
+                        <input type="text" name="username" id="reg_username" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <i class="fas fa-envelope form-icon"></i>
+                        <input type="email" name="email" id="reg_email" placeholder="Email" required>
+                    </div>
+                    <div class="form-group">
+                        <i class="fas fa-lock form-icon"></i>
+                        <input type="password" name="password" id="reg_password" placeholder="Password" required>
+                         <i class="fas fa-eye password-toggle"></i>
+                    </div>
+                    <button type="submit" class="form-submit-button">Sign Up</button>
                 </form>
             </div>
         </div>

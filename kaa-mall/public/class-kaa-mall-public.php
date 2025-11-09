@@ -615,9 +615,14 @@ class Kaa_Mall_Public {
                 color: white;
             }
 
+            .purchase-history {
+                overflow-x: auto;
+            }
+
             .purchase-history table {
                 width: 100%;
                 border-collapse: collapse;
+                min-width: 600px;
             }
 
             .purchase-history th,
