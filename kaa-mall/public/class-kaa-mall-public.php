@@ -331,7 +331,48 @@ class Kaa_Mall_Public {
 
     public function render_user_portal() {
         if ( ! is_user_logged_in() ) {
-            return 'Please log in to access the portal.';
+            ob_start();
+            ?>
+            <style>
+                #loginform label {
+                    color: #e0e0e0;
+                }
+                #loginform input[type="text"],
+                #loginform input[type="password"] {
+                    background-color: #2c2c2c;
+                    border: 1px solid #333;
+                    color: #e0e0e0;
+                    width: 100%;
+                    padding: 10px;
+                    border-radius: 8px;
+                    margin-bottom: 15px;
+                }
+                #loginform input[type="submit"] {
+                    background-color: #ffc107;
+                    color: #121212;
+                    border: none;
+                    font-weight: bold;
+                    width: 100%;
+                    padding: 12px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                }
+                #loginform .forgetmenot label {
+                    color: #e0e0e0;
+                }
+                #loginform a {
+                    color: #ffc107;
+                }
+                .login-remember {
+                    margin-bottom: 15px;
+                }
+            </style>
+            <div class="kaa-mall-portal" style="max-width: 400px; margin: 40px auto; padding: 20px; background-color: #1e1e1e; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                <h3 style="text-align: center; color: #ffffff; margin-bottom: 20px;">Please log in to access the portal.</h3>
+                <?php wp_login_form( array('redirect' => get_permalink()) ); ?>
+            </div>
+            <?php
+            return ob_get_clean();
         }
 
         if ( isset( $_GET['ref'] ) ) {
