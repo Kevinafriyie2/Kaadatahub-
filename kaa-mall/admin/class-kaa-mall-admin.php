@@ -191,10 +191,11 @@ class Kaa_Mall_Admin {
                     <tbody>
                         <?php foreach ( $all_orders as $order_post ) :
                             $order = wc_get_order( $order_post->ID );
+                            $date_created = $order->get_date_created();
                             ?>
                             <tr>
                                 <td><?php echo $order->get_id(); ?></td>
-                                <td><?php echo $order->get_date_created()->date_i18n( 'Y-m-d H:i:s' ); ?></td>
+                                <td><?php echo $date_created ? $date_created->date_i18n( 'Y-m-d H:i:s' ) : 'N/A'; ?></td>
                                 <td><?php echo $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(); ?></td>
                                 <td><?php echo $order->get_formatted_order_total(); ?></td>
                                 <td><?php echo wc_get_order_status_name( $order->get_status() ); ?></td>
