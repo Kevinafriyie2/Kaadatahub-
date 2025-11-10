@@ -422,10 +422,20 @@ class Kaa_Mall_Public {
     }
 
     public function render_user_portal() {
-        if ( isset( $_GET['ref'] ) ) {
-            $reseller_id = intval( $_GET['ref'] );
-            if ( get_user_by( 'id', $reseller_id ) && function_exists('WC') && WC()->session ) {
-                WC()->session->set( 'kaa_mall_reseller_id', $reseller_id );
+        if ( isset( $_GET['ref_shop'] ) ) {
+            $shop_name = sanitize_title( $_GET['ref_shop'] );
+            $users = get_users( array(
+                'meta_key'   => '_kaa_mall_shop_name',
+                'meta_value' => $shop_name,
+                'number'     => 1,
+                'fields'     => 'ID',
+            ) );
+
+            if ( ! empty( $users ) ) {
+                $reseller_id = $users[0];
+                if ( function_exists('WC') && WC()->session ) {
+                    WC()->session->set( 'kaa_mall_reseller_id', $reseller_id );
+                }
             }
         }
 

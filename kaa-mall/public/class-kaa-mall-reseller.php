@@ -69,7 +69,12 @@ class Kaa_Mall_Reseller {
 
         update_user_meta( $reseller_id, '_kaa_mall_shop_name', $shop_name );
 
-        $referral_link = esc_url( home_url( '/shop/' . $shop_name ) );
+        $portal_url = get_option( 'kaa_mall_user_portal_url' );
+        if ( empty( $portal_url ) ) {
+            wp_send_json_error( array( 'message' => 'The user portal URL is not configured. Please contact an administrator.' ) );
+        }
+
+        $referral_link = esc_url( add_query_arg( 'ref_shop', $shop_name, $portal_url ) );
 
         wp_send_json_success( array(
             'message' => 'Shop name updated successfully.',
@@ -273,7 +278,12 @@ class Kaa_Mall_Reseller {
                     <h3>Your Referral Link</h3>
                     <p>Share this link with your customers.</p>
                     <div class="referral-link-wrapper">
-                        <input type="text" id="kaa-mall-referral-link" value="<?php echo esc_url( home_url( '/shop/' . get_user_meta( $reseller_id, '_kaa_mall_shop_name', true ) ) ); ?>" readonly>
+                        <?php
+                        $shop_name = get_user_meta( $reseller_id, '_kaa_mall_shop_name', true );
+                        $portal_url = get_option( 'kaa_mall_user_portal_url' );
+                        $referral_link = ! empty( $portal_url ) ? esc_url( add_query_arg( 'ref_shop', $shop_name, $portal_url ) ) : 'Please configure the User Portal URL in settings.';
+                        ?>
+                        <input type="text" id="kaa-mall-referral-link" value="<?php echo $referral_link; ?>" readonly>
                         <button id="kaa-mall-copy-btn">Copy</button>
                     </div>
                 </div>
