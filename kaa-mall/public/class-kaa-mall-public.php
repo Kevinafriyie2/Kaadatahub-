@@ -81,6 +81,11 @@ class Kaa_Mall_Public {
         check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $network = sanitize_text_field( $_POST['network'] );
 
+        if ( get_option( 'kaa_mall_' . $network . '_out_of_stock' ) ) {
+            wp_send_json_success( array() );
+            return;
+        }
+
         $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
         $admin_prices = array();
         if ( ! empty( $admin_prices_str ) ) {
@@ -439,54 +444,6 @@ class Kaa_Mall_Public {
             }
         }
 
-        if ( ! is_user_logged_in() ) {
-            ob_start();
-            ?>
-            <style>
-                #loginform label {
-                    color: #e0e0e0;
-                }
-                #loginform input[type="text"],
-                #loginform input[type="password"] {
-                    background-color: #2c2c2c;
-                    border: 1px solid #333;
-                    color: #e0e0e0;
-                    width: 100%;
-                    padding: 10px;
-                    border-radius: 8px;
-                    margin-bottom: 15px;
-                }
-                #loginform input[type="submit"] {
-                    background-color: #ffc107;
-                    color: #121212;
-                    border: none;
-                    font-weight: bold;
-                    width: 100%;
-                    padding: 12px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                }
-                #loginform .forgetmenot label {
-                    color: #e0e0e0;
-                }
-                #loginform a {
-                    color: #ffc107;
-                }
-                .login-remember {
-                    margin-bottom: 15px;
-                }
-            </style>
-            <div class="kaa-mall-portal" style="max-width: 400px; margin: 40px auto; padding: 20px; background-color: #1e1e1e; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
-                <h3 style="text-align: center; color: #ffffff; margin-bottom: 20px;">Please log in to access the portal.</h3>
-                <?php wp_login_form( array('redirect' => get_permalink()) ); ?>
-                <p style="text-align: center; margin-top: 20px; color: #e0e0e0;">
-                    Don't have an account? <a href="<?php echo esc_url( home_url( '/auth' ) ); ?>" style="color: #ffc107;">Register here</a>
-                </p>
-            </div>
-            <?php
-            return ob_get_clean();
-        }
-
         ob_start();
 
         if ( is_user_logged_in() ) {
@@ -774,6 +731,28 @@ class Kaa_Mall_Public {
                 <p>Instant Data Top-up for All Networks</p>
             </div>
 
+            <div class="kaa-mall-card">
+                <h3>Broadcast Messages</h3>
+                <?php
+                $broadcasts = get_posts( array(
+                    'post_type' => 'kaa_mall_broadcast',
+                    'numberposts' => 5,
+                ) );
+                ?>
+                <ul>
+                    <?php if ( ! empty( $broadcasts ) ) : ?>
+                        <?php foreach ( $broadcasts as $broadcast ) : ?>
+                            <li>
+                                <strong><?php echo esc_html( $broadcast->post_title ); ?></strong> - <?php echo esc_html( $broadcast->post_content ); ?>
+                                <small>(<?php echo get_the_date( '', $broadcast ); ?>)</small>
+                            </li>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <li>No recent broadcasts.</li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+
             <?php if ( is_user_logged_in() ) : ?>
             <div class="kaa-mall-card wallet-balance">
                 <div class="wallet-balance-details">
@@ -925,7 +904,7 @@ class Kaa_Mall_Public {
             <div class="kaa-mall-card need-help">
                 <h3>Need Help?</h3>
                 <p>Our support team is here to help you 24/7</p>
-                <a href="#" class="contact-admin-btn">Contact the Admin</a>
+                <a href="https://wa.me/233201858375" class="contact-admin-btn">Contact the Admin</a>
             </div>
         </div>
         <?php

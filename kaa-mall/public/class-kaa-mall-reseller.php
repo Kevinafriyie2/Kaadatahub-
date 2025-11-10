@@ -4,10 +4,86 @@ class Kaa_Mall_Reseller {
 
     public function __construct() {
         add_shortcode( 'kaa_reseller_portal', array( $this, 'render_reseller_portal' ) );
+        add_shortcode( 'kaa_reseller_apply', array( $this, 'render_apply_form' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
         add_action( 'wp_ajax_kaa_mall_save_reseller_prices', array( $this, 'save_reseller_prices' ) );
         add_action( 'wp_ajax_kaa_mall_save_shop_name', array( $this, 'save_shop_name' ) );
         add_action( 'wp_ajax_kaa_mall_request_withdrawal', array( $this, 'request_withdrawal' ) );
+        add_action( 'wp_ajax_kaa_mall_submit_reseller_application', array( $this, 'submit_reseller_application' ) );
+    }
+
+    public function submit_reseller_application() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'You must be logged in to apply.' ) );
+        }
+
+        $user_id = get_current_user_id();
+
+        if ( current_user_can( 'reseller' ) ) {
+            wp_send_json_error( array( 'message' => 'You are already a reseller.' ) );
+        }
+
+        $existing_application = get_posts( array(
+            'post_type' => 'reseller_application',
+            'author' => $user_id,
+            'post_status' => 'pending',
+        ) );
+
+        if ( ! empty( $existing_application ) ) {
+            wp_send_json_error( array( 'message' => 'You already have a pending application.' ) );
+        }
+
+        $reference = sanitize_text_field( $_POST['reference'] );
+        $secret_key = get_option( 'kaa_mall_paystack_secret_key' );
+        $application_fee = floatval( get_option( 'kaa_mall_reseller_application_fee', '10' ) );
+
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => "https://api.paystack.co/transaction/verify/" . rawurlencode($reference),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                "accept: application/json",
+                "authorization: Bearer $secret_key",
+            ],
+        ));
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            wp_send_json_error( array( 'message' => 'An error occurred while verifying the transaction.' ) );
+        }
+
+        $result = json_decode($response);
+        if ( 'success' === $result->data->status ) {
+            $amount_paid = $result->data->amount / 100;
+
+            if ( $amount_paid < $application_fee ) {
+                wp_send_json_error( array( 'message' => 'The amount paid is incorrect.' ) );
+            }
+
+            $post_id = wp_insert_post( array(
+                'post_title' => 'Reseller Application from ' . wp_get_current_user()->display_name,
+                'post_type' => 'reseller_application',
+                'post_status' => 'pending',
+                'post_author' => $user_id,
+            ) );
+
+            if ( $post_id ) {
+                update_post_meta( $post_id, '_paystack_reference', $reference );
+                $admin_email = get_option( 'admin_email' );
+                $subject = 'New Reseller Application';
+                $message = 'A new reseller application has been submitted by ' . wp_get_current_user()->display_name . '. Please review it in the admin dashboard.';
+                wp_mail( $admin_email, $subject, $message );
+                wp_send_json_success( array( 'message' => 'Your application has been submitted. You will be notified once it has been reviewed.' ) );
+            } else {
+                wp_send_json_error( array( 'message' => 'There was an error submitting your application. Please try again.' ) );
+            }
+        } else {
+            wp_send_json_error( array( 'message' => 'Transaction verification failed.' ) );
+        }
     }
 
     public function enqueue_scripts() {
@@ -20,6 +96,22 @@ class Kaa_Mall_Reseller {
                 wp_localize_script( 'kaa-mall-reseller', 'kaa_mall_reseller_params', array(
                     'ajax_url' => admin_url( 'admin-ajax.php' ),
                     'nonce' => wp_create_nonce( 'kaa_mall_reseller_nonce' ),
+                ) );
+            }
+
+            if ( has_shortcode( $post->post_content, 'kaa_reseller_apply' ) ) {
+                wp_enqueue_script( 'paystack-inline', 'https://js.paystack.co/v1/inline.js', array(), null, true );
+                $js_file_url = plugin_dir_url( __FILE__ ) . 'js/kaa-mall-reseller-apply.js';
+                $js_version = filemtime( plugin_dir_path( __FILE__ ) . 'js/kaa-mall-reseller-apply.js' );
+                wp_enqueue_script( 'kaa-mall-reseller-apply', $js_file_url, array( 'jquery', 'paystack-inline' ), $js_version, true );
+
+                $user = wp_get_current_user();
+                wp_localize_script( 'kaa-mall-reseller-apply', 'kaa_mall_params', array(
+                    'ajax_url' => admin_url( 'admin-ajax.php' ),
+                    'paystack_public_key' => get_option( 'kaa_mall_paystack_public_key' ),
+                    'nonce' => wp_create_nonce( 'kaa_mall_nonce' ),
+                    'user_email' => $user->user_email,
+                    'currency' => function_exists('get_woocommerce_currency') ? get_woocommerce_currency() : 'GHS',
                 ) );
             }
         }
@@ -157,6 +249,87 @@ class Kaa_Mall_Reseller {
         return empty( $balance ) ? 0.00 : floatval( $balance );
     }
 
+    private function get_total_reseller_sales( $reseller_id ) {
+        $args = array(
+            'post_type' => 'shop_order',
+            'post_status' => array_keys( wc_get_order_statuses() ),
+            'meta_key' => '_reseller_id',
+            'meta_value' => $reseller_id,
+            'numberposts' => -1,
+            'fields' => 'ids',
+        );
+        $orders = get_posts( $args );
+        $total_sales = 0;
+        foreach ( $orders as $order_id ) {
+            $order = wc_get_order( $order_id );
+            if ( $order ) {
+                $total_sales += $order->get_total();
+            }
+        }
+        return $total_sales;
+    }
+
+    private function get_total_reseller_profit( $reseller_id ) {
+        $args = array(
+            'post_type' => 'shop_order',
+            'post_status' => array_keys( wc_get_order_statuses() ),
+            'meta_key' => '_reseller_id',
+            'meta_value' => $reseller_id,
+            'numberposts' => -1,
+            'fields' => 'ids',
+        );
+        $orders = get_posts( $args );
+        $total_profit = 0;
+        foreach ( $orders as $order_id ) {
+            $order = wc_get_order( $order_id );
+            if ( $order ) {
+                $profit = $order->get_meta( '_reseller_profit' );
+                if ( ! empty( $profit ) ) {
+                    $total_profit += floatval( $profit );
+                }
+            }
+        }
+        return $total_profit;
+    }
+
+    public function render_apply_form() {
+        ob_start();
+
+        if ( ! is_user_logged_in() ) {
+            echo '<p>You must be logged in to apply to be a reseller.</p>';
+            return ob_get_clean();
+        }
+
+        if ( current_user_can( 'reseller' ) ) {
+            echo '<p>You are already a reseller.</p>';
+            return ob_get_clean();
+        }
+
+        $user_id = get_current_user_id();
+        $existing_application = get_posts( array(
+            'post_type' => 'reseller_application',
+            'author' => $user_id,
+            'post_status' => 'pending',
+        ) );
+
+        if ( ! empty( $existing_application ) ) {
+            echo '<p>You have a pending reseller application. Please wait for an administrator to review it.</p>';
+            return ob_get_clean();
+        }
+
+        $application_fee = get_option( 'kaa_mall_reseller_application_fee', '10' );
+        ?>
+        <div id="kaa-mall-reseller-apply-form">
+            <h3>Apply to be a Reseller</h3>
+            <p>To become a reseller, you need to pay a one-time application fee.</p>
+            <p><strong>Application Fee:</strong> <?php echo wc_price( $application_fee ); ?></p>
+            <button id="kaa-mall-apply-now-btn" data-fee="<?php echo esc_attr( $application_fee ); ?>">Apply Now</button>
+        </div>
+        <?php
+
+        return ob_get_clean();
+    }
+
     public function render_reseller_portal() {
         if ( ! is_user_logged_in() ) {
             ob_start();
@@ -173,6 +346,8 @@ class Kaa_Mall_Reseller {
 
         $reseller_id = get_current_user_id();
         $profit_balance = $this->get_profit_wallet_balance( $reseller_id );
+        $total_sales = $this->get_total_reseller_sales( $reseller_id );
+        $total_profit = $this->get_total_reseller_profit( $reseller_id );
 
         ob_start();
 
@@ -306,6 +481,32 @@ class Kaa_Mall_Reseller {
             .network-tab-content.active {
                 display: block;
             }
+            #loginform label {
+                color: var(--text-color);
+            }
+            #loginform input[type="text"],
+            #loginform input[type="password"] {
+                background-color: #2c2c2c;
+                border: 1px solid var(--border-color);
+                color: var(--text-color);
+                width: 100%;
+                padding: 10px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+            }
+            #loginform input[type="submit"] {
+                background-color: var(--primary-color);
+                color: #121212;
+                border: none;
+                font-weight: bold;
+                width: 100%;
+                padding: 12px;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+            #loginform .forgetmenot label {
+                color: var(--text-color);
+            }
         </style>
 
         <div class="kaa-mall-reseller-portal">
@@ -315,9 +516,24 @@ class Kaa_Mall_Reseller {
 
             <div class="reseller-grid">
                 <div class="reseller-card">
+                    <h3>Your Reseller ID</h3>
+                    <p class="profit-balance"><?php echo esc_html( $reseller_id ); ?></p>
+                </div>
+
+                <div class="reseller-card">
                     <h3>Your Profit Wallet</h3>
                     <p>Your current profit balance is:</p>
                     <p class="profit-balance"><?php echo wc_price( $profit_balance ); ?></p>
+                </div>
+
+                <div class="reseller-card">
+                    <h3>Total Sales</h3>
+                    <p class="profit-balance"><?php echo wc_price( $total_sales ); ?></p>
+                </div>
+
+                <div class="reseller-card">
+                    <h3>Total Profit</h3>
+                    <p class="profit-balance"><?php echo wc_price( $total_profit ); ?></p>
                 </div>
 
                 <div class="reseller-card">

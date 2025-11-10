@@ -16,6 +16,119 @@ class Kaa_Mall_Admin {
         add_action( 'admin_post_kaa_mall_bulk_update_order_status', array( $this, 'handle_bulk_update_order_status' ) );
         add_action( 'admin_post_kaa_mall_mark_withdrawal_paid', array( $this, 'handle_mark_withdrawal_paid' ) );
         add_action( 'wp_ajax_kaa_mall_search_users', array( $this, 'search_users' ) );
+        add_action( 'admin_post_kaa_mall_login_as_user', array( $this, 'handle_login_as_user' ) );
+        add_action( 'admin_post_kaa_mall_approve_reseller', array( $this, 'handle_approve_reseller' ) );
+        add_action( 'admin_post_kaa_mall_deny_reseller', array( $this, 'handle_deny_reseller' ) );
+        add_action( 'admin_post_kaa_mall_send_broadcast', array( $this, 'handle_send_broadcast' ) );
+    }
+
+    public function handle_send_broadcast() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        check_admin_referer( 'kaa_mall_send_broadcast_nonce', 'kaa_mall_send_broadcast_nonce' );
+
+        $subject = sanitize_text_field( $_POST['broadcast_subject'] );
+        $message = wp_kses_post( $_POST['broadcast_message'] );
+        $recipient = sanitize_text_field( $_POST['broadcast_recipient'] );
+
+        // Save the broadcast
+        wp_insert_post( array(
+            'post_type' => 'kaa_mall_broadcast',
+            'post_title' => $subject,
+            'post_content' => $message,
+            'post_status' => 'publish',
+        ) );
+
+        // Get recipients
+        if ( $recipient === 'resellers' ) {
+            $users = get_users( array( 'role' => 'reseller' ) );
+        } else {
+            $users = get_users();
+        }
+
+        $emails = array();
+        foreach ( $users as $user ) {
+            $emails[] = $user->user_email;
+        }
+
+        // Send the email
+        wp_mail( $emails, $subject, $message );
+
+        $redirect_url = add_query_arg( 'message', 'Broadcast sent successfully.', wp_get_referer() );
+        wp_redirect( $redirect_url );
+        exit;
+    }
+
+    public function handle_approve_reseller() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        $application_id = intval( $_GET['application_id'] );
+        $user_id = get_post_field( 'post_author', $application_id );
+
+        $user = get_user_by( 'id', $user_id );
+        $user->add_role( 'reseller' );
+
+        wp_update_post( array(
+            'ID' => $application_id,
+            'post_status' => 'publish',
+        ) );
+
+        // Send email to user
+        $user_email = $user->user_email;
+        $subject = 'Your Reseller Application has been Approved';
+        $message = 'Congratulations! Your reseller application has been approved. You can now access the reseller dashboard.';
+        wp_mail( $user_email, $subject, $message );
+
+        $redirect_url = add_query_arg( 'message', 'Reseller approved.', wp_get_referer() );
+        wp_redirect( $redirect_url );
+        exit;
+    }
+
+    public function handle_deny_reseller() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        $application_id = intval( $_GET['application_id'] );
+        $user_id = get_post_field( 'post_author', $application_id );
+
+        wp_update_post( array(
+            'ID' => $application_id,
+            'post_status' => 'trash',
+        ) );
+
+        // Send email to user
+        $user = get_user_by( 'id', $user_id );
+        $user_email = $user->user_email;
+        $subject = 'Your Reseller Application has been Denied';
+        $message = 'We regret to inform you that your reseller application has been denied at this time.';
+        wp_mail( $user_email, $subject, $message );
+
+        $redirect_url = add_query_arg( 'message', 'Reseller denied.', wp_get_referer() );
+        wp_redirect( $redirect_url );
+        exit;
+    }
+
+    public function handle_login_as_user() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        $user_id = intval( $_GET['user_id'] );
+        wp_set_current_user( $user_id );
+        wp_set_auth_cookie( $user_id );
+
+        $portal_url = get_option( 'kaa_mall_user_portal_url' );
+        if( empty( $portal_url ) ) {
+            $portal_url = home_url();
+        }
+
+        wp_redirect( $portal_url );
+        exit;
     }
 
     public function search_users() {
@@ -101,12 +214,34 @@ class Kaa_Mall_Admin {
             array( $this, 'render_settings_page' ),
             'dashicons-store'
         );
+
+        add_submenu_page(
+            'kaa_mall',
+            'Reseller Applications',
+            'Reseller Applications',
+            'manage_options',
+            'kaa-mall-reseller-applications',
+            array($this, 'display_reseller_applications_page')
+        );
+
+        add_submenu_page(
+            'kaa_mall',
+            'Broadcast Messages',
+            'Broadcast Messages',
+            'manage_options',
+            'kaa-mall-broadcasts',
+            array($this, 'display_broadcasts_page')
+        );
     }
 
     public function register_settings() {
         register_setting( 'kaa_mall_options', 'kaa_mall_mtn_prices' );
         register_setting( 'kaa_mall_options', 'kaa_mall_airteltigo_prices' );
         register_setting( 'kaa_mall_options', 'kaa_mall_vodafone_prices' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_mtn_out_of_stock' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_airteltigo_out_of_stock' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_vodafone_out_of_stock' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_reseller_application_fee' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_public_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_secret_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_business_email' );
@@ -153,11 +288,22 @@ class Kaa_Mall_Admin {
                     </tr>
                 </table>
 
+                <h3>Reseller Settings</h3>
+                <table class="form-table">
+                    <tr valign="top">
+                        <th scope="row">Application Fee</th>
+                        <td><input type="number" name="kaa_mall_reseller_application_fee" value="<?php echo esc_attr( get_option('kaa_mall_reseller_application_fee', '10') ); ?>" step="0.01" /></td>
+                    </tr>
+                </table>
+
                 <h3>MTN Prices</h3>
+                <p><label><input type="checkbox" name="kaa_mall_mtn_out_of_stock" value="1" <?php checked( get_option( 'kaa_mall_mtn_out_of_stock' ), 1 ); ?>> Mark all MTN bundles as out of stock</label></p>
                 <textarea name="kaa_mall_mtn_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_mtn_prices') ); ?></textarea>
                 <h3>AirtelTigo Prices</h3>
+                <p><label><input type="checkbox" name="kaa_mall_airteltigo_out_of_stock" value="1" <?php checked( get_option( 'kaa_mall_airteltigo_out_of_stock' ), 1 ); ?>> Mark all AirtelTigo bundles as out of stock</label></p>
                 <textarea name="kaa_mall_airteltigo_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_airteltigo_prices') ); ?></textarea>
                 <h3>Vodafone Prices</h3>
+                <p><label><input type="checkbox" name="kaa_mall_vodafone_out_of_stock" value="1" <?php checked( get_option( 'kaa_mall_vodafone_out_of_stock' ), 1 ); ?>> Mark all Vodafone bundles as out of stock</label></p>
                 <textarea name="kaa_mall_vodafone_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_vodafone_prices') ); ?></textarea>
                 <?php submit_button(); ?>
             </form>
@@ -233,7 +379,11 @@ class Kaa_Mall_Admin {
         $balances = array();
         foreach ( $users as $user ) {
             $balance = get_user_meta( $user->ID, '_kaa_mall_wallet_balance', true );
-            $balances[ $user->display_name ] = floatval( $balance );
+            $balances[] = array(
+                'id' => $user->ID,
+                'name' => $user->display_name,
+                'balance' => floatval( $balance )
+            );
         }
         return $balances;
     }
@@ -247,6 +397,12 @@ class Kaa_Mall_Admin {
             'role' => 'reseller',
         );
         return get_users( $args );
+    }
+
+    private function get_total_reseller_profit() {
+        global $wpdb;
+        $total_profit = $wpdb->get_var( "SELECT SUM(meta_value) FROM $wpdb->usermeta WHERE meta_key = '_kaa_mall_reseller_profit_balance'" );
+        return floatval( $total_profit );
     }
 
     private function get_withdrawal_requests() {
@@ -272,100 +428,101 @@ class Kaa_Mall_Admin {
         $all_users = $this->get_all_users();
         $all_resellers = $this->get_all_resellers();
         $withdrawal_requests = $this->get_withdrawal_requests();
+        $total_reseller_profit = $this->get_total_reseller_profit();
 
         ob_start();
         ?>
         <style>
             :root {
-                --primary-color: #4a90e2;
-                --primary-hover-color: #357ABD;
-                --background-color: #f7f8fc;
+                --primary-color: #0073aa;
+                --background-color: #f0f0f1;
                 --card-background-color: #ffffff;
-                --text-color: #333;
-                --heading-color: #1a1a1a;
-                --border-color: #e6e6e6;
-                --shadow-color: rgba(0, 0, 0, 0.08);
+                --text-color: #3c434a;
+                --heading-color: #1d2327;
+                --border-color: #dcdcde;
+                --shadow-color: rgba(0, 0, 0, 0.05);
             }
 
             .kaa-mall-admin-portal {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                color: var(--text-color);
+                background-color: var(--background-color);
+                padding: 20px;
+                margin-left: -20px; /* Counteract default WP admin margin */
             }
 
             .kaa-mall-admin-portal h2 {
                 font-size: 2em;
                 font-weight: 600;
                 color: var(--heading-color);
-                margin-bottom: 30px;
+                margin-bottom: 20px;
             }
 
             .admin-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-                gap: 25px;
+                gap: 20px;
             }
 
             .admin-section {
                 background: var(--card-background-color);
-                border-radius: 12px;
-                box-shadow: 0 5px 15px var(--shadow-color);
-                padding: 25px;
-                margin-bottom: 25px;
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                box-shadow: 0 1px 1px var(--shadow-color);
+                padding: 20px;
+            }
+
+            .admin-section.full-width {
+                grid-column: 1 / -1;
             }
 
             .admin-section h3 {
                 margin-top: 0;
                 margin-bottom: 20px;
                 color: var(--heading-color);
-                font-size: 1.4em;
+                font-size: 1.2em;
                 font-weight: 600;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 15px;
             }
 
-            .admin-section table {
+            .admin-section .form-table th, .admin-section .form-table td {
+                padding: 10px 0;
+            }
+
+            .admin-section .form-table input[type="text"],
+            .admin-section .form-table input[type="number"] {
+                width: 100%;
+            }
+
+            .admin-section table:not(.form-table) {
                 width: 100%;
                 border-collapse: collapse;
             }
 
             .admin-section th, .admin-section td {
                 border-bottom: 1px solid var(--border-color);
-                padding: 15px;
+                padding: 12px;
                 text-align: left;
             }
 
             .admin-section th {
-                background-color: #f9fafb;
                 font-weight: 600;
-                text-transform: uppercase;
-                font-size: 0.85em;
-                letter-spacing: 0.5px;
             }
 
-            .admin-section tr:last-child td {
-                border-bottom: none;
-            }
-
-            .admin-section tr:hover {
-                background-color: #f7f8fc;
-            }
-
-            .admin-section a {
+            .admin-section .button {
                 background-color: var(--primary-color);
+                border-color: var(--primary-color);
                 color: white;
-                padding: 10px 15px;
-                border-radius: 6px;
-                text-decoration: none;
-                font-weight: 600;
-                transition: background-color 0.2s ease;
-            }
-
-            .admin-section a:hover {
-                background-color: var(--primary-hover-color);
             }
         </style>
         <div class="kaa-mall-admin-portal">
             <h2>Admin Dashboard</h2>
 
             <div class="admin-grid">
+                <div class="admin-section">
+                    <h3>Total Reseller Profit</h3>
+                    <p style="font-size: 2em; font-weight: bold; text-align: center; margin: 20px 0;"><?php echo wc_price( $total_reseller_profit ); ?></p>
+                </div>
+
                 <div class="admin-section">
                     <h3>Top Up User Wallet</h3>
                     <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -396,13 +553,15 @@ class Kaa_Mall_Admin {
                             <tr>
                                 <th>User</th>
                                 <th>Balance</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ( $wallet_balances as $user => $balance ) : ?>
+                            <?php foreach ( $wallet_balances as $item ) : ?>
                                 <tr>
-                                    <td><?php echo $user; ?></td>
-                                    <td>₵<?php echo number_format( $balance, 2 ); ?></td>
+                                    <td><?php echo esc_html($item['name']); ?></td>
+                                    <td><?php echo wc_price( $item['balance'] ); ?></td>
+                                    <td><a href="<?php echo esc_url( add_query_arg( array('action' => 'kaa_mall_login_as_user', 'user_id' => $item['id']), admin_url('admin-post.php') ) ); ?>" class="button">Login As</a></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -437,7 +596,7 @@ class Kaa_Mall_Admin {
                 </div>
             </div>
 
-            <div class="admin-section" style="grid-column: 1 / -1;">
+            <div class="admin-section full-width">
                 <h3>Withdrawal Requests</h3>
                 <table>
                     <thead>
@@ -465,7 +624,7 @@ class Kaa_Mall_Admin {
                 </table>
             </div>
 
-            <div class="admin-section" style="grid-column: 1 / -1;">
+            <div class="admin-section full-width">
                 <h3>All Orders</h3>
                 <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
                     <input type="hidden" name="action" value="kaa_mall_bulk_update_order_status">
@@ -602,5 +761,121 @@ class Kaa_Mall_Admin {
         </style>
         <?php
         return ob_get_clean();
+    }
+
+    public function display_reseller_applications_page() {
+        ?>
+        <div class="wrap">
+            <h2>Reseller Applications</h2>
+            <?php
+            $applications = get_posts( array(
+                'post_type' => 'reseller_application',
+                'post_status' => 'pending',
+                'numberposts' => -1,
+            ) );
+            ?>
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th>Applicant</th>
+                        <th>Email</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ( ! empty( $applications ) ) : ?>
+                        <?php foreach ( $applications as $application ) :
+                            $user = get_user_by( 'id', $application->post_author );
+                            ?>
+                            <tr>
+                                <td><?php echo esc_html( $user->display_name ); ?></td>
+                                <td><?php echo esc_html( $user->user_email ); ?></td>
+                                <td><?php echo get_the_date( '', $application ); ?></td>
+                                <td>
+                                    <a href="<?php echo esc_url( add_query_arg( array( 'action' => 'kaa_mall_approve_reseller', 'application_id' => $application->ID ), admin_url( 'admin-post.php' ) ) ); ?>" class="button button-primary">Approve</a>
+                                    <a href="<?php echo esc_url( add_query_arg( array( 'action' => 'kaa_mall_deny_reseller', 'application_id' => $application->ID ), admin_url( 'admin-post.php' ) ) ); ?>" class="button">Deny</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <tr>
+                            <td colspan="4">No pending applications.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+    }
+
+    public function display_broadcasts_page() {
+        ?>
+        <div class="wrap">
+            <h2>Broadcast Messages</h2>
+
+            <div id="col-container">
+                <div id="col-right">
+                    <div class="col-wrap">
+                        <h3>Previous Broadcasts</h3>
+                        <?php
+                        $broadcasts = get_posts( array(
+                            'post_type' => 'kaa_mall_broadcast',
+                            'numberposts' => -1,
+                        ) );
+                        ?>
+                        <table class="wp-list-table widefat fixed striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Subject</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if ( ! empty( $broadcasts ) ) : ?>
+                                    <?php foreach ( $broadcasts as $broadcast ) : ?>
+                                        <tr>
+                                            <td><?php echo get_the_date( '', $broadcast ); ?></td>
+                                            <td><?php echo esc_html( $broadcast->post_title ); ?></td>
+                                            <td><?php echo esc_html( $broadcast->post_content ); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else : ?>
+                                    <tr>
+                                        <td colspan="3">No broadcasts sent yet.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="col-left">
+                    <div class="col-wrap">
+                        <h3>Send New Broadcast</h3>
+                        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                            <input type="hidden" name="action" value="kaa_mall_send_broadcast">
+                            <?php wp_nonce_field( 'kaa_mall_send_broadcast_nonce', 'kaa_mall_send_broadcast_nonce' ); ?>
+                            <p>
+                                <label for="broadcast_subject">Subject</label>
+                                <input type="text" name="broadcast_subject" id="broadcast_subject" class="widefat" required>
+                            </p>
+                            <p>
+                                <label for="broadcast_message">Message</label>
+                                <textarea name="broadcast_message" id="broadcast_message" class="widefat" rows="5" required></textarea>
+                            </p>
+                            <p>
+                                <label>Send to:</label><br>
+                                <input type="radio" name="broadcast_recipient" value="all" checked> All Users<br>
+                                <input type="radio" name="broadcast_recipient" value="resellers"> Resellers Only<br>
+                            </p>
+                            <?php submit_button( 'Send Broadcast' ); ?>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 }
