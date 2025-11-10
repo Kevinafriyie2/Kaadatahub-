@@ -153,7 +153,25 @@ class Kaa_Mall_Admin {
         $search = sanitize_text_field( $_POST['search'] );
         $users = get_users( array(
             'search'         => '*' . esc_attr( $search ) . '*',
-            'search_columns' => array( 'user_login', 'user_email', 'display_name' ),
+            'search_columns' => array( 'user_login', 'user_email' ),
+            'meta_query'     => array(
+                'relation' => 'OR',
+                array(
+                    'key'     => 'nickname',
+                    'value'   => $search,
+                    'compare' => 'LIKE'
+                ),
+                array(
+                    'key'     => 'first_name',
+                    'value'   => $search,
+                    'compare' => 'LIKE'
+                ),
+                array(
+                    'key'     => 'last_name',
+                    'value'   => $search,
+                    'compare' => 'LIKE'
+                ),
+            ),
             'number'         => 10,
         ) );
 
