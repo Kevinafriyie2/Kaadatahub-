@@ -16,6 +16,7 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_kaa_mall_purchase_bundle_paystack', array( $this, 'purchase_bundle_paystack' ) );
         add_action( 'wp_ajax_nopriv_kaa_mall_purchase_bundle_paystack', array( $this, 'purchase_bundle_paystack' ) );
         add_action( 'wp_ajax_kaa_mall_get_bundle_prices', array( $this, 'get_bundle_prices' ) );
+        add_action( 'wp_ajax_nopriv_kaa_mall_get_bundle_prices', array( $this, 'get_bundle_prices' ) );
         add_action( 'wp_ajax_kaa_mall_afa_registration', array( $this, 'afa_registration' ) );
         add_action( 'wp_ajax_kaa_mall_get_recent_orders', array( $this, 'get_recent_orders' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_balance', array( $this, 'ajax_get_wallet_balance' ) );
@@ -78,7 +79,6 @@ class Kaa_Mall_Public {
     }
 
     public function get_bundle_prices() {
-        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $network = sanitize_text_field( $_POST['network'] );
 
         if ( get_option( 'kaa_mall_' . $network . '_out_of_stock' ) ) {
