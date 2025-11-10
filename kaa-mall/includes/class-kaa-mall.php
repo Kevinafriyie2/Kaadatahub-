@@ -47,6 +47,14 @@ class Kaa_Mall {
     }
 
     public function handle_shop_redirect() {
+        $portal_url = get_option( 'kaa_mall_user_portal_url' );
+        $portal_page_id = url_to_postid( $portal_url );
+
+        // Do not redirect if we are already on the portal page
+        if ( is_page( $portal_page_id ) ) {
+            return;
+        }
+
         $shop_name = get_query_var( 'shop_name' );
         if ( ! $shop_name ) {
             return;
