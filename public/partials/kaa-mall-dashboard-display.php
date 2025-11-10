@@ -38,10 +38,11 @@
             <li><a href="#" data-page="my-shop"><i class="fas fa-store"></i> Reseller</a></li>
             <?php endif; ?>
         </ul>
-        <div class="sidebar-footer">
-             <a href="#">Contact the Admin</a>
-        </div>
     </div>
+
+    <a href="#" class="contact-admin-fab">
+        <i class="fas fa-comment-dots"></i> Contact the Admin
+    </a>
 
     <!-- Main Content -->
     <div id="kaa-mall-main-content">
@@ -57,11 +58,11 @@
             </div>
         </div>
 
+        <div class="dashboard-header">
+            <h2>Kaadatahub</h2>
+            <p>Dashboard</p>
+        </div>
         <div class="main-dashboard-content">
-             <div class="dashboard-header">
-                <h2>Kaadatahub</h2>
-                <p>Dashboard</p>
-            </div>
             <!-- Dynamic content will be loaded here -->
         </div>
     </div>

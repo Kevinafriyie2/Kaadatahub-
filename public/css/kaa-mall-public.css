@@ -314,3 +314,28 @@ body.sidebar-closed #kaa-mall-main-content {
        z-index: 4;
     }
 }
+
+.contact-admin-fab {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #4CAF50;
+    color: white;
+    padding: 15px;
+    border-radius: 50px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.contact-admin-fab i {
+    margin-right: 5px;
+}
+
+.contact-admin-fab:hover {
+    background-color: #45a049;
+}
