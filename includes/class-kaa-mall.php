@@ -138,6 +138,7 @@ class Kaa_Mall {
 		$this->loader->add_action( 'wp_ajax_nopriv_kaa_mall_verify_paystack_transaction', $plugin_public, 'verify_paystack_transaction_callback' );
 
 		$this->loader->add_action( 'wp_ajax_kaa_mall_save_reseller_prices', $plugin_public, 'save_reseller_prices_callback' );
+		$this->loader->add_action( 'wp_ajax_kaa_mall_save_shop_name', $plugin_public, 'save_shop_name_callback' );
 
 		// Wallet Top Up
 		$this->loader->add_action( 'wp_ajax_kaa_mall_top_up_wallet', $plugin_public, 'top_up_wallet_callback' );
@@ -149,6 +150,9 @@ class Kaa_Mall {
 
 		// Admin Wallet Adjustment
 		$this->loader->add_action( 'wp_ajax_kaa_mall_adjust_wallet_balance', $plugin_admin, 'adjust_wallet_balance_callback' );
+
+		$this->loader->add_filter( 'query_vars', $plugin_public, 'register_query_vars' );
+		$this->loader->add_action( 'template_redirect', $plugin_public, 'handle_store_rewrite' );
 	}
 
 	private function define_auth_hooks() {

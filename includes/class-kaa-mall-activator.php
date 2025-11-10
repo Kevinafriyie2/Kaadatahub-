@@ -56,6 +56,8 @@ class Kaa_Mall_Activator {
 		dbDelta( $sql );
 
 		self::create_data_bundle_products();
+		add_rewrite_rule('^store/([^/]*)/?', 'index.php?kaa_mall_store=$matches[1]', 'top');
+		flush_rewrite_rules();
 	}
 
 	private static function create_data_bundle_products() {

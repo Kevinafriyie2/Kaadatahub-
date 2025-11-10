@@ -5,11 +5,11 @@
 
         // --- Sidebar Toggling ---
         $('.open-btn').on('click', function() {
-            $('#kaa-mall-sidebar').addClass('open');
+            $('body').removeClass('sidebar-closed');
         });
 
         $('.close-btn').on('click', function() {
-            $('#kaa-mall-sidebar').removeClass('open');
+            $('body').addClass('sidebar-closed');
         });
 
         // --- Submenu Toggling ---
@@ -88,7 +88,10 @@
 
             var $form = $(this);
             var $button = $form.find('button');
+            var $notice = $form.find('.kaa-mall-notice');
+
             $button.prop('disabled', true).text('Logging in...');
+            $notice.hide();
 
             $.ajax({
                 url: kaa_mall_ajax.ajax_url,
@@ -103,11 +106,11 @@
                     if (response.success) {
                         window.location.href = response.data.redirect;
                     } else {
-                        alert('Error: ' + response.data);
+                        $notice.text('Error: ' + response.data).fadeIn();
                     }
                 },
                 error: function() {
-                    alert('An unexpected error occurred. Please try again.');
+                    $notice.text('An unexpected error occurred. Please try again.').fadeIn();
                 },
                 complete: function() {
                     $button.prop('disabled', false).text('Log in');
@@ -121,7 +124,10 @@
 
             var $form = $(this);
             var $button = $form.find('button');
+            var $notice = $form.find('.kaa-mall-notice');
+
             $button.prop('disabled', true).text('Registering...');
+            $notice.hide();
 
             $.ajax({
                 url: kaa_mall_ajax.ajax_url,
@@ -134,15 +140,17 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        alert(response.data);
+                        $notice.text(response.data).addClass('success').fadeIn();
                         // Switch to the login tab
-                        $('.tab-link[data-tab="login"]').click();
+                        setTimeout(function() {
+                            $('.tab-link[data-tab="login"]').click();
+                        }, 2000);
                     } else {
-                        alert('Error: ' + response.data);
+                        $notice.text('Error: ' + response.data).fadeIn();
                     }
                 },
                 error: function() {
-                    alert('An unexpected error occurred. Please try again.');
+                    $notice.text('An unexpected error occurred. Please try again.').fadeIn();
                 },
                 complete: function() {
                     $button.prop('disabled', false).text('Register');
@@ -297,6 +305,39 @@
                 },
                 complete: function() {
                     $button.prop('disabled', false).text('Save Prices');
+                }
+            });
+        });
+
+        // --- Save Shop Name ---
+        $('.main-dashboard-content').on('submit', '#reseller-shop-name-form', function(e) {
+            e.preventDefault();
+
+            var $form = $(this);
+            var $button = $form.find('button');
+            $button.prop('disabled', true).text('Saving...');
+
+            $.ajax({
+                url: kaa_mall_ajax.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'kaa_mall_save_shop_name',
+                    shop_name: $form.find('#shop_name').val(),
+                    nonce: kaa_mall_ajax.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.data);
+                        loadContent('my-shop');
+                    } else {
+                        alert('Error: ' + response.data);
+                    }
+                },
+                error: function() {
+                    alert('An unexpected error occurred. Please try again.');
+                },
+                complete: function() {
+                    $button.prop('disabled', false).text('Save Shop Name');
                 }
             });
         });

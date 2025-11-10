@@ -8,10 +8,22 @@
         </div>
     </div>
 
-    <div class="reseller-link">
-        <h3>Your Shop Link</h3>
-        <p>Share this link with your customers:</p>
-        <input type="text" value="<?php echo esc_url(home_url('/shop/' . get_current_user_id())); ?>" readonly>
+    <div class="reseller-settings">
+        <h3>Shop Settings</h3>
+        <form id="reseller-shop-name-form">
+            <div class="form-group">
+                <label for="shop_name">Your Shop Name</label>
+                <input type="text" name="shop_name" id="shop_name" value="<?php echo esc_attr(get_user_meta(get_current_user_id(), 'kaa_mall_shop_name', true)); ?>">
+                <p class="description">Use only letters, numbers, and dashes.</p>
+            </div>
+            <button type="submit" class="button">Save Shop Name</button>
+        </form>
+
+        <div class="reseller-link">
+            <h3>Your Shop Link</h3>
+            <p>Share this link with your customers:</p>
+            <input type="text" value="<?php echo esc_url(home_url('/store/' . get_user_meta(get_current_user_id(), 'kaa_mall_shop_name', true))); ?>" readonly>
+        </div>
     </div>
 
     <form id="reseller-prices-form">

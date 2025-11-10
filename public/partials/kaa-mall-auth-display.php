@@ -6,6 +6,7 @@
 
     <div id="login" class="auth-tab-content active">
         <form id="kaa-login-form">
+            <div class="kaa-mall-notice"></div>
             <p class="form-row">
                 <label for="username">Username or Email <span class="required">*</span></label>
                 <input type="text" name="username" id="username" autocomplete="username" required>
@@ -22,6 +23,7 @@
 
     <div id="register" class="auth-tab-content">
         <form id="kaa-register-form">
+            <div class="kaa-mall-notice"></div>
             <p class="form-row">
                 <label for="reg_email">Email address <span class="required">*</span></label>
                 <input type="email" name="email" id="reg_email" autocomplete="email" required>

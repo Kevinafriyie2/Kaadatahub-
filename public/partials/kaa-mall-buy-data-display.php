@@ -45,8 +45,14 @@
                     <label for="bundle-select-<?php echo esc_attr($network); ?>">Select Bundle</label>
                     <select id="bundle-select-<?php echo esc_attr($network); ?>">
                         <option value="">— Choose Bundle —</option>
-                        <?php foreach ( $product_list as $product ) : ?>
-                            <option value="<?php echo esc_attr($product->get_id()); ?>"><?php echo esc_html($product->get_name() . ' - ' . $product->get_price_html()); ?></option>
+                        <?php foreach ( $product_list as $product ) :
+                            $name = $product->get_name();
+                            $price = $product->get_price();
+                            // Extract size like "1GB" or "500MB" from the name
+                            preg_match('/(\d+(\.\d+)?(GB|MB))/i', $name, $matches);
+                            $size = isset($matches[0]) ? $matches[0] : $name;
+                        ?>
+                            <option value="<?php echo esc_attr($product->get_id()); ?>"><?php echo esc_html( $size . ' - ' . number_format($price, 2) ); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>

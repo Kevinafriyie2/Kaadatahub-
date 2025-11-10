@@ -149,7 +149,7 @@ class Kaa_Mall_Public {
 
 				if (stripos($name, 'MTN') !== false) {
 					$products['mtn'][] = $product;
-				} elseif (stripos($name, 'Airteltigo') !== false) {
+				} elseif (stripos($name, 'AirtelTigo') !== false) {
 					$products['airteltigo'][] = $product;
 				} elseif (stripos($name, 'Vodafone') !== false) {
 					$products['vodafone'][] = $product;
@@ -389,6 +389,35 @@ class Kaa_Mall_Public {
 		wp_die();
 	}
 
+	public function save_shop_name_callback() {
+		check_ajax_referer('kaa_mall_ajax_nonce', 'nonce');
+
+		if (!is_user_logged_in() || !in_array('reseller', (array) wp_get_current_user()->roles)) {
+			wp_send_json_error('You are not authorized to perform this action.');
+			wp_die();
+		}
+
+		$shop_name = sanitize_title($_POST['shop_name']);
+		$user_id = get_current_user_id();
+
+		// Check if the shop name is unique
+		$existing_user = get_users(array(
+			'meta_key' => 'kaa_mall_shop_name',
+			'meta_value' => $shop_name,
+			'exclude' => array($user_id),
+		));
+
+		if (!empty($existing_user)) {
+			wp_send_json_error('This shop name is already taken. Please choose another one.');
+			wp_die();
+		}
+
+		update_user_meta($user_id, 'kaa_mall_shop_name', $shop_name);
+
+		wp_send_json_success('Shop name saved successfully.');
+		wp_die();
+	}
+
 	public function top_up_wallet_callback() {
 		check_ajax_referer('kaa_mall_ajax_nonce', 'nonce');
 
@@ -495,5 +524,41 @@ class Kaa_Mall_Public {
 		}
 
 		wp_die();
+	}
+
+	public function register_query_vars( $vars ) {
+		$vars[] = 'kaa_mall_store';
+		return $vars;
+	}
+
+	public function handle_store_rewrite() {
+		if ( get_query_var( 'kaa_mall_store' ) ) {
+			$shop_name = get_query_var( 'kaa_mall_store' );
+			$user = get_users(array(
+				'meta_key' => 'kaa_mall_shop_name',
+				'meta_value' => $shop_name,
+			));
+
+			if ( !empty( $user ) ) {
+				$reseller_id = $user[0]->ID;
+				// Now you can display the store for this reseller
+				// You might want to create a new template for this
+				// For now, let's just enqueue a script and display a partial
+				wp_enqueue_script( $this->plugin_name . '-store', plugin_dir_url( __FILE__ ) . 'js/kaa-mall-store.js', array( 'jquery' ), $this->version, false );
+				wp_localize_script(
+					$this->plugin_name . '-store',
+					'kaa_mall_store_ajax',
+					array(
+						'ajax_url' => admin_url( 'admin-ajax.php' ),
+						'nonce'    => wp_create_nonce( 'kaa_mall_ajax_nonce' ),
+						'reseller_id' => $reseller_id
+					)
+				);
+
+				// Include a template file
+				include_once( plugin_dir_path( __FILE__ ) . 'partials/kaa-mall-store-display.php' );
+				exit;
+			}
+		}
 	}
 }
