@@ -612,6 +612,71 @@ class Kaa_Mall_Public {
                 cursor: pointer;
             }
 
+            .payment-method-header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+            .payment-method-header img {
+                width: 24px;
+                height: 24px;
+                margin-right: 10px;
+            }
+            .payment-method-header span {
+                font-weight: bold;
+                color: var(--heading-color);
+            }
+            .payment-options {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+            .payment-option {
+                display: flex;
+                align-items: center;
+                background-color: #2c2c2c;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid var(--border-color);
+                cursor: pointer;
+                transition: border-color 0.2s ease;
+            }
+            .payment-option:hover {
+                border-color: var(--primary-color);
+            }
+            .payment-option input[type="radio"] {
+                display: none;
+            }
+            .payment-option .radio-custom {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                border: 2px solid #555;
+                margin-right: 15px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                transition: border-color 0.2s ease;
+            }
+            .payment-option .radio-custom .radio-dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background-color: var(--primary-color);
+                transform: scale(0);
+                transition: transform 0.2s ease;
+            }
+            .payment-option input[type="radio"]:checked + .radio-custom {
+                border-color: var(--primary-color);
+            }
+            .payment-option input[type="radio"]:checked + .radio-custom .radio-dot {
+                transform: scale(1);
+            }
+            .payment-option label {
+                font-weight: 500;
+                color: var(--text-color);
+            }
+
             .afa-registration {
                 background: linear-gradient(135deg, #9b59b6, #8e44ad);
             }
@@ -725,11 +790,24 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <?php if ( is_user_logged_in() ) : ?>
-                        <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                        <?php endif; ?>
-                        <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                        <div class="payment-method-header">
+                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
+                            <span>Payment Method</span>
+                        </div>
+                        <div class="payment-options">
+                            <?php if ( is_user_logged_in() ) : ?>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="wallet" checked>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Wallet Balance
+                            </label>
+                            <?php endif; ?>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Paystack (Card/Mobile Money)
+                            </label>
+                        </div>
                         <button type="submit">Buy MTN Bundle</button>
                     </form>
                 </div>
@@ -743,11 +821,24 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <?php if ( is_user_logged_in() ) : ?>
-                        <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                        <?php endif; ?>
-                        <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                        <div class="payment-method-header">
+                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
+                            <span>Payment Method</span>
+                        </div>
+                        <div class="payment-options">
+                            <?php if ( is_user_logged_in() ) : ?>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="wallet" checked>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Wallet Balance
+                            </label>
+                            <?php endif; ?>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Paystack (Card/Mobile Money)
+                            </label>
+                        </div>
                         <button type="submit">Buy AirtelTigo Bundle</button>
                     </form>
                 </div>
@@ -761,11 +852,24 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <?php if ( is_user_logged_in() ) : ?>
-                        <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                        <?php endif; ?>
-                        <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                        <div class="payment-method-header">
+                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
+                            <span>Payment Method</span>
+                        </div>
+                        <div class="payment-options">
+                            <?php if ( is_user_logged_in() ) : ?>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="wallet" checked>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Wallet Balance
+                            </label>
+                            <?php endif; ?>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Paystack (Card/Mobile Money)
+                            </label>
+                        </div>
                         <button type="submit">Buy Vodafone Bundle</button>
                     </form>
                 </div>

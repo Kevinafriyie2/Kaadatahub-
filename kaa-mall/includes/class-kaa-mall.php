@@ -37,29 +37,41 @@ class Kaa_Mall {
 
     public function add_rewrite_rules() {
         add_rewrite_rule( '^shop/([^/]*)/?$', 'index.php?shop_name=$matches[1]', 'top' );
-        add_filter( 'query_vars', function( $query_vars ) {
-            $query_vars[] = 'shop_name';
-            return $query_vars;
-        } );
-        add_action( 'template_redirect', function() {
-            $shop_name = get_query_var( 'shop_name' );
-            if ( $shop_name ) {
-                $users = get_users( array(
-                    'meta_key' => '_kaa_mall_shop_name',
-                    'meta_value' => $shop_name,
-                ) );
-                if ( ! empty( $users ) ) {
-                    $reseller_id = $users[0]->ID;
-                    $portal_url = get_option( 'kaa_mall_user_portal_url' );
-                    if ( empty( $portal_url ) ) {
-                        $portal_url = home_url('/');
-                    }
-                    $redirect_url = add_query_arg( 'ref', $reseller_id, $portal_url );
-                    wp_redirect( $redirect_url );
-                    exit;
-                }
-            }
-        } );
+        add_filter( 'query_vars', array( $this, 'add_query_vars' ) );
+        add_action( 'template_redirect', array( $this, 'handle_shop_redirect' ) );
+    }
+
+    public function add_query_vars( $query_vars ) {
+        $query_vars[] = 'shop_name';
+        return $query_vars;
+    }
+
+    public function handle_shop_redirect() {
+        $shop_name = get_query_var( 'shop_name' );
+        if ( ! $shop_name ) {
+            return;
+        }
+
+        $users = get_users( array(
+            'meta_key'   => '_kaa_mall_shop_name',
+            'meta_value' => $shop_name,
+            'number'     => 1,
+            'fields'     => 'ID',
+        ) );
+
+        if ( empty( $users ) ) {
+            return;
+        }
+
+        $reseller_id = $users[0];
+        $portal_url = get_option( 'kaa_mall_user_portal_url' );
+
+        if ( ! empty( $portal_url ) ) {
+            $redirect_url = add_query_arg( 'ref', $reseller_id, $portal_url );
+            wp_redirect( $redirect_url );
+            exit;
+        }
+        // If portal URL is not set, do nothing. This prevents a redirect to the homepage which can cause a fatal error.
     }
 
     private function load_dependencies() {
