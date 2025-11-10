@@ -289,6 +289,7 @@ class Kaa_Mall_Public {
 			'publicKey' => $paystack_pk,
 			'email'     => $user->user_email,
 			'amount'    => $product->get_price() * 100, // Paystack amount is in kobo
+			'currency'  => 'GHS',
 			'productId' => $product->get_id(),
 		) );
 		wp_die();
@@ -436,6 +437,7 @@ class Kaa_Mall_Public {
 			'publicKey' => $paystack_pk,
 			'email'     => $user->user_email,
 			'amount'    => $amount * 100, // Paystack amount is in kobo
+			'currency'  => 'GHS',
 		));
 		wp_die();
 	}
@@ -491,6 +493,7 @@ class Kaa_Mall_Public {
 			'publicKey' => $paystack_pk,
 			'email'     => $user->user_email,
 			'amount'    => 13 * 100, // AFA registration fee
+			'currency'  => 'GHS',
 		));
 		wp_die();
 	}

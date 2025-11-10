@@ -57,9 +57,20 @@ class Kaa_Mall_Auth {
         if (is_wp_error($user_signon)) {
             wp_send_json_error('Wrong username or password.');
         } else {
-            $redirect_url = get_option('kaa_mall_user_portal_url', home_url('/'));
-            $redirect_url = apply_filters('kaa_mall_login_redirect', $redirect_url, $user_signon);
+            wp_set_current_user($user_signon->ID);
+            wp_set_auth_cookie($user_signon->ID, true, false);
+
+            $redirect_url = $this->get_redirect_url($user_signon);
             wp_send_json_success(array('redirect' => $redirect_url));
+        }
+    }
+
+    public function get_redirect_url($user) {
+        if (in_array('administrator', $user->roles) || in_array('shop_manager', $user->roles) ) {
+            return admin_url();
+        } else {
+            $dashboard_url = get_option('kaa_mall_user_portal_url');
+            return $dashboard_url ? esc_url($dashboard_url) : home_url('/my-account');
         }
     }
 

@@ -5,11 +5,23 @@
 
         // --- Sidebar Toggling ---
         $('.open-btn').on('click', function() {
-            $('body').removeClass('sidebar-closed');
+            $('body').addClass('sidebar-open');
         });
 
         $('.close-btn').on('click', function() {
-            $('body').addClass('sidebar-closed');
+            $('body').removeClass('sidebar-open');
+        });
+
+        // --- Logout Dropdown ---
+        $('.user-profile').on('click', function() {
+            $('.profile-dropdown').toggleClass('show');
+        });
+
+        // Close dropdown if clicked outside
+        $(window).on('click', function(event) {
+            if (!$(event.target).closest('.user-profile').length) {
+                $('.profile-dropdown').removeClass('show');
+            }
         });
 
         // --- Submenu Toggling ---
@@ -60,6 +72,11 @@
             $(this).parent().addClass('active');
 
             loadContent(page, network);
+
+            // Auto-close sidebar on mobile
+            if ($(window).width() <= 768) {
+                $('body').removeClass('sidebar-open');
+            }
         });
 
         // Load the initial "Dashboard" page

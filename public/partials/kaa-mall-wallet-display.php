@@ -27,4 +27,13 @@
         <button class="button top-up-btn"><i class="fas fa-arrow-up"></i> Top Up with Paystack</button>
     </div>
 
+    <!-- Contact Admin Floating Button -->
+    <a href="https://wa.me/<?php echo esc_attr( get_option('kaa_mall_whatsapp_number') ); ?>" class="contact-admin-fab" target="_blank">
+        <div class="fab-icon">
+            <i class="fas fa-comment-dots"></i>
+        </div>
+        <div class="fab-text">
+            Contact the Admin
+        </div>
+    </a>
 </div>

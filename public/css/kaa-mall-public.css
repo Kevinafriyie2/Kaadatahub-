@@ -1,8 +1,19 @@
+:root {
+    --primary-color: #4a148c;
+    --primary-dark: #38006b;
+    --secondary-color: #f9a825;
+    --background-color: #1c1c1e;
+    --surface-color: #2c2c2e;
+    --text-color: #ffffff;
+    --text-muted-color: #aaa;
+}
+
 /* KAA Mall Dashboard Styles */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     margin: 0;
-    background-color: #f4f7f6;
+    background-color: var(--background-color);
+    color: var(--text-color);
 }
 
 #kaa-mall-dashboard-wrapper {
@@ -17,19 +28,19 @@ body {
     height: 100%;
     width: 250px;
     position: fixed;
-    z-index: 2;
+    z-index: 1001;
     top: 0;
     left: 0;
-    background-color: #fff;
+    background-color: var(--surface-color);
     overflow-x: hidden;
-    transition: 0.5s;
+    transition: transform 0.3s ease-in-out;
     padding-top: 20px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    transform: translateX(0);
+    transform: translateX(-250px);
 }
 
-body.sidebar-closed .kaa-mall-sidebar {
-    transform: translateX(-250px);
+body.sidebar-open .kaa-mall-sidebar {
+    transform: translateX(0);
 }
 
 .sidebar-header {
@@ -40,14 +51,14 @@ body.sidebar-closed .kaa-mall-sidebar {
 }
 
 .sidebar-header .plugin-name {
-    color: #333;
+    color: var(--text-color);
     font-size: 24px;
     font-weight: bold;
 }
 
 .close-btn {
     font-size: 30px;
-    color: #818181;
+    color: var(--text-muted-color);
     text-decoration: none;
     display: none;
 }
@@ -62,7 +73,7 @@ body.sidebar-closed .kaa-mall-sidebar {
     padding: 10px 15px;
     text-decoration: none;
     font-size: 16px;
-    color: #333;
+    color: var(--text-color);
     display: block;
     transition: 0.3s;
     border-left: 3px solid transparent;
@@ -75,19 +86,19 @@ body.sidebar-closed .kaa-mall-sidebar {
 }
 
 .sidebar-nav li a:hover, .sidebar-nav li.active a {
-    background-color: #f0f0f0;
-    border-left: 3px solid #4a148c;
-    color: #4a148c;
+    background-color: var(--primary-dark);
+    border-left: 3px solid var(--secondary-color);
+    color: var(--secondary-color);
 }
 
 .sidebar-nav li.active a {
-    background-color: #4a148c;
-    color: white;
+    background-color: var(--primary-color);
+    color: var(--text-color);
 }
 
 
 .sidebar-nav .nav-section-title {
-    color: #888;
+    color: var(--text-muted-color);
     padding: 10px 15px;
     font-size: 14px;
     font-weight: bold;
@@ -139,7 +150,7 @@ body.sidebar-closed #kaa-mall-main-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #fff;
+    background: var(--surface-color);
     padding: 10px 20px;
     border-radius: 8px;
     margin-bottom: 20px;
@@ -151,11 +162,47 @@ body.sidebar-closed #kaa-mall-main-content {
     cursor: pointer;
 }
 
-.user-actions i {
-    font-size: 20px;
-    margin-left: 15px;
-    color: #555;
+.user-actions {
+    position: relative;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
     cursor: pointer;
+}
+
+.user-profile i {
+    font-size: 24px;
+    color: var(--text-color);
+}
+
+.profile-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: var(--surface-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    width: 150px;
+    padding: 5px 0;
+}
+
+.profile-dropdown.show {
+    display: block;
+}
+
+.profile-dropdown a {
+    display: block;
+    padding: 10px 15px;
+    text-decoration: none;
+    color: var(--text-color);
+}
+
+.profile-dropdown a:hover {
+    background-color: var(--primary-dark);
 }
 
 /* Buy Data Page Styles */
@@ -212,19 +259,19 @@ body.sidebar-closed #kaa-mall-main-content {
 .data-bundle-card .tab-link {
     background: transparent;
     border: none;
-    color: #aaa;
+    color: var(--text-muted-color);
     padding: 10px 15px;
     cursor: pointer;
     font-size: 16px;
 }
 
 .data-bundle-card .tab-link.active {
-    color: #f9a825;
-    border-bottom: 2px solid #f9a825;
+    color: var(--secondary-color);
+    border-bottom: 2px solid var(--secondary-color);
 }
 
 .data-bundle-form h4 {
-    color: #f9a825;
+    color: var(--secondary-color);
     margin-top: 0;
 }
 
@@ -235,7 +282,7 @@ body.sidebar-closed #kaa-mall-main-content {
 .form-group label {
     display: block;
     margin-bottom: 5px;
-    color: #aaa;
+    color: var(--text-muted-color);
     font-size: 14px;
 }
 
@@ -245,14 +292,51 @@ body.sidebar-closed #kaa-mall-main-content {
     background-color: #3a3a3c;
     border: 1px solid #555;
     border-radius: 8px;
-    color: white;
+    color: var(--text-color);
+}
+
+.payment-options {
+    display: flex;
+    flex-direction: column;
 }
 
 .payment-options label {
-    margin-right: 15px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    cursor: pointer;
 }
 
-.buy-bundle-btn, .register-btn {
+.payment-options input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--text-muted-color);
+    border-radius: 50%;
+    margin-right: 10px;
+    position: relative;
+    top: -1px;
+}
+
+.payment-options input[type="radio"]:checked {
+    border-color: var(--secondary-color);
+}
+
+.payment-options input[type="radio"]:checked::before {
+    content: '';
+    display: block;
+    width: 12px;
+    height: 12px;
+    background-color: var(--secondary-color);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.direct-purchase-btn, .register-btn {
     width: 100%;
     padding: 15px;
     border-radius: 8px;
@@ -260,8 +344,8 @@ body.sidebar-closed #kaa-mall-main-content {
     cursor: pointer;
     font-size: 16px;
     font-weight: bold;
-    background-color: #f9a825;
-    color: #1c1c1e;
+    background-color: var(--secondary-color);
+    color: var(--background-color);
 }
 
 .register-btn {
@@ -276,7 +360,7 @@ body.sidebar-closed #kaa-mall-main-content {
     left: 15px;
     top: 50%;
     transform: translateY(-50%);
-    color: #ddd;
+    color: var(--text-color);
 }
 .afa-card .form-group input {
     padding-left: 40px;
@@ -291,7 +375,7 @@ body.sidebar-closed #kaa-mall-main-content {
     margin-bottom: 15px;
 }
 
-.purchase-history-card h4 { color: #f9a825; }
+.purchase-history-card h4 { color: var(--secondary-color); }
 .purchase-history-card a { color: #2997ff; }
 
 /* Responsive Styles */
@@ -338,4 +422,149 @@ body.sidebar-closed #kaa-mall-main-content {
 
 .contact-admin-fab:hover {
     background-color: #45a049;
+}
+
+.network-title {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-color);
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+
+/* Wallet Page Styles */
+.kaa-mall-wallet-content {
+    padding: 20px;
+}
+
+.wallet-balance-card {
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
+
+.wallet-balance-card .wallet-label {
+    font-size: 1rem;
+    color: var(--text-color-light);
+    margin-bottom: 5px;
+}
+
+.wallet-balance-card .wallet-amount {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.top-up-card {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+}
+
+.top-up-card h4 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.top-up-card h4 i {
+    margin-right: 10px;
+    color: var(--text-color);
+}
+
+
+.top-up-card p {
+    font-size: 0.95rem;
+    color: var(--text-color-light);
+    margin-bottom: 20px;
+}
+
+.top-up-card .form-group {
+    margin-bottom: 15px;
+}
+
+.top-up-card label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-color-light);
+    margin-bottom: 8px;
+}
+
+.top-up-card input#top-up-amount {
+    width: 100%;
+    padding: 15px;
+    border-radius: 10px;
+    border: none;
+    background-color: #3a3a3c; /* Dark input background from image */
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.top-up-card input#top-up-amount::placeholder {
+    color: #8e8e93; /* Light placeholder text */
+}
+
+
+.top-up-btn {
+    background-color: #e5e5ea; /* Light grey background from image */
+    color: #007aff; /* Blue text color from image */
+    border: none;
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+}
+
+.top-up-btn:hover {
+    background-color: #dcdce0;
+}
+
+.top-up-btn i {
+    margin-right: 8px;
+}
+
+/* Contact Admin FAB */
+.contact-admin-fab {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    z-index: 1000;
+}
+
+.contact-admin-fab .fab-icon {
+    background-color: #4cd964; /* Green circle from image */
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.contact-admin-fab .fab-icon i {
+    color: white;
+    font-size: 1.5rem;
+}
+
+.contact-admin-fab .fab-text {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    padding: 10px 15px 10px 25px; /* Add padding to the left to make space for the overlapping icon */
+    border-radius: 20px;
+    margin-left: -15px; /* Overlap the icon */
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }

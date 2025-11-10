@@ -1,5 +1,7 @@
 <div class="kaa-mall-buy-data-content">
 
+    <h2 class="network-title"><?php echo esc_html(ucfirst($network)); ?> Bundles</h2>
+
     <!-- Data Bundle Store Card -->
     <div class="info-card orange-card">
         <div class="card-icon">
