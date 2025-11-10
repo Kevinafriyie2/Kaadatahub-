@@ -22,16 +22,12 @@
 
     <!-- Data Bundles Card -->
     <div class="data-bundle-card">
-        <div class="network-tabs">
-            <?php $first = true; foreach ( $products as $network => $product_list ) : if ( empty( $product_list ) ) continue; ?>
-                <button class="tab-link <?php if ($first) { echo 'active'; $first = false; } ?>" data-network="<?php echo esc_attr($network); ?>"><?php echo esc_html(ucfirst($network)); ?></button>
-            <?php endforeach; ?>
-        </div>
-
-        <?php $first = true; foreach ( $products as $network => $product_list ) : if ( empty( $product_list ) ) continue; ?>
-            <div class="data-bundle-form <?php if ($first) { echo 'active'; $first = false; } ?>" id="form-<?php echo esc_attr($network); ?>">
-                <h4><i class="fas fa-signal"></i> <?php echo esc_html(ucfirst($network)); ?> Data Bundles</h4>
-                <div class="form-group">
+        <?php
+        $product_list = $products[$network];
+        ?>
+        <div class="data-bundle-form active" id="form-<?php echo esc_attr($network); ?>">
+            <h4><i class="fas fa-signal"></i> <?php echo esc_html(ucfirst($network)); ?> Data Bundles</h4>
+            <div class="form-group">
                     <label for="phone-number-<?php echo esc_attr($network); ?>"><?php echo esc_html(ucfirst($network)); ?> Phone Number</label>
                     <input type="text" id="phone-number-<?php echo esc_attr($network); ?>" placeholder="Enter phone number">
                 </div>
@@ -52,7 +48,7 @@
                             preg_match('/(\d+(\.\d+)?(GB|MB))/i', $name, $matches);
                             $size = isset($matches[0]) ? $matches[0] : $name;
                         ?>
-                            <option value="<?php echo esc_attr($product->get_id()); ?>"><?php echo esc_html( $size . ' - ' . number_format($price, 2) ); ?></option>
+                            <option value="<?php echo esc_attr($product->get_id()); ?>"><?php echo esc_html( $size . ' - GH₵' . number_format($price, 2) ); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -65,7 +61,6 @@
                 </div>
                 <button class="direct-purchase-btn" data-network="<?php echo esc_attr($network); ?>"><i class="fas fa-rocket"></i> Purchase</button>
             </div>
-        <?php endforeach; ?>
     </div>
 
     <!-- AFA Bundle Registration Card -->

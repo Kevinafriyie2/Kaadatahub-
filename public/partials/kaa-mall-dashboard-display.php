@@ -8,29 +8,13 @@
             <a href="javascript:void(0)" class="close-btn">&times;</a>
         </div>
         <ul class="sidebar-nav">
+            <li><a href="#" data-page="dashboard-main"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
             <li class="nav-section-title">SERVICES</li>
-            <li class="has-submenu">
-                <a href="#" class="submenu-toggle"><i class="fas fa-signal"></i> MTN <i class="fas fa-chevron-down"></i></a>
-                <ul class="submenu">
-                    <li><a href="#" data-page="buy-data" data-network="mtn">Buy Data</a></li>
-                    <li><a href="#">MTNUP2U Business</a></li>
-                </ul>
-            </li>
-            <li class="has-submenu">
-                <a href="#" class="submenu-toggle"><i class="fas fa-signal"></i> AirtelTigo <i class="fas fa-chevron-down"></i></a>
-                <ul class="submenu">
-                    <li><a href="#" data-page="buy-data" data-network="airteltigo">Buy Data</a></li>
-                    <li><a href="#">AT iShare Business</a></li>
-                </ul>
-            </li>
-            <li class="has-submenu">
-                <a href="#" class="submenu-toggle"><i class="fas fa-signal"></i> Vodafone <i class="fas fa-chevron-down"></i></a>
-                <ul class="submenu">
-                    <li><a href="#" data-page="buy-data" data-network="vodafone">Buy Data</a></li>
-                    <li><a href="#">AT Big Time Business</a></li>
-                </ul>
-            </li>
+            <li><a href="#" data-page="buy-data" data-network="mtn"><i class="fas fa-signal"></i> MTN</a></li>
+            <li><a href="#" data-page="buy-data" data-network="airteltigo"><i class="fas fa-signal"></i> AirtelTigo</a></li>
+            <li><a href="#" data-page="buy-data" data-network="vodafone"><i class="fas fa-signal"></i> Vodafone</a></li>
             <li><a href="#" data-page="wallet"><i class="fas fa-wallet"></i> Wallet</a></li>
+            <li><a href="#" data-page="wallet-history"><i class="fas fa-history"></i> Wallet History</a></li>
             <?php
             $user = wp_get_current_user();
             if (in_array('reseller', (array) $user->roles)) :
@@ -50,7 +34,12 @@
             <span class="open-btn">&#9776;</span>
             <div class="user-actions">
                 <?php if (is_user_logged_in()) : ?>
-                    <i class="fas fa-user-circle"></i>
+                    <div class="user-profile">
+                        <i class="fas fa-user-circle"></i>
+                        <div class="profile-dropdown">
+                            <a href="<?php echo wp_logout_url(home_url()); ?>">Logout</a>
+                        </div>
+                    </div>
                 <?php else : ?>
                     <a href="<?php echo wp_login_url(); ?>" class="button">Login</a>
                     <a href="<?php echo wp_registration_url(); ?>" class="button">Sign Up</a>

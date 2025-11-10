@@ -39,7 +39,15 @@
                 echo '<td>' . esc_html($user->user_email) . '</td>';
                 echo '<td>' . wc_price($main_wallet_balance) . '</td>';
                 echo '<td>' . wc_price($profit_wallet_balance) . '</td>';
-                echo '<td><button class="button adjust-wallet-btn" data-user-id="' . $user_id . '">Adjust Wallet</button></td>';
+                echo '<td>';
+                echo '<button class="button adjust-wallet-btn" data-user-id="' . esc_attr($user_id) . '">Adjust Wallet</button>';
+
+                $is_reseller = in_array('reseller', (array)$user->roles);
+                $button_text = $is_reseller ? 'Remove Reseller' : 'Make Reseller';
+                $button_class = $is_reseller ? 'button-secondary' : 'button-primary';
+
+                echo ' <button class="button toggle-reseller-btn ' . esc_attr($button_class) . '" data-user-id="' . esc_attr($user_id) . '" data-nonce="' . wp_create_nonce('kaa_mall_toggle_reseller_' . $user_id) . '">' . esc_html($button_text) . '</button>';
+                echo '</td>';
                 echo '</tr>';
             }
             ?>

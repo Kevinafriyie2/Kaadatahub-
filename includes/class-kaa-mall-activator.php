@@ -55,6 +55,20 @@ class Kaa_Mall_Activator {
 		) $charset_collate;";
 		dbDelta( $sql );
 
+		// Table for wallet transactions
+		$table_name = $wpdb->prefix . 'kaa_mall_wallet_transactions';
+		$sql = "CREATE TABLE $table_name (
+			id mediumint(9) NOT NULL AUTO_INCREMENT,
+			user_id bigint(20) NOT NULL,
+			amount decimal(10, 2) NOT NULL,
+			type varchar(20) NOT NULL,
+			description text NOT NULL,
+			date datetime NOT NULL,
+			PRIMARY KEY  (id)
+		) $charset_collate;";
+		dbDelta( $sql );
+
+
 		self::create_data_bundle_products();
 		add_rewrite_rule('^store/([^/]*)/?', 'index.php?kaa_mall_store=$matches[1]', 'top');
 		flush_rewrite_rules();

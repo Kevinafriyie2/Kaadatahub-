@@ -79,6 +79,11 @@ class Kaa_Mall_Public {
 				'nonce'    => wp_create_nonce( 'kaa_mall_ajax_nonce' ),
 			)
 		);
+
+		// Only load the Paystack script on the dashboard or store page
+		if ( is_a_page_with_shortcode('kaa_mall_dashboard') || get_query_var('kaa_mall_store') ) {
+			wp_enqueue_script( 'paystack-inline', 'https://js.paystack.co/v1/inline.js', array(), $this->version, true );
+		}
 	}
 
 	/**
@@ -178,6 +183,7 @@ class Kaa_Mall_Public {
 		check_ajax_referer( 'kaa_mall_ajax_nonce', 'nonce' );
 
 		$page = sanitize_text_field( $_POST['page'] );
+		$network = isset( $_POST['network'] ) ? sanitize_text_field( $_POST['network'] ) : '';
 		$partial_path = plugin_dir_path( __FILE__ ) . 'partials/kaa-mall-' . $page . '-display.php';
 
 		$balance = $this->get_user_wallet_balance();
@@ -252,20 +258,11 @@ class Kaa_Mall_Public {
 		}
 
 		// Deduct from wallet and create order
-		global $wpdb;
-		$table_name = $wpdb->prefix . 'kaa_mall_wallets';
-		$new_balance = $current_balance - $product_price;
-
-		$wpdb->update(
-			$table_name,
-			array( 'balance' => $new_balance ),
-			array( 'user_id' => $user_id ),
-			array( '%f' ),
-			array( '%d' )
-		);
+		$order = $this->create_woocommerce_order( $product, $user_id, 'wallet' );
+		$description = 'Purchase of ' . $product->get_name();
+		Kaa_Mall_Wallet::update_wallet_balance( $user_id, -$product_price, 'debit', $description, $order->get_id() );
 
 		$guest_email = isset($_POST['guest_email']) ? sanitize_email($_POST['guest_email']) : '';
-		$this->create_woocommerce_order( $product, $user_id, 'wallet', $guest_email );
 
 		if ($reseller_id) {
 			$base_price = $product->get_price();
@@ -464,7 +461,8 @@ class Kaa_Mall_Public {
 		$body = json_decode(wp_remote_retrieve_body($response));
 
 		if ('success' === $body->data->status) {
-			Kaa_Mall_Wallet::update_wallet_balance(get_current_user_id(), $amount);
+			$description = 'Wallet top-up via Paystack';
+			Kaa_Mall_Wallet::update_wallet_balance(get_current_user_id(), $amount, 'credit', $description, $reference);
 			wp_send_json_success('Wallet topped up successfully.');
 		} else {
 			wp_send_json_error('Payment verification failed.');
@@ -561,4 +559,11 @@ class Kaa_Mall_Public {
 			}
 		}
 	}
+}
+
+if (!function_exists('is_a_page_with_shortcode')) {
+    function is_a_page_with_shortcode($shortcode) {
+        global $post;
+        return is_a($post, 'WP_Post') && has_shortcode($post->post_content, $shortcode);
+    }
 }

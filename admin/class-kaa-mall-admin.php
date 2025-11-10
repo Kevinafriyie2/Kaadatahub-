@@ -25,6 +25,10 @@ class Kaa_Mall_Admin {
 
     public function enqueue_scripts() {
         wp_enqueue_script($this->plugin_name, plugin_dir_url(__FILE__) . 'js/kaa-mall-admin.js', array('jquery'), $this->version, false);
+        wp_localize_script($this->plugin_name, 'kaa_mall_ajax', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('kaa_mall_ajax_nonce')
+        ));
     }
 
     public function add_menu_page() {
@@ -107,7 +111,9 @@ class Kaa_Mall_Admin {
         $amount = floatval($_POST['amount']);
 
         if ($wallet_type === 'main') {
-            Kaa_Mall_Wallet::update_wallet_balance($user_id, $amount);
+            $type = $amount >= 0 ? 'credit' : 'debit';
+            $description = $amount >= 0 ? 'Admin wallet top-up' : 'Admin wallet deduction';
+            Kaa_Mall_Wallet::update_wallet_balance($user_id, $amount, $type, $description);
         } elseif ($wallet_type === 'profit') {
             Kaa_Mall_Profit_Wallet::update_profit_wallet_balance($user_id, $amount);
         } else {
@@ -116,6 +122,43 @@ class Kaa_Mall_Admin {
         }
 
         wp_send_json_success('Wallet balance updated successfully.');
+        wp_die();
+    }
+
+    public function toggle_reseller_callback() {
+        $user_id = absint($_POST['user_id']);
+        $nonce = sanitize_text_field($_POST['nonce']);
+
+        if (!wp_verify_nonce($nonce, 'kaa_mall_toggle_reseller_' . $user_id)) {
+            wp_send_json_error('Security check failed.');
+            wp_die();
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('You are not authorized to perform this action.');
+            wp_die();
+        }
+
+        $user = get_user_by('id', $user_id);
+        if (!$user) {
+            wp_send_json_error('Invalid user.');
+            wp_die();
+        }
+
+        $is_reseller = in_array('reseller', (array)$user->roles);
+
+        if ($is_reseller) {
+            $user->remove_role('reseller');
+            $message = 'User is no longer a reseller.';
+        } else {
+            $user->add_role('reseller');
+            $message = 'User is now a reseller.';
+        }
+
+        wp_send_json_success(array(
+            'message' => $message,
+            'is_reseller' => !$is_reseller,
+        ));
         wp_die();
     }
 }

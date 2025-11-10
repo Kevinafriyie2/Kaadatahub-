@@ -112,6 +112,10 @@ class Kaa_Mall {
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_menu_page' );
 		$this->loader->add_action( 'admin_init', $plugin_admin, 'register_settings' );
+
+		// Admin AJAX hooks
+		$this->loader->add_action( 'wp_ajax_kaa_mall_adjust_wallet_balance', $plugin_admin, 'adjust_wallet_balance_callback' );
+		$this->loader->add_action( 'wp_ajax_kaa_mall_toggle_reseller', $plugin_admin, 'toggle_reseller_callback' );
 	}
 
 	/**
@@ -147,9 +151,6 @@ class Kaa_Mall {
 		// AFA Registration
 		$this->loader->add_action( 'wp_ajax_kaa_mall_afa_registration', $plugin_public, 'afa_registration_callback' );
 		$this->loader->add_action( 'wp_ajax_kaa_mall_verify_afa_registration', $plugin_public, 'verify_afa_registration_callback' );
-
-		// Admin Wallet Adjustment
-		$this->loader->add_action( 'wp_ajax_kaa_mall_adjust_wallet_balance', $plugin_admin, 'adjust_wallet_balance_callback' );
 
 		$this->loader->add_filter( 'query_vars', $plugin_public, 'register_query_vars' );
 		$this->loader->add_action( 'template_redirect', $plugin_public, 'handle_store_rewrite' );

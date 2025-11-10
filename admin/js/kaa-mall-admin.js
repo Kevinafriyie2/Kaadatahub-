@@ -57,6 +57,46 @@
                 }
             });
         });
+
+        // --- Toggle Reseller Status ---
+        $('.toggle-reseller-btn').on('click', function(e) {
+            e.preventDefault();
+
+            var $button = $(this);
+            var userId = $button.data('user-id');
+            var nonce = $button.data('nonce');
+
+            $button.prop('disabled', true).text('Updating...');
+
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'kaa_mall_toggle_reseller',
+                    user_id: userId,
+                    nonce: nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.data.message);
+                        // Toggle button text and class
+                        if (response.data.is_reseller) {
+                            $button.text('Remove Reseller').removeClass('button-primary').addClass('button-secondary');
+                        } else {
+                            $button.text('Make Reseller').removeClass('button-secondary').addClass('button-primary');
+                        }
+                    } else {
+                        alert('Error: ' + response.data);
+                    }
+                },
+                error: function() {
+                    alert('An unexpected error occurred. Please try again.');
+                },
+                complete: function() {
+                    $button.prop('disabled', false);
+                }
+            });
+        });
     });
 
 })(jQuery);

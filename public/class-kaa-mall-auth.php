@@ -57,7 +57,9 @@ class Kaa_Mall_Auth {
         if (is_wp_error($user_signon)) {
             wp_send_json_error('Wrong username or password.');
         } else {
-            wp_send_json_success(array('redirect' => home_url('/dashboard')));
+            $redirect_url = get_option('kaa_mall_user_portal_url', home_url('/'));
+            $redirect_url = apply_filters('kaa_mall_login_redirect', $redirect_url, $user_signon);
+            wp_send_json_success(array('redirect' => $redirect_url));
         }
     }
 

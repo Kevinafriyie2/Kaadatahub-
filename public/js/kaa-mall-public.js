@@ -19,7 +19,7 @@
         });
 
         // --- AJAX Page Loading ---
-        function loadContent(page) {
+        function loadContent(page, network) {
             // If no page is specified, do nothing.
              if (!page) {
                 return;
@@ -33,6 +33,7 @@
                 data: {
                     action: 'kaa_mall_load_page',
                     page: page,
+                    network: network,
                     nonce: kaa_mall_ajax.nonce
                 },
                 success: function(response) {
@@ -52,17 +53,18 @@
         $('.sidebar-nav').on('click', 'a', function(e) {
             e.preventDefault();
             var page = $(this).data('page');
+            var network = $(this).data('network');
 
             // Update active class
             $('.sidebar-nav li').removeClass('active');
             $(this).parent().addClass('active');
 
-            loadContent(page);
+            loadContent(page, network);
         });
 
-        // Load the initial "Buy Data" page
-        loadContent('buy-data');
-        $('.sidebar-nav a[data-page="buy-data"]').parent().addClass('active');
+        // Load the initial "Dashboard" page
+        loadContent('dashboard');
+        $('.sidebar-nav a[data-page="dashboard"]').parent().addClass('active');
 
         // --- Network Tab Switching ---
         $('.main-dashboard-content').on('click', '.tab-link', function() {
@@ -159,12 +161,12 @@
         });
 
         // --- Top Up Wallet ---
-        $('.main-dashboard-content').on('click', '.top-up-btn', function(e) {
+        $(document).on('click', '.top-up-btn', function(e) {
             e.preventDefault();
 
-            var amount = prompt('Enter the amount to top up:');
-            if (!amount || isNaN(amount) || amount <= 0) {
-                alert('Please enter a valid amount.');
+            var amount = $('#top-up-amount').val();
+            if (!amount || parseFloat(amount) <= 0) {
+                alert('Please enter a valid amount from the input field.');
                 return;
             }
 
@@ -187,7 +189,7 @@
                             amount: response.data.amount,
                             ref: '' + Math.floor((Math.random() * 1000000000) + 1),
                             onClose: function() {
-                                $button.prop('disabled', false).html('<i class="fas fa-credit-card"></i> Top Up Wallet');
+                                $button.prop('disabled', false).html('<i class="fas fa-arrow-up"></i> Top Up with Paystack');
                             },
                             callback: function(transaction) {
                                 $.ajax({
@@ -202,7 +204,7 @@
                                     success: function(verifyResponse) {
                                         if (verifyResponse.success) {
                                             alert(verifyResponse.data);
-                                            loadContent('buy-data');
+                                            loadContent('wallet'); // Reload the wallet page
                                         } else {
                                             alert('Error: ' + verifyResponse.data);
                                         }
@@ -213,11 +215,12 @@
                         handler.openIframe();
                     } else {
                         alert('Error: ' + response.data);
+                        $button.prop('disabled', false).html('<i class="fas fa-arrow-up"></i> Top Up with Paystack');
                     }
                 },
                 error: function() {
                     alert('An unexpected error occurred. Please try again.');
-                    $button.prop('disabled', false).html('<i class="fas fa-credit-card"></i> Top Up Wallet');
+                    $button.prop('disabled', false).html('<i class="fas fa-arrow-up"></i> Top Up with Paystack');
                 }
             });
         });
@@ -343,7 +346,7 @@
         });
 
         // --- Direct Purchase ---
-        $('.main-dashboard-content').on('click', '.direct-purchase-btn', function(e) {
+        $(document).on('click', '.direct-purchase-btn', function(e) {
             e.preventDefault();
 
             var $button = $(this);
@@ -360,6 +363,7 @@
             $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Purchasing...');
 
             if (paymentMethod === 'wallet') {
+                var resellerId = (typeof kaa_mall_store_ajax !== 'undefined') ? kaa_mall_store_ajax.reseller_id : 0;
                 $.ajax({
                     url: kaa_mall_ajax.ajax_url,
                     type: 'POST',
@@ -367,6 +371,7 @@
                         action: 'kaa_mall_direct_purchase',
                         product_id: productId,
                         payment_method: paymentMethod,
+                        reseller_id: resellerId,
                         nonce: kaa_mall_ajax.nonce
                     },
                     success: function(response) {
