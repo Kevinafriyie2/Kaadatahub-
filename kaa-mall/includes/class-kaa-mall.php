@@ -50,7 +50,11 @@ class Kaa_Mall {
                 ) );
                 if ( ! empty( $users ) ) {
                     $reseller_id = $users[0]->ID;
-                    $redirect_url = add_query_arg( 'ref', $reseller_id, get_option( 'kaa_mall_user_portal_url' ) );
+                    $portal_url = get_option( 'kaa_mall_user_portal_url' );
+                    if ( empty( $portal_url ) ) {
+                        $portal_url = home_url('/');
+                    }
+                    $redirect_url = add_query_arg( 'ref', $reseller_id, $portal_url );
                     wp_redirect( $redirect_url );
                     exit;
                 }
