@@ -1,0 +1,95 @@
+/* KAA Mall Store Styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    margin: 0;
+    background-color: #f4f7f6;
+}
+
+#kaa-mall-store-wrapper {
+    max-width: 800px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.store-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.data-bundle-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 20px;
+}
+
+.network-tabs {
+    display: flex;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.tab-link {
+    background: transparent;
+    border: none;
+    color: #555;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.tab-link.active {
+    color: #4a148c;
+    border-bottom: 2px solid #4a148c;
+}
+
+.data-bundle-form {
+    display: none;
+}
+
+.data-bundle-form.active {
+    display: block;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.payment-options label {
+    margin-right: 15px;
+}
+
+.direct-purchase-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    background: linear-gradient(to right, #4a148c, #880e4f);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.direct-purchase-btn:hover {
+    background: linear-gradient(to right, #5e1a9e, #a0125e);
+}
