@@ -233,7 +233,24 @@ class Kaa_Mall_Public {
             $order->save();
         }
 
+        $this->check_and_send_low_balance_alert( $user_id );
         wp_send_json_success();
+    }
+
+    private function check_and_send_low_balance_alert( $user_id ) {
+        if ( ! get_option( 'kaa_mall_enable_low_balance_alerts' ) ) {
+            return;
+        }
+
+        $threshold = floatval( get_option( 'kaa_mall_low_balance_threshold', '5' ) );
+        $balance = $this->get_wallet_balance( $user_id );
+
+        if ( $balance < $threshold ) {
+            $user = get_user_by( 'id', $user_id );
+            $subject = 'Your Wallet Balance is Low';
+            $message = 'Dear ' . $user->display_name . ",\n\nYour wallet balance is running low. Your current balance is " . wc_price( $balance ) . ".\n\nPlease top up your wallet to continue enjoying our services.\n\nThank you,\nKaa Mall";
+            wp_mail( $user->user_email, $subject, $message );
+        }
     }
 
     public function purchase_bundle_paystack() {
@@ -396,6 +413,7 @@ class Kaa_Mall_Public {
             $order->save();
         }
 
+        $this->check_and_send_low_balance_alert( $user_id );
         wp_send_json_success();
     }
 

@@ -20,6 +20,20 @@ class Kaa_Mall_Admin {
         add_action( 'admin_post_kaa_mall_approve_reseller', array( $this, 'handle_approve_reseller' ) );
         add_action( 'admin_post_kaa_mall_deny_reseller', array( $this, 'handle_deny_reseller' ) );
         add_action( 'admin_post_kaa_mall_send_broadcast', array( $this, 'handle_send_broadcast' ) );
+        add_action( 'admin_post_kaa_mall_delete_broadcast', array( $this, 'handle_delete_broadcast' ) );
+    }
+
+    public function handle_delete_broadcast() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        $broadcast_id = intval( $_GET['broadcast_id'] );
+        wp_delete_post( $broadcast_id, true );
+
+        $redirect_url = add_query_arg( 'message', 'Broadcast deleted successfully.', wp_get_referer() );
+        wp_redirect( $redirect_url );
+        exit;
     }
 
     public function handle_send_broadcast() {
@@ -242,6 +256,8 @@ class Kaa_Mall_Admin {
         register_setting( 'kaa_mall_options', 'kaa_mall_airteltigo_out_of_stock' );
         register_setting( 'kaa_mall_options', 'kaa_mall_vodafone_out_of_stock' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_application_fee' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_low_balance_threshold' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_enable_low_balance_alerts' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_public_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_secret_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_business_email' );
@@ -293,6 +309,18 @@ class Kaa_Mall_Admin {
                     <tr valign="top">
                         <th scope="row">Application Fee</th>
                         <td><input type="number" name="kaa_mall_reseller_application_fee" value="<?php echo esc_attr( get_option('kaa_mall_reseller_application_fee', '10') ); ?>" step="0.01" /></td>
+                    </tr>
+                </table>
+
+                <h3>Email Notification Settings</h3>
+                <table class="form-table">
+                    <tr valign="top">
+                        <th scope="row">Low Balance Alerts</th>
+                        <td><label><input type="checkbox" name="kaa_mall_enable_low_balance_alerts" value="1" <?php checked( get_option( 'kaa_mall_enable_low_balance_alerts' ), 1 ); ?>> Enable low balance email alerts</label></td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">Low Balance Threshold</th>
+                        <td><input type="number" name="kaa_mall_low_balance_threshold" value="<?php echo esc_attr( get_option('kaa_mall_low_balance_threshold', '5') ); ?>" step="0.01" /></td>
                     </tr>
                 </table>
 
@@ -414,6 +442,98 @@ class Kaa_Mall_Admin {
         return get_posts( $args );
     }
 
+    private function get_total_sales_today() {
+        $today = date('Y-m-d');
+        $args = array(
+            'post_type' => 'shop_order',
+            'post_status' => array('wc-completed', 'wc-processing'),
+            'date_query' => array(
+                array(
+                    'after'     => $today . ' 00:00:00',
+                    'before'    => $today . ' 23:59:59',
+                    'inclusive' => true,
+                ),
+            ),
+            'posts_per_page' => -1,
+        );
+        $orders = new WP_Query($args);
+        $total_sales = 0;
+        while ($orders->have_posts()) {
+            $orders->the_post();
+            $order = wc_get_order(get_the_ID());
+            $total_sales += $order->get_total();
+        }
+        wp_reset_postdata();
+        return $total_sales;
+    }
+
+    private function get_new_users_this_month() {
+        $first_day_of_month = date('Y-m-01');
+        $args = array(
+            'date_query' => array(
+                array(
+                    'after'     => $first_day_of_month,
+                    'inclusive' => true,
+                ),
+            ),
+        );
+        $user_query = new WP_User_Query($args);
+        return $user_query->get_total();
+    }
+
+    private function get_popular_data_bundles() {
+        global $wpdb;
+
+        $results = $wpdb->get_results( "
+            SELECT p.ID, p.post_title, COUNT(oim.meta_value) as purchase_count
+            FROM {$wpdb->prefix}woocommerce_order_items oi
+            JOIN {$wpdb->prefix}woocommerce_order_itemmeta oim ON oi.order_item_id = oim.order_item_id
+            JOIN {$wpdb->posts} p ON oim.meta_value = p.ID
+            WHERE oim.meta_key = '_product_id'
+            GROUP BY p.ID
+            ORDER BY purchase_count DESC
+            LIMIT 5
+        " );
+
+        return $results;
+    }
+
+    private function get_reseller_leaderboard() {
+        $resellers = get_users(array('role' => 'reseller'));
+        $leaderboard = array();
+
+        foreach ($resellers as $reseller) {
+            $args = array(
+                'post_type' => 'shop_order',
+                'post_status' => array('wc-completed', 'wc-processing'),
+                'meta_key' => '_reseller_id',
+                'meta_value' => $reseller->ID,
+                'posts_per_page' => -1,
+            );
+            $orders = new WP_Query($args);
+            $total_sales = 0;
+            while ($orders->have_posts()) {
+                $orders->the_post();
+                $order = wc_get_order(get_the_ID());
+                $total_sales += $order->get_total();
+            }
+            wp_reset_postdata();
+
+            if ($total_sales > 0) {
+                $leaderboard[] = array(
+                    'name' => $reseller->display_name,
+                    'sales' => $total_sales,
+                );
+            }
+        }
+
+        usort($leaderboard, function($a, $b) {
+            return $b['sales'] - $a['sales'];
+        });
+
+        return $leaderboard;
+    }
+
     public function render_admin_portal() {
         if ( ! current_user_can( 'manage_options' ) ) {
             return 'You do not have permission to view this page.';
@@ -429,6 +549,10 @@ class Kaa_Mall_Admin {
         $all_resellers = $this->get_all_resellers();
         $withdrawal_requests = $this->get_withdrawal_requests();
         $total_reseller_profit = $this->get_total_reseller_profit();
+        $total_sales_today = $this->get_total_sales_today();
+        $new_users_this_month = $this->get_new_users_this_month();
+        $popular_bundles = $this->get_popular_data_bundles();
+        $reseller_leaderboard = $this->get_reseller_leaderboard();
 
         ob_start();
         ?>
@@ -519,10 +643,49 @@ class Kaa_Mall_Admin {
 
             <div class="admin-grid">
                 <div class="admin-section">
+                    <h3>Total Sales Today</h3>
+                    <p style="font-size: 2em; font-weight: bold; text-align: center; margin: 20px 0;"><?php echo wc_price($total_sales_today); ?></p>
+                </div>
+                <div class="admin-section">
+                    <h3>New Users This Month</h3>
+                    <p style="font-size: 2em; font-weight: bold; text-align: center; margin: 20px 0;"><?php echo $new_users_this_month; ?></p>
+                </div>
+                <div class="admin-section">
                     <h3>Total Reseller Profit</h3>
                     <p style="font-size: 2em; font-weight: bold; text-align: center; margin: 20px 0;"><?php echo wc_price( $total_reseller_profit ); ?></p>
                 </div>
-
+                <div class="admin-section">
+                    <h3>Popular Data Bundles</h3>
+                    <ul>
+                        <?php foreach ( $popular_bundles as $bundle ) : ?>
+                            <li><?php echo esc_html( $bundle->post_title ); ?> (<?php echo $bundle->purchase_count; ?> sales)</li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <div class="admin-section">
+                    <h3>Reseller Leaderboard</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Reseller</th>
+                                <th>Total Sales</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $rank = 1;
+                            foreach ( $reseller_leaderboard as $reseller_data ) :
+                            ?>
+                                <tr>
+                                    <td><?php echo $rank++; ?></td>
+                                    <td><?php echo esc_html( $reseller_data['name'] ); ?></td>
+                                    <td><?php echo wc_price( $reseller_data['sales'] ); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
                 <div class="admin-section">
                     <h3>Top Up User Wallet</h3>
                     <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -703,7 +866,7 @@ class Kaa_Mall_Admin {
                 $('#kaa-mall-user-search').on('keyup', function() {
                     clearTimeout(searchTimer);
                     var searchTerm = $(this).val();
-                    if (searchTerm.length < 3) {
+                    if (searchTerm.length < 2) {
                         $('#kaa-mall-user-search-results').empty();
                         return;
                     }
@@ -830,6 +993,7 @@ class Kaa_Mall_Admin {
                                     <th>Date</th>
                                     <th>Subject</th>
                                     <th>Message</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -839,6 +1003,7 @@ class Kaa_Mall_Admin {
                                             <td><?php echo get_the_date( '', $broadcast ); ?></td>
                                             <td><?php echo esc_html( $broadcast->post_title ); ?></td>
                                             <td><?php echo esc_html( $broadcast->post_content ); ?></td>
+                                            <td><a href="<?php echo esc_url( add_query_arg( array( 'action' => 'kaa_mall_delete_broadcast', 'broadcast_id' => $broadcast->ID ), admin_url( 'admin-post.php' ) ) ); ?>" class="button">Delete</a></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else : ?>

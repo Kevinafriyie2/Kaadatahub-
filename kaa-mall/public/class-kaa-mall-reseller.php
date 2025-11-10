@@ -319,10 +319,50 @@ class Kaa_Mall_Reseller {
 
         $application_fee = get_option( 'kaa_mall_reseller_application_fee', '10' );
         ?>
-        <div id="kaa-mall-reseller-apply-form">
+        <style>
+            .kaa-mall-apply-portal {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                background-color: #121212;
+                color: #e0e0e0;
+                padding: 20px;
+                max-width: 500px;
+                margin: 40px auto;
+                border-radius: 12px;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            }
+            .kaa-mall-apply-portal h3 {
+                font-size: 1.8em;
+                color: #ffffff;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .kaa-mall-apply-portal p {
+                text-align: center;
+                margin-bottom: 15px;
+            }
+            .kaa-mall-apply-portal .fee {
+                font-size: 2.2em;
+                font-weight: bold;
+                color: #ffc107;
+                text-align: center;
+                margin: 20px 0;
+            }
+            .kaa-mall-apply-portal button {
+                width: 100%;
+                padding: 12px;
+                border: none;
+                border-radius: 8px;
+                background-color: #ffc107;
+                color: #121212;
+                font-weight: bold;
+                cursor: pointer;
+                font-size: 1.1em;
+            }
+        </style>
+        <div class="kaa-mall-apply-portal" id="kaa-mall-reseller-apply-form">
             <h3>Apply to be a Reseller</h3>
             <p>To become a reseller, you need to pay a one-time application fee.</p>
-            <p><strong>Application Fee:</strong> <?php echo wc_price( $application_fee ); ?></p>
+            <p class="fee"><?php echo wc_price( $application_fee ); ?></p>
             <button id="kaa-mall-apply-now-btn" data-fee="<?php echo esc_attr( $application_fee ); ?>">Apply Now</button>
         </div>
         <?php

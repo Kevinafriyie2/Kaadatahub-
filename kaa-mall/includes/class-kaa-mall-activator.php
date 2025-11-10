@@ -7,20 +7,6 @@ class Kaa_Mall_Activator {
         self::create_virtual_product( 'Data Bundle' );
         self::create_virtual_product( 'AFA Registration' );
         self::add_reseller_role();
-        self::create_page( 'Apply to be a Reseller', '[kaa_reseller_apply]' );
-    }
-
-    private static function create_page( $title, $content ) {
-        if ( ! get_page_by_title( $title, 'OBJECT', 'page' ) ) {
-            $page = array(
-                'post_title'   => $title,
-                'post_content' => $content,
-                'post_status'  => 'publish',
-                'post_author'  => 1,
-                'post_type'    => 'page',
-            );
-            wp_insert_post( $page );
-        }
     }
 
     private static function add_reseller_role() {
