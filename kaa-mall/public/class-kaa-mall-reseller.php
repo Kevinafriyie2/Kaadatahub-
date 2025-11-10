@@ -115,6 +115,17 @@ class Kaa_Mall_Reseller {
             $new_profit_balance = $profit_balance - $amount;
             update_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', $new_profit_balance );
 
+            // Send email notification to admin
+            $admin_email = get_option( 'admin_email' );
+            $reseller = get_userdata( $reseller_id );
+            $subject = 'New Withdrawal Request from ' . $reseller->display_name;
+            $message = "A new withdrawal request has been submitted:\n\n" .
+                       "Reseller: " . $reseller->display_name . " (" . $reseller->user_email . ")\n" .
+                       "Amount: " . wc_price( $amount ) . "\n" .
+                       "Payment Details: " . $payment_details . "\n\n" .
+                       "You can view and process this request in your WordPress admin dashboard.";
+            wp_mail( $admin_email, $subject, $message );
+
             wp_send_json_success( array( 'message' => 'Withdrawal request submitted successfully.' ) );
         } else {
             wp_send_json_error( array( 'message' => 'Could not submit withdrawal request.' ) );
@@ -147,8 +158,17 @@ class Kaa_Mall_Reseller {
     }
 
     public function render_reseller_portal() {
+        if ( ! is_user_logged_in() ) {
+            ob_start();
+            echo '<div class="kaa-mall-portal" style="max-width: 400px; margin: 40px auto; padding: 20px; background-color: #1e1e1e; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">';
+            echo '<h3 style="text-align: center; color: #ffffff; margin-bottom: 20px;">Please log in to access the Reseller Portal.</h3>';
+            wp_login_form( array('redirect' => get_permalink()) );
+            echo '</div>';
+            return ob_get_clean();
+        }
+
         if ( ! current_user_can( 'reseller' ) ) {
-            return 'You do not have permission to view this page.';
+            return '<div class="kaa-mall-portal" style="text-align: center; padding: 40px;">You do not have the required permissions to view this page. Please contact the site administrator if you believe this is an error.</div>';
         }
 
         $reseller_id = get_current_user_id();
@@ -159,6 +179,96 @@ class Kaa_Mall_Reseller {
         echo Kaa_Mall_Portal_Header::render();
         ?>
         <style>
+            :root {
+                --primary-color: #ffc107;
+                --secondary-color: #8a2be2;
+                --background-color: #121212;
+                --card-background-color: #1e1e1e;
+                --text-color: #e0e0e0;
+                --heading-color: #ffffff;
+                --border-color: #333333;
+                --shadow-color: rgba(0, 0, 0, 0.5);
+            }
+
+            .kaa-mall-reseller-portal {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                background-color: var(--background-color);
+                color: var(--text-color);
+                padding: 20px;
+            }
+            .reseller-header h2 {
+                font-size: 2.5em;
+                margin-bottom: 20px;
+                color: var(--heading-color);
+                text-align: center;
+            }
+            .reseller-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+            }
+            .reseller-card {
+                background: var(--card-background-color);
+                border-radius: 12px;
+                padding: 25px;
+                box-shadow: 0 5px 15px var(--shadow-color);
+            }
+            .reseller-card h3 {
+                font-size: 1.4em;
+                margin-top: 0;
+                margin-bottom: 20px;
+                color: var(--heading-color);
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 10px;
+            }
+            .profit-balance {
+                font-size: 2.8em;
+                font-weight: bold;
+                color: var(--primary-color);
+                text-align: center;
+                margin: 10px 0;
+            }
+            .reseller-card label {
+                display: block;
+                margin-bottom: 8px;
+                color: var(--text-color);
+            }
+            .reseller-card input[type="text"],
+            .reseller-card input[type="number"],
+            .reseller-card textarea {
+                width: 100%;
+                padding: 12px;
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                background-color: #2c2c2c;
+                color: var(--text-color);
+                font-size: 1em;
+                box-sizing: border-box;
+            }
+            .reseller-card table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .reseller-card th, .reseller-card td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .reseller-card th {
+                color: var(--heading-color);
+            }
+            .reseller-card button {
+                width: 100%;
+                padding: 12px;
+                border: none;
+                border-radius: 8px;
+                background-color: var(--primary-color);
+                color: #121212;
+                font-weight: bold;
+                cursor: pointer;
+                font-size: 1.1em;
+            }
             .referral-link-wrapper {
                 display: flex;
             }
@@ -173,68 +283,28 @@ class Kaa_Mall_Reseller {
                 width: auto;
                 padding: 10px 15px;
             }
-            .kaa-mall-reseller-portal {
-                padding: 20px;
-                max-width: 1200px;
-                margin: 0 auto;
-                color: #333;
-            }
-            .reseller-header h2 {
-                font-size: 2.5em;
+            .network-tabs {
+                display: flex;
+                justify-content: space-around;
                 margin-bottom: 20px;
-                color: #1a1a1a;
             }
-            .reseller-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 20px;
-            }
-            .reseller-card {
-                background: #fff;
-                border-radius: 12px;
-                padding: 25px;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
-            }
-            .reseller-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-            }
-            .reseller-card h3 {
-                font-size: 1.4em;
-                margin-top: 0;
-                margin-bottom: 15px;
-                color: #1a1a1a;
-            }
-            .profit-balance {
-                font-size: 2.5em;
-                font-weight: bold;
-                color: #4a90e2;
-            }
-            .reseller-card input[type="text"], .reseller-card input[type="number"] {
-                width: 100%;
-                padding: 10px;
-                border: 1px solid #e6e6e6;
-                border-radius: 8px;
-            }
-            .reseller-card table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            .reseller-card th, .reseller-card td {
-                padding: 12px;
-                text-align: left;
-                border-bottom: 1px solid #e6e6e6;
-            }
-            .reseller-card button {
-                width: 100%;
-                padding: 12px;
+            .network-tabs .tab-link {
+                background: none;
                 border: none;
-                border-radius: 8px;
-                background-color: #4a90e2;
-                color: #fff;
-                font-weight: bold;
+                color: var(--text-color);
                 cursor: pointer;
+                padding: 10px;
+                font-size: 1em;
+            }
+            .network-tabs .tab-link.active {
+                border-bottom: 2px solid var(--primary-color);
+                color: var(--primary-color);
+            }
+            .network-tab-content {
+                display: none;
+            }
+            .network-tab-content.active {
+                display: block;
             }
         </style>
 
@@ -267,9 +337,9 @@ class Kaa_Mall_Reseller {
 
                 <div class="reseller-card">
                     <h3>Your Shop Name</h3>
-                    <p>Set your unique shop name.</p>
                     <form id="kaa-mall-shop-name-form">
-                        <input type="text" name="shop_name" value="<?php echo esc_attr( get_user_meta( $reseller_id, '_kaa_mall_shop_name', true ) ); ?>" placeholder="e.g., my-data-shop">
+                        <label for="shop_name">Set your unique shop name</label>
+                        <input type="text" id="shop_name" name="shop_name" value="<?php echo esc_attr( get_user_meta( $reseller_id, '_kaa_mall_shop_name', true ) ); ?>" placeholder="e.g., my-data-shop">
                         <button type="submit">Save Shop Name</button>
                     </form>
                 </div>

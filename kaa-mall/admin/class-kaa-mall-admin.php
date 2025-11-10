@@ -15,6 +15,30 @@ class Kaa_Mall_Admin {
         add_action( 'admin_post_kaa_mall_top_up_wallet', array( $this, 'handle_top_up_wallet' ) );
         add_action( 'admin_post_kaa_mall_bulk_update_order_status', array( $this, 'handle_bulk_update_order_status' ) );
         add_action( 'admin_post_kaa_mall_mark_withdrawal_paid', array( $this, 'handle_mark_withdrawal_paid' ) );
+        add_action( 'wp_ajax_kaa_mall_search_users', array( $this, 'search_users' ) );
+    }
+
+    public function search_users() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array(), 403 );
+        }
+
+        $search = sanitize_text_field( $_POST['search'] );
+        $users = get_users( array(
+            'search'         => '*' . esc_attr( $search ) . '*',
+            'search_columns' => array( 'user_login', 'user_email', 'display_name' ),
+            'number'         => 10,
+        ) );
+
+        $results = array();
+        foreach ( $users as $user ) {
+            $results[] = array(
+                'id' => $user->ID,
+                'text' => $user->display_name . ' (' . $user->user_email . ')',
+            );
+        }
+
+        wp_send_json_success( $results );
     }
 
     public function handle_mark_withdrawal_paid() {
@@ -349,13 +373,11 @@ class Kaa_Mall_Admin {
                         <?php wp_nonce_field( 'kaa_mall_top_up_wallet_nonce', 'kaa_mall_top_up_wallet_nonce' ); ?>
                         <table class="form-table">
                             <tr valign="top">
-                                <th scope="row">Select User</th>
+                                <th scope="row">Search User</th>
                                 <td>
-                                    <select name="user_id">
-                                        <?php foreach ( $all_users as $user ) : ?>
-                                            <option value="<?php echo $user->ID; ?>"><?php echo esc_html( $user->display_name ); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <input type="text" id="kaa-mall-user-search" placeholder="Search by username or email...">
+                                    <input type="hidden" name="user_id" id="kaa-mall-user-id">
+                                    <div id="kaa-mall-user-search-results"></div>
                                 </td>
                             </tr>
                             <tr valign="top">
@@ -517,8 +539,67 @@ class Kaa_Mall_Admin {
                     var checkboxes = $(this).closest('table').find('tbody input[type="checkbox"]');
                     checkboxes.prop('checked', $(this).is(':checked'));
                 });
+
+                var searchTimer;
+                $('#kaa-mall-user-search').on('keyup', function() {
+                    clearTimeout(searchTimer);
+                    var searchTerm = $(this).val();
+                    if (searchTerm.length < 3) {
+                        $('#kaa-mall-user-search-results').empty();
+                        return;
+                    }
+
+                    searchTimer = setTimeout(function() {
+                        $.post(ajaxurl, {
+                            action: 'kaa_mall_search_users',
+                            search: searchTerm
+                        }, function(response) {
+                            var resultsContainer = $('#kaa-mall-user-search-results');
+                            resultsContainer.empty();
+                            if (response.success && response.data.length) {
+                                var list = $('<ul>');
+                                $.each(response.data, function(i, user) {
+                                    list.append($('<li>').data('userid', user.id).text(user.text));
+                                });
+                                resultsContainer.append(list);
+                            } else {
+                                resultsContainer.text('No users found.');
+                            }
+                        });
+                    }, 500); // Debounce for 500ms
+                });
+
+                $(document).on('click', '#kaa-mall-user-search-results li', function() {
+                    var userId = $(this).data('userid');
+                    var userName = $(this).text();
+                    $('#kaa-mall-user-id').val(userId);
+                    $('#kaa-mall-user-search').val(userName);
+                    $('#kaa-mall-user-search-results').empty();
+                });
             });
         </script>
+        <style>
+            #kaa-mall-user-search-results {
+                position: relative;
+            }
+            #kaa-mall-user-search-results ul {
+                position: absolute;
+                background: white;
+                border: 1px solid #ddd;
+                list-style: none;
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                z-index: 100;
+            }
+            #kaa-mall-user-search-results li {
+                padding: 8px 12px;
+                cursor: pointer;
+            }
+            #kaa-mall-user-search-results li:hover {
+                background: #f0f0f0;
+            }
+        </style>
         <?php
         return ob_get_clean();
     }
