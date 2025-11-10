@@ -86,7 +86,7 @@ class Kaa_Mall_Auth {
             wp_send_json_error($user_id->get_error_message());
         } else {
             // Create a wallet for the new user
-            Kaa_Mall_Wallet::create_wallet($user_id);
+            // Kaa_Mall_Wallet::create_wallet($user_id);
             wp_send_json_success('Registration successful. You can now log in.');
         }
     }

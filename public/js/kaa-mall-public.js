@@ -3,13 +3,13 @@
 
     $(document).ready(function() {
 
-        // --- Sidebar Toggling ---
-        $('.open-btn').on('click', function() {
-            $('body').addClass('sidebar-open');
+        // --- Hamburger Menu Toggling ---
+        $('.open-hamburger').on('click', function() {
+            $('#kaa-mall-hamburger-nav').addClass('open');
         });
 
-        $('.close-btn').on('click', function() {
-            $('body').removeClass('sidebar-open');
+        $('.close-hamburger').on('click', function() {
+            $('#kaa-mall-hamburger-nav').removeClass('open');
         });
 
         // --- Logout Dropdown ---
