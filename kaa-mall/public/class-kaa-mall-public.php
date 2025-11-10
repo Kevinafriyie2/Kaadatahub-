@@ -404,14 +404,23 @@ class Kaa_Mall_Public {
     }
 
     public function render_user_portal() {
-        if ( isset( $_GET['ref'] ) ) {
-            $reseller_id = intval( $_GET['ref'] );
-            if ( get_user_by( 'id', $reseller_id ) ) {
-                WC()->session->set( 'kaa_mall_reseller_id', $reseller_id );
+        if ( function_exists('WC') && WC()->session ) {
+            // Ensure a session is started for guest users.
+            if ( !WC()->session->has_session() ) {
+                 WC()->session->set_customer_session_cookie(true);
+            }
+
+            if ( isset( $_GET['ref'] ) ) {
+                $reseller_id = intval( $_GET['ref'] );
+                if ( get_user_by( 'id', $reseller_id ) ) {
+                    WC()->session->set( 'kaa_mall_reseller_id', $reseller_id );
+                }
             }
         }
 
-        if ( ! is_user_logged_in() && ! WC()->session->get( 'kaa_mall_reseller_id' ) ) {
+        $reseller_in_session = ( function_exists('WC') && WC()->session ) ? WC()->session->get( 'kaa_mall_reseller_id' ) : false;
+
+        if ( ! is_user_logged_in() && ! $reseller_in_session ) {
             ob_start();
             ?>
             <style>
@@ -451,6 +460,9 @@ class Kaa_Mall_Public {
             <div class="kaa-mall-portal" style="max-width: 400px; margin: 40px auto; padding: 20px; background-color: #1e1e1e; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
                 <h3 style="text-align: center; color: #ffffff; margin-bottom: 20px;">Please log in to access the portal.</h3>
                 <?php wp_login_form( array('redirect' => get_permalink()) ); ?>
+                <p style="text-align: center; margin-top: 20px; color: #e0e0e0;">
+                    Don't have an account? <a href="<?php echo esc_url( home_url( '/auth' ) ); ?>" style="color: #ffc107;">Register here</a>
+                </p>
             </div>
             <?php
             return ob_get_clean();
