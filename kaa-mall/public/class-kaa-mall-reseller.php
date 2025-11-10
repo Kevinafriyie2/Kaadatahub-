@@ -69,7 +69,13 @@ class Kaa_Mall_Reseller {
 
         update_user_meta( $reseller_id, '_kaa_mall_shop_name', $shop_name );
 
-        wp_send_json_success( array( 'message' => 'Shop name updated successfully.' ) );
+        $referral_link = esc_url( home_url( '/shop/' . $shop_name ) );
+
+        wp_send_json_success( array(
+            'message' => 'Shop name updated successfully.',
+            'shop_name' => $shop_name,
+            'referral_link' => $referral_link,
+        ) );
     }
 
     public function request_withdrawal() {

@@ -37,7 +37,8 @@
             $.post(kaa_mall_reseller_params.ajax_url, data, function(response) {
                 if (response.success) {
                     alert(response.data.message);
-                    window.location.reload();
+                    $('input[name="shop_name"]').val(response.data.shop_name);
+                    $('input[readonly]').val(response.data.referral_link);
                 } else {
                     alert('An error occurred: ' + response.data.message);
                 }
