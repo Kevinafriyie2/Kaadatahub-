@@ -8,8 +8,10 @@
         });
 
         // Initial setup on page load
-        update_wallet_balance();
-        load_recent_orders();
+        if (kaa_mall_params.is_user_logged_in) {
+            update_wallet_balance();
+            load_recent_orders();
+        }
         load_bundle_prices('mtn'); // Load default tab prices
 
         // Handle network tab switching

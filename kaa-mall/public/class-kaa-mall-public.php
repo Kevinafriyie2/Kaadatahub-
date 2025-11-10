@@ -33,7 +33,8 @@ class Kaa_Mall_Public {
         wp_localize_script( 'kaa-mall-public', 'kaa_mall_params', array(
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'paystack_public_key' => get_option( 'kaa_mall_paystack_public_key' ),
-            'user_email' => $user->user_email,
+            'user_email' => is_user_logged_in() ? $user->user_email : '',
+            'is_user_logged_in' => is_user_logged_in(),
             'currency' => get_woocommerce_currency(),
             'nonce' => wp_create_nonce( 'kaa_mall_nonce' ),
         ) );
@@ -418,9 +419,7 @@ class Kaa_Mall_Public {
             }
         }
 
-        $reseller_in_session = ( function_exists('WC') && WC()->session ) ? WC()->session->get( 'kaa_mall_reseller_id' ) : false;
-
-        if ( ! is_user_logged_in() && ! $reseller_in_session ) {
+        if ( ! is_user_logged_in() ) {
             ob_start();
             ?>
             <style>
