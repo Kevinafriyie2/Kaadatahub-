@@ -1,0 +1,75 @@
+/* KAA Mall Auth Portal Styles */
+
+.kaa-auth-portal {
+    max-width: 400px;
+    margin: 50px auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.auth-tabs {
+    display: flex;
+}
+
+.auth-tabs .tab-link {
+    flex: 1;
+    padding: 15px;
+    border: none;
+    background: #f1f1f1;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.auth-tabs .tab-link.active {
+    background: #fff;
+    color: #4a148c;
+}
+
+.auth-tab-content {
+    display: none;
+    padding: 20px;
+}
+
+.auth-tab-content.active {
+    display: block;
+}
+
+.form-row {
+    margin-bottom: 15px;
+}
+
+.form-row label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-row input[type="text"],
+.form-row input[type="password"],
+.form-row input[type="email"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    background: linear-gradient(to right, #4a148c, #880e4f);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.button:hover {
+    background: linear-gradient(to right, #5e1a9e, #a0125e);
+}
