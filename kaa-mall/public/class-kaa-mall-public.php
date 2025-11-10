@@ -21,6 +21,12 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_kaa_mall_get_wallet_balance', array( $this, 'ajax_get_wallet_balance' ) );
     }
 
+    public function init_session() {
+        if ( ! session_id() && ! headers_sent() ) {
+            session_start();
+        }
+    }
+
     public function enqueue_scripts() {
         $js_file_path = plugin_dir_path( __FILE__ ) . 'js/kaa-mall-public.js';
         $js_file_url = plugin_dir_url( __FILE__ ) . 'js/kaa-mall-public.js';
@@ -30,14 +36,23 @@ class Kaa_Mall_Public {
         wp_enqueue_script( 'kaa-mall-public', $js_file_url, array( 'jquery', 'paystack-inline' ), $js_version, false );
 
         $user = wp_get_current_user();
-        wp_localize_script( 'kaa-mall-public', 'kaa_mall_params', array(
+        $params = array(
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'paystack_public_key' => get_option( 'kaa_mall_paystack_public_key' ),
-            'user_email' => is_user_logged_in() ? $user->user_email : '',
-            'is_user_logged_in' => is_user_logged_in(),
-            'currency' => get_woocommerce_currency(),
             'nonce' => wp_create_nonce( 'kaa_mall_nonce' ),
-        ) );
+            'is_user_logged_in' => is_user_logged_in(),
+            'user_email' => '',
+            'currency' => 'GHS', // Default currency
+        );
+
+        if ( is_user_logged_in() ) {
+            $params['user_email'] = $user->user_email;
+            if ( function_exists('get_woocommerce_currency') ) {
+                $params['currency'] = get_woocommerce_currency();
+            }
+        }
+
+        wp_localize_script( 'kaa-mall-public', 'kaa_mall_params', $params );
     }
 
     private function get_wallet_balance( $user_id ) {
@@ -602,9 +617,69 @@ class Kaa_Mall_Public {
                 cursor: pointer;
             }
 
-            .payment-method label {
-                display: inline-block;
-                margin-right: 20px;
+            .payment-method-header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+            .payment-method-header img {
+                width: 24px;
+                height: 24px;
+                margin-right: 10px;
+            }
+            .payment-method-header span {
+                font-weight: bold;
+                color: var(--heading-color);
+            }
+            .payment-options {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+            .payment-option {
+                display: flex;
+                align-items: center;
+                background-color: #2c2c2c;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid var(--border-color);
+                cursor: pointer;
+                transition: border-color 0.2s ease;
+            }
+            .payment-option:hover {
+                border-color: var(--primary-color);
+            }
+            .payment-option input[type="radio"] {
+                display: none;
+            }
+            .payment-option .radio-custom {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                border: 2px solid #555;
+                margin-right: 15px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                transition: border-color 0.2s ease;
+            }
+            .payment-option .radio-custom .radio-dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background-color: var(--primary-color);
+                transform: scale(0);
+                transition: transform 0.2s ease;
+            }
+            .payment-option input[type="radio"]:checked + .radio-custom {
+                border-color: var(--primary-color);
+            }
+            .payment-option input[type="radio"]:checked + .radio-custom .radio-dot {
+                transform: scale(1);
+            }
+            .payment-option label {
+                font-weight: 500;
+                color: var(--text-color);
             }
 
             .afa-registration {
@@ -720,12 +795,23 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <div class="payment-method">
+                        <div class="payment-method-header">
+                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
+                            <span>Payment Method</span>
+                        </div>
+                        <div class="payment-options">
                             <?php if ( is_user_logged_in() ) : ?>
-                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="wallet" checked>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Wallet Balance
+                            </label>
                             <?php endif; ?>
-                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Paystack (Card/Mobile Money)
+                            </label>
                         </div>
                         <button type="submit">Buy MTN Bundle</button>
                     </form>
@@ -740,12 +826,23 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <div class="payment-method">
+                        <div class="payment-method-header">
+                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
+                            <span>Payment Method</span>
+                        </div>
+                        <div class="payment-options">
                             <?php if ( is_user_logged_in() ) : ?>
-                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="wallet" checked>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Wallet Balance
+                            </label>
                             <?php endif; ?>
-                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Paystack (Card/Mobile Money)
+                            </label>
                         </div>
                         <button type="submit">Buy AirtelTigo Bundle</button>
                     </form>
@@ -760,12 +857,23 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <div class="payment-method">
+                        <div class="payment-method-header">
+                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
+                            <span>Payment Method</span>
+                        </div>
+                        <div class="payment-options">
                             <?php if ( is_user_logged_in() ) : ?>
-                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="wallet" checked>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Wallet Balance
+                            </label>
                             <?php endif; ?>
-                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Paystack (Card/Mobile Money)
+                            </label>
                         </div>
                         <button type="submit">Buy Vodafone Bundle</button>
                     </form>

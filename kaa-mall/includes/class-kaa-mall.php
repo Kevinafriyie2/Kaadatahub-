@@ -76,6 +76,7 @@ class Kaa_Mall {
 
     private function define_public_hooks() {
         $plugin_public = new Kaa_Mall_Public( $this->get_plugin_name(), $this->get_version() );
+        add_action( 'init', array( $plugin_public, 'init_session' ) );
         $plugin_reseller = new Kaa_Mall_Reseller();
         $plugin_auth = new Kaa_Mall_Auth();
     }
