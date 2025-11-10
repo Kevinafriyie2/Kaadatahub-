@@ -60,6 +60,20 @@
                 }
             });
         });
+
+        $('#kaa-mall-copy-btn').on('click', function() {
+            var copyText = document.getElementById("kaa-mall-referral-link");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); // For mobile devices
+            document.execCommand("copy");
+
+            var button = $(this);
+            var originalText = button.text();
+            button.text('Copied!');
+            setTimeout(function() {
+                button.text(originalText);
+            }, 2000);
+        });
     });
 
 })(jQuery);

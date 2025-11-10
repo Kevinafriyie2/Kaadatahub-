@@ -154,6 +154,20 @@ class Kaa_Mall_Reseller {
         echo Kaa_Mall_Portal_Header::render();
         ?>
         <style>
+            .referral-link-wrapper {
+                display: flex;
+            }
+            .referral-link-wrapper input {
+                flex-grow: 1;
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+            }
+            .referral-link-wrapper button {
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+                width: auto;
+                padding: 10px 15px;
+            }
             .kaa-mall-reseller-portal {
                 padding: 20px;
                 max-width: 1200px;
@@ -258,7 +272,10 @@ class Kaa_Mall_Reseller {
                 <div class="reseller-card">
                     <h3>Your Referral Link</h3>
                     <p>Share this link with your customers.</p>
-                    <input type="text" value="<?php echo esc_url( home_url( '/shop/' . get_user_meta( $reseller_id, '_kaa_mall_shop_name', true ) ) ); ?>" readonly>
+                    <div class="referral-link-wrapper">
+                        <input type="text" id="kaa-mall-referral-link" value="<?php echo esc_url( home_url( '/shop/' . get_user_meta( $reseller_id, '_kaa_mall_shop_name', true ) ) ); ?>" readonly>
+                        <button id="kaa-mall-copy-btn">Copy</button>
+                    </div>
                 </div>
 
                 <div class="reseller-card" style="grid-column: 1 / -1;">
