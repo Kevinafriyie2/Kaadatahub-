@@ -288,6 +288,15 @@ class Kaa_Mall_Admin {
             'kaa-mall-broadcasts',
             array($this, 'display_broadcasts_page')
         );
+
+        add_submenu_page(
+            'kaa_mall',
+            'Top Up Wallet',
+            'Top Up Wallet',
+            'manage_options',
+            'kaa-mall-top-up-wallet',
+            array($this, 'render_top_up_wallet_page')
+        );
     }
 
     public function register_settings() {
@@ -746,29 +755,6 @@ class Kaa_Mall_Admin {
                         </tbody>
                     </table>
                 </div>
-                <div class="admin-section">
-                    <h3>Top Up User Wallet</h3>
-                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-                        <input type="hidden" name="action" value="kaa_mall_top_up_wallet">
-                        <?php wp_nonce_field( 'kaa_mall_top_up_wallet_nonce', 'kaa_mall_top_up_wallet_nonce' ); ?>
-                        <table class="form-table">
-                            <tr valign="top">
-                                <th scope="row">Search User</th>
-                                <td>
-                                    <input type="text" id="kaa-mall-user-search" placeholder="Search by username or email...">
-                                    <input type="hidden" name="user_id" id="kaa-mall-user-id">
-                                    <div id="kaa-mall-user-search-results"></div>
-                                    <p class="description">Start typing a name or email, then select a user from the list that appears.</p>
-                                </td>
-                            </tr>
-                            <tr valign="top">
-                                <th scope="row">Amount</th>
-                                <td><input type="number" name="amount" step="0.01" min="0.01" required /></td>
-                            </tr>
-                        </table>
-                        <?php submit_button( 'Top Up Wallet' ); ?>
-                    </form>
-                </div>
 
                 <div class="admin-section">
                     <h3>User Wallet Balances</h3>
@@ -985,6 +971,84 @@ class Kaa_Mall_Admin {
         </style>
         <?php
         return ob_get_clean();
+    }
+
+    public function render_top_up_wallet_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return 'You do not have permission to view this page.';
+        }
+        ?>
+        <div class="wrap">
+            <h2>Top Up User Wallet</h2>
+            <?php
+            if ( isset( $_GET['message'] ) ) {
+                echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $_GET['message'] ) . '</p></div>';
+            }
+            ?>
+            <div class="admin-section">
+                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                    <input type="hidden" name="action" value="kaa_mall_top_up_wallet">
+                    <?php wp_nonce_field( 'kaa_mall_top_up_wallet_nonce', 'kaa_mall_top_up_wallet_nonce' ); ?>
+                    <table class="form-table">
+                        <tr valign="top">
+                            <th scope="row">Search User</th>
+                            <td>
+                                <input type="text" id="kaa-mall-user-search" placeholder="Search by username or email..." style="width: 300px;">
+                                <input type="hidden" name="user_id" id="kaa-mall-user-id">
+                                <div id="kaa-mall-user-search-results"></div>
+                                <p class="description">Start typing a name or email, then select a user from the list that appears.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Amount</th>
+                            <td><input type="number" name="amount" step="0.01" min="0.01" required /></td>
+                        </tr>
+                    </table>
+                    <?php submit_button( 'Top Up Wallet' ); ?>
+                </form>
+            </div>
+        </div>
+        <script>
+            jQuery(document).ready(function($) {
+                var searchTimer;
+                $('#kaa-mall-user-search').on('keyup', function() {
+                    clearTimeout(searchTimer);
+                    var searchTerm = $(this).val();
+                    if (searchTerm.length < 2) {
+                        $('#kaa-mall-user-search-results').empty();
+                        return;
+                    }
+
+                    searchTimer = setTimeout(function() {
+                        $.post(ajaxurl, {
+                            action: 'kaa_mall_search_users',
+                            search: searchTerm
+                        }, function(response) {
+                            var resultsContainer = $('#kaa-mall-user-search-results');
+                            resultsContainer.empty();
+                            if (response.success && response.data.length) {
+                                var list = $('<ul style="border: 1px solid #ddd; background: #fff; list-style: none; margin: 0; padding: 0; max-width: 300px;">');
+                                $.each(response.data, function(i, user) {
+                                    list.append($('<li style="padding: 8px 12px; cursor: pointer;">').data('userid', user.id).text(user.text));
+                                });
+                                resultsContainer.append(list);
+                            } else {
+                                resultsContainer.text('No users found.');
+                            }
+                        });
+                    }, 500);
+                });
+
+                $(document).on('click', '#kaa-mall-user-search-results li', function() {
+                    var userId = $(this).data('userid');
+                    var userName = $(this).text();
+                    $('#kaa-mall-user-id').val(userId);
+                    $('#kaa-mall-user-search').val(userName);
+                    $('#kaa-mall-user-search-results').empty();
+                });
+            });
+        </script>
+        <?php
     }
 
     public function display_reseller_applications_page() {
