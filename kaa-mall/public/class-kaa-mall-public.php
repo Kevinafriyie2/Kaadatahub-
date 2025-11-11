@@ -16,9 +16,33 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_kaa_mall_purchase_bundle_paystack', array( $this, 'purchase_bundle_paystack' ) );
         add_action( 'wp_ajax_nopriv_kaa_mall_purchase_bundle_paystack', array( $this, 'purchase_bundle_paystack' ) );
         add_action( 'wp_ajax_kaa_mall_get_bundle_prices', array( $this, 'get_bundle_prices' ) );
+        add_action( 'wp_ajax_nopriv_kaa_mall_get_bundle_prices', array( $this, 'get_bundle_prices' ) );
         add_action( 'wp_ajax_kaa_mall_afa_registration', array( $this, 'afa_registration' ) );
         add_action( 'wp_ajax_kaa_mall_get_recent_orders', array( $this, 'get_recent_orders' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_balance', array( $this, 'ajax_get_wallet_balance' ) );
+        add_action( 'wp_ajax_kaa_mall_get_wallet_transactions', array( $this, 'get_wallet_transactions' ) );
+    }
+
+    public function get_wallet_transactions() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'kaa_mall_wallet_transactions';
+        $user_id = get_current_user_id();
+
+        $results = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM $table_name WHERE user_id = %d ORDER BY created_at DESC LIMIT 50",
+            $user_id
+        ) );
+
+        wp_send_json_success( $results );
+    }
+
+    public function init_session() {
+        if ( class_exists('WooCommerce') && ! is_admin() && ! defined( 'DOING_AJAX' ) ) {
+            if ( WC()->session && ! WC()->session->has_session() ) {
+                WC()->session->set_customer_session_cookie( true );
+            }
+        }
     }
 
     public function enqueue_scripts() {
@@ -30,18 +54,52 @@ class Kaa_Mall_Public {
         wp_enqueue_script( 'kaa-mall-public', $js_file_url, array( 'jquery', 'paystack-inline' ), $js_version, false );
 
         $user = wp_get_current_user();
-        wp_localize_script( 'kaa-mall-public', 'kaa_mall_params', array(
+        $params = array(
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'paystack_public_key' => get_option( 'kaa_mall_paystack_public_key' ),
-            'user_email' => $user->user_email,
-            'currency' => get_woocommerce_currency(),
             'nonce' => wp_create_nonce( 'kaa_mall_nonce' ),
-        ) );
+            'is_user_logged_in' => is_user_logged_in(),
+            'user_email' => '',
+            'currency' => 'GHS', // Default currency
+            'wallet_topup_fee' => get_option( 'kaa_mall_wallet_topup_fee', 0 ),
+            'wallet_purchase_fee' => get_option( 'kaa_mall_wallet_purchase_fee', 0 ),
+            'paystack_topup_fee' => get_option( 'kaa_mall_paystack_topup_fee', 0 ),
+            'paystack_purchase_fee' => get_option( 'kaa_mall_paystack_purchase_fee', 0 ),
+        );
+
+        if ( is_user_logged_in() ) {
+            $params['user_email'] = $user->user_email;
+            if ( function_exists('get_woocommerce_currency') ) {
+                $params['currency'] = get_woocommerce_currency();
+            }
+        }
+
+        wp_localize_script( 'kaa-mall-public', 'kaa_mall_params', $params );
     }
 
     private function get_wallet_balance( $user_id ) {
         $balance = get_user_meta( $user_id, '_kaa_mall_wallet_balance', true );
         return empty( $balance ) ? 0.00 : floatval( $balance );
+    }
+
+    private function _update_wallet_balance_and_log( $user_id, $amount, $type, $details ) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'kaa_mall_wallet_transactions';
+
+        $current_balance = $this->get_wallet_balance( $user_id );
+        $new_balance = $current_balance + $amount;
+        update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
+
+        $wpdb->insert(
+            $table_name,
+            array(
+                'user_id' => $user_id,
+                'amount' => $amount,
+                'type' => $type,
+                'details' => $details,
+                'balance_after' => $new_balance,
+            )
+        );
     }
 
     public function ajax_get_wallet_balance() {
@@ -60,8 +118,12 @@ class Kaa_Mall_Public {
     }
 
     public function get_bundle_prices() {
-        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $network = sanitize_text_field( $_POST['network'] );
+
+        if ( get_option( 'kaa_mall_' . $network . '_out_of_stock' ) ) {
+            wp_send_json_success( array() );
+            return;
+        }
 
         $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
         $admin_prices = array();
@@ -115,11 +177,16 @@ class Kaa_Mall_Public {
 
         $result = json_decode($response);
         if ( 'success' === $result->data->status ) {
-            $amount = $result->data->amount / 100; // Convert from pesewas
+            $total_amount_paid = $result->data->amount / 100; // Convert from pesewas
+            $fee = floatval( get_option( 'kaa_mall_paystack_topup_fee', 0 ) );
+            $top_up_amount = $total_amount_paid - $fee;
+
             $user_id = get_current_user_id();
-            $current_balance = $this->get_wallet_balance( $user_id );
-            $new_balance = $current_balance + $amount;
-            update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
+            // Log the fee as a separate transaction for clarity
+            if ( $fee > 0 ) {
+                $this->_update_wallet_balance_and_log( $user_id, -$fee, 'fee', 'Paystack Top-up Fee. Reference: ' . $reference );
+            }
+            $this->_update_wallet_balance_and_log( $user_id, $top_up_amount, 'top-up', 'Paystack Top-up. Reference: ' . $reference );
 
             $product = $this->get_product_by_name( 'Wallet Top-up' );
             if ( $product ) {
@@ -177,13 +244,19 @@ class Kaa_Mall_Public {
 
         $user_id = get_current_user_id();
         $wallet_balance = $this->get_wallet_balance( $user_id );
+        $fee = floatval( get_option( 'kaa_mall_wallet_purchase_fee', 0 ) );
+        $total_cost = $final_price + $fee;
 
-        if ( $wallet_balance < $final_price ) {
+        if ( $wallet_balance < $total_cost ) {
             wp_send_json_error( array( 'message' => 'Insufficient wallet balance.' ) );
         }
 
-        $new_balance = $wallet_balance - $final_price;
-        update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
+        // Deduct the bundle price first
+        $this->_update_wallet_balance_and_log( $user_id, -$final_price, 'purchase', "{$bundle} for {$phone_number}" );
+        // Then deduct the fee
+        if ( $fee > 0 ) {
+            $this->_update_wallet_balance_and_log( $user_id, -$fee, 'fee', "Service fee for {$bundle}" );
+        }
 
         $product = $this->get_product_by_name( 'Data Bundle' );
         if ( $product ) {
@@ -210,7 +283,24 @@ class Kaa_Mall_Public {
             $order->save();
         }
 
+        $this->check_and_send_low_balance_alert( $user_id );
         wp_send_json_success();
+    }
+
+    private function check_and_send_low_balance_alert( $user_id ) {
+        if ( ! get_option( 'kaa_mall_enable_low_balance_alerts' ) ) {
+            return;
+        }
+
+        $threshold = floatval( get_option( 'kaa_mall_low_balance_threshold', '5' ) );
+        $balance = $this->get_wallet_balance( $user_id );
+
+        if ( $balance < $threshold ) {
+            $user = get_user_by( 'id', $user_id );
+            $subject = 'Your Wallet Balance is Low';
+            $message = 'Dear ' . $user->display_name . ",\n\nYour wallet balance is running low. Your current balance is " . wc_price( $balance ) . ".\n\nPlease top up your wallet to continue enjoying our services.\n\nThank you,\nKaa Mall";
+            wp_mail( $user->user_email, $subject, $message );
+        }
     }
 
     public function purchase_bundle_paystack() {
@@ -274,7 +364,14 @@ class Kaa_Mall_Public {
 
         $result = json_decode($response);
         if ( 'success' === $result->data->status ) {
+            $fee = floatval( get_option( 'kaa_mall_paystack_purchase_fee', 0 ) );
             $user_id = is_user_logged_in() ? get_current_user_id() : 0;
+
+            if ( $user_id && $fee > 0 ) {
+                 // We don't need to deduct from wallet, just log it for the user's records if they are logged in
+                 // This assumes the fee was already included in the Paystack charge amount
+                $this->_update_wallet_balance_and_log( $user_id, -$fee, 'fee', "Paystack service fee for {$bundle}" );
+            }
 
             $product = $this->get_product_by_name( 'Data Bundle' );
             if ( $product ) {
@@ -326,7 +423,7 @@ class Kaa_Mall_Public {
         $location = sanitize_text_field( $_POST['location'] );
         $ghana_card = sanitize_text_field( $_POST['ghana_card'] );
 
-        $afa_fee = 13.00; // This is a fixed admin price
+        $afa_fee = floatval( get_option( 'kaa_mall_afa_registration_fee', '13' ) );
         $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
         $final_price = $afa_fee;
 
@@ -344,8 +441,7 @@ class Kaa_Mall_Public {
             wp_send_json_error( array( 'message' => 'Insufficient wallet balance.' ) );
         }
 
-        $new_balance = $wallet_balance - $final_price;
-        update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
+        $this->_update_wallet_balance_and_log( $user_id, -$final_price, 'purchase', 'AFA Registration' );
 
         $product = $this->get_product_by_name( 'AFA Registration' );
         if ( $product ) {
@@ -373,6 +469,7 @@ class Kaa_Mall_Public {
             $order->save();
         }
 
+        $this->check_and_send_low_balance_alert( $user_id );
         wp_send_json_success();
     }
 
@@ -404,61 +501,28 @@ class Kaa_Mall_Public {
     }
 
     public function render_user_portal() {
-        if ( isset( $_GET['ref'] ) ) {
-            $reseller_id = intval( $_GET['ref'] );
-            if ( get_user_by( 'id', $reseller_id ) ) {
-                WC()->session->set( 'kaa_mall_reseller_id', $reseller_id );
-            }
-        }
+        if ( isset( $_GET['ref_shop'] ) ) {
+            $shop_name = sanitize_title( $_GET['ref_shop'] );
+            $users = get_users( array(
+                'meta_key'   => '_kaa_mall_shop_name',
+                'meta_value' => $shop_name,
+                'number'     => 1,
+                'fields'     => 'ID',
+            ) );
 
-        if ( ! is_user_logged_in() && ! WC()->session->get( 'kaa_mall_reseller_id' ) ) {
-            ob_start();
-            ?>
-            <style>
-                #loginform label {
-                    color: #e0e0e0;
+            if ( ! empty( $users ) ) {
+                $reseller_id = $users[0];
+                if ( function_exists('WC') && WC()->session ) {
+                    WC()->session->set( 'kaa_mall_reseller_id', $reseller_id );
                 }
-                #loginform input[type="text"],
-                #loginform input[type="password"] {
-                    background-color: #2c2c2c;
-                    border: 1px solid #333;
-                    color: #e0e0e0;
-                    width: 100%;
-                    padding: 10px;
-                    border-radius: 8px;
-                    margin-bottom: 15px;
-                }
-                #loginform input[type="submit"] {
-                    background-color: #ffc107;
-                    color: #121212;
-                    border: none;
-                    font-weight: bold;
-                    width: 100%;
-                    padding: 12px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                }
-                #loginform .forgetmenot label {
-                    color: #e0e0e0;
-                }
-                #loginform a {
-                    color: #ffc107;
-                }
-                .login-remember {
-                    margin-bottom: 15px;
-                }
-            </style>
-            <div class="kaa-mall-portal" style="max-width: 400px; margin: 40px auto; padding: 20px; background-color: #1e1e1e; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
-                <h3 style="text-align: center; color: #ffffff; margin-bottom: 20px;">Please log in to access the portal.</h3>
-                <?php wp_login_form( array('redirect' => get_permalink()) ); ?>
-            </div>
-            <?php
-            return ob_get_clean();
+            }
         }
 
         ob_start();
 
-        echo Kaa_Mall_Portal_Header::render();
+        if ( is_user_logged_in() ) {
+            echo Kaa_Mall_Portal_Header::render();
+        }
 
         ?>
         <style>
@@ -589,9 +653,69 @@ class Kaa_Mall_Public {
                 cursor: pointer;
             }
 
-            .payment-method label {
-                display: inline-block;
-                margin-right: 20px;
+            .payment-method-header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+            .payment-method-header img {
+                width: 24px;
+                height: 24px;
+                margin-right: 10px;
+            }
+            .payment-method-header span {
+                font-weight: bold;
+                color: var(--heading-color);
+            }
+            .payment-options {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+            .payment-option {
+                display: flex;
+                align-items: center;
+                background-color: #2c2c2c;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid var(--border-color);
+                cursor: pointer;
+                transition: border-color 0.2s ease;
+            }
+            .payment-option:hover {
+                border-color: var(--primary-color);
+            }
+            .payment-option input[type="radio"] {
+                display: none;
+            }
+            .payment-option .radio-custom {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                border: 2px solid #555;
+                margin-right: 15px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                transition: border-color 0.2s ease;
+            }
+            .payment-option .radio-custom .radio-dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background-color: var(--primary-color);
+                transform: scale(0);
+                transition: transform 0.2s ease;
+            }
+            .payment-option input[type="radio"]:checked + .radio-custom {
+                border-color: var(--primary-color);
+            }
+            .payment-option input[type="radio"]:checked + .radio-custom .radio-dot {
+                transform: scale(1);
+            }
+            .payment-option label {
+                font-weight: 500;
+                color: var(--text-color);
             }
 
             .afa-registration {
@@ -681,6 +805,34 @@ class Kaa_Mall_Public {
                 <p>Instant Data Top-up for All Networks</p>
             </div>
 
+            <div class="kaa-mall-card">
+                <h3>Broadcast Messages</h3>
+                <?php
+                $broadcasts = get_posts( array(
+                    'post_type' => 'kaa_mall_broadcast',
+                    'numberposts' => 5,
+                ) );
+                ?>
+                <ul>
+                    <?php if ( ! empty( $broadcasts ) ) : ?>
+                        <?php foreach ( $broadcasts as $broadcast ) : ?>
+                            <li>
+                                <strong><?php echo esc_html( $broadcast->post_title ); ?></strong> - <?php echo esc_html( $broadcast->post_content ); ?>
+                                <small>(<?php echo get_the_date( '', $broadcast ); ?>)</small>
+                            </li>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <li>No recent broadcasts.</li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+
+            <div class="kaa-mall-card">
+                <h3>Join Our Community</h3>
+                <p>Stay updated with the latest news and offers by joining our WhatsApp community.</p>
+                <a href="https://chat.whatsapp.com/JZEJZlNO3DV8VCyeTwzYgt" class="contact-admin-btn" style="background-color: #25D366; text-align: center; display: block;">Join Now</a>
+            </div>
+
             <?php if ( is_user_logged_in() ) : ?>
             <div class="kaa-mall-card wallet-balance">
                 <div class="wallet-balance-details">
@@ -707,12 +859,24 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <div class="payment-method">
+                        <div class="price-breakdown" style="padding: 10px 0;"></div>
+                        <div class="payment-method-header">
+                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
+                            <span>Payment Method</span>
+                        </div>
+                        <div class="payment-options">
                             <?php if ( is_user_logged_in() ) : ?>
-                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="wallet" checked>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Wallet Balance
+                            </label>
                             <?php endif; ?>
-                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Paystack (Card/Mobile Money)
+                            </label>
                         </div>
                         <button type="submit">Buy MTN Bundle</button>
                     </form>
@@ -727,12 +891,23 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <div class="payment-method">
+                        <div class="payment-method-header">
+                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
+                            <span>Payment Method</span>
+                        </div>
+                        <div class="payment-options">
                             <?php if ( is_user_logged_in() ) : ?>
-                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="wallet" checked>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Wallet Balance
+                            </label>
                             <?php endif; ?>
-                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Paystack (Card/Mobile Money)
+                            </label>
                         </div>
                         <button type="submit">Buy AirtelTigo Bundle</button>
                     </form>
@@ -747,12 +922,23 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <div class="payment-method">
+                        <div class="payment-method-header">
+                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
+                            <span>Payment Method</span>
+                        </div>
+                        <div class="payment-options">
                             <?php if ( is_user_logged_in() ) : ?>
-                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="wallet" checked>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Wallet Balance
+                            </label>
                             <?php endif; ?>
-                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                            <label class="payment-option">
+                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
+                                <span class="radio-custom"><span class="radio-dot"></span></span>
+                                Paystack (Card/Mobile Money)
+                            </label>
                         </div>
                         <button type="submit">Buy Vodafone Bundle</button>
                     </form>
@@ -766,15 +952,27 @@ class Kaa_Mall_Public {
                 <form id="kaa-mall-afa-form">
                     <label>Full Name</label>
                     <input type="text" name="full_name" placeholder="Enter your full name" required>
+                    <label>Phone Number</label>
+                    <input type="tel" name="phone_number" placeholder="Enter your phone number" required>
                     <label>Location</label>
                     <input type="text" name="location" placeholder="Enter your location" required>
                     <label>ID Ghana Card Number</label>
                     <input type="text" name="ghana_card" placeholder="GHA-XXXXXXXXX-X" required>
+                    <?php
+                    $afa_fee = floatval( get_option( 'kaa_mall_afa_registration_fee', '13' ) );
+                    $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+                    if ( $reseller_id ) {
+                        $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_afa', true );
+                        if ( ! empty( $reseller_prices ) && isset( $reseller_prices['registration'] ) ) {
+                            $afa_fee = $reseller_prices['registration'];
+                        }
+                    }
+                    ?>
                     <div class="registration-fee">
                         <span>Registration Fee</span>
-                        <span>GH₵13.00</span>
+                        <span><?php echo wc_price( $afa_fee ); ?></span>
                     </div>
-                    <button type="submit">Register Now - GH₵13</button>
+                    <button type="submit">Register Now - <?php echo wc_price( $afa_fee ); ?></button>
                 </form>
             </div>
 
@@ -794,12 +992,38 @@ class Kaa_Mall_Public {
                     <tbody></tbody>
                 </table>
             </div>
+
+            <div class="kaa-mall-card wallet-transactions">
+                <h3>Wallet History</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Details</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
             <?php endif; ?>
 
             <div class="kaa-mall-card need-help">
                 <h3>Need Help?</h3>
                 <p>Our support team is here to help you 24/7</p>
-                <a href="#" class="contact-admin-btn">Contact the Admin</a>
+                <?php
+                $whatsapp_number = get_option( 'kaa_mall_whatsapp_number', '233201858375' );
+                $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+                if ( $reseller_id ) {
+                    $reseller_whatsapp = get_user_meta( $reseller_id, '_kaa_mall_whatsapp_number', true );
+                    if ( ! empty( $reseller_whatsapp ) ) {
+                        $whatsapp_number = $reseller_whatsapp;
+                    }
+                }
+                ?>
+                <a href="https://wa.me/<?php echo esc_attr( $whatsapp_number ); ?>" class="contact-admin-btn">Contact Support</a>
             </div>
         </div>
         <?php

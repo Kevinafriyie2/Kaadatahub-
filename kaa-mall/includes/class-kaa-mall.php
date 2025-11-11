@@ -12,8 +12,43 @@ class Kaa_Mall {
         $this->load_dependencies();
         $this->define_admin_hooks();
         $this->define_public_hooks();
-        add_action( 'init', array( $this, 'add_rewrite_rules' ) );
         add_action( 'init', array( $this, 'register_withdrawal_post_type' ) );
+        add_action( 'init', array( $this, 'register_reseller_application_post_type' ) );
+        add_action( 'init', array( $this, 'register_broadcast_post_type' ) );
+    }
+
+    public function register_broadcast_post_type() {
+        register_post_type( 'kaa_mall_broadcast',
+            array(
+                'labels'      => array(
+                    'name'          => __( 'Broadcasts', 'kaa-mall' ),
+                    'singular_name' => __( 'Broadcast', 'kaa-mall' ),
+                ),
+                'public'      => false,
+                'show_ui'     => false,
+                'show_in_menu'=> false,
+                'supports'    => array( 'title', 'editor' ),
+            )
+        );
+    }
+
+    public function register_reseller_application_post_type() {
+        register_post_type( 'reseller_application',
+            array(
+                'labels'      => array(
+                    'name'          => __( 'Reseller Applications', 'kaa-mall' ),
+                    'singular_name' => __( 'Reseller Application', 'kaa-mall' ),
+                ),
+                'public'      => false,
+                'show_ui'     => true,
+                'show_in_menu'=> 'kaa_mall',
+                'supports'    => array( 'title', 'author' ),
+                'capabilities' => array(
+                    'create_posts' => 'do_not_allow',
+                ),
+                'map_meta_cap' => true,
+            )
+        );
     }
 
     public function register_withdrawal_post_type() {
@@ -35,29 +70,6 @@ class Kaa_Mall {
         );
     }
 
-    public function add_rewrite_rules() {
-        add_rewrite_rule( '^shop/([^/]*)/?$', 'index.php?shop_name=$matches[1]', 'top' );
-        add_filter( 'query_vars', function( $query_vars ) {
-            $query_vars[] = 'shop_name';
-            return $query_vars;
-        } );
-        add_action( 'template_redirect', function() {
-            $shop_name = get_query_var( 'shop_name' );
-            if ( $shop_name ) {
-                $users = get_users( array(
-                    'meta_key' => '_kaa_mall_shop_name',
-                    'meta_value' => $shop_name,
-                ) );
-                if ( ! empty( $users ) ) {
-                    $reseller_id = $users[0]->ID;
-                    $redirect_url = add_query_arg( 'ref', $reseller_id, get_option( 'kaa_mall_user_portal_url' ) );
-                    wp_redirect( $redirect_url );
-                    exit;
-                }
-            }
-        } );
-    }
-
     private function load_dependencies() {
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-kaa-mall-admin.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-public.php';
@@ -72,6 +84,7 @@ class Kaa_Mall {
 
     private function define_public_hooks() {
         $plugin_public = new Kaa_Mall_Public( $this->get_plugin_name(), $this->get_version() );
+        add_action( 'init', array( $plugin_public, 'init_session' ) );
         $plugin_reseller = new Kaa_Mall_Reseller();
         $plugin_auth = new Kaa_Mall_Auth();
     }

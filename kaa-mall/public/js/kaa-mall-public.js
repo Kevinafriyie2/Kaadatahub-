@@ -8,8 +8,11 @@
         });
 
         // Initial setup on page load
-        update_wallet_balance();
-        load_recent_orders();
+        if (kaa_mall_params.is_user_logged_in) {
+            update_wallet_balance();
+            load_recent_orders();
+            load_wallet_transactions();
+        }
         load_bundle_prices('mtn'); // Load default tab prices
 
         // Handle network tab switching
@@ -29,17 +32,24 @@
         $('.top-up-wallet-btn').on('click', function(e) {
             e.preventDefault();
 
-            var amount = prompt("Enter amount to top up:", "10");
+            var topup_fee = parseFloat(kaa_mall_params.paystack_topup_fee) || 0;
+            var prompt_message = "Enter amount to top up:";
+            if (topup_fee > 0) {
+                prompt_message += "\n(A fee of GH₵" + topup_fee.toFixed(2) + " will be added)";
+            }
+
+            var amount = prompt(prompt_message, "10");
             if (amount === null || amount === "" || isNaN(amount) || parseFloat(amount) <= 0) {
                 show_notification('Please enter a valid amount.', 'error');
                 return;
             }
             amount = parseFloat(amount);
+            var total_amount = amount + topup_fee;
 
             var handler = PaystackPop.setup({
                 key: kaa_mall_params.paystack_public_key,
                 email: kaa_mall_params.user_email,
-                amount: amount * 100, // in pesewas
+                amount: total_amount * 100, // in pesewas
                 currency: kaa_mall_params.currency,
                 ref: '' + Math.floor((Math.random() * 1000000000) + 1),
                 callback: function(response) {
@@ -70,6 +80,46 @@
             }
         });
 
+        // Update price breakdown when bundle or payment method changes
+        $('.bundle-form select[name="bundle"], .bundle-form input[name="payment_method"]').on('change', function() {
+            update_bundle_price_display($(this).closest('form'));
+        });
+
+        function update_bundle_price_display(form) {
+            var bundle_select = form.find('select[name="bundle"] option:selected');
+            if (!bundle_select.length || !bundle_select.val()) return;
+
+            var bundle_text = bundle_select.text();
+            var bundle_price_match = bundle_text.match(/(\d+\.\d+)/);
+            if (!bundle_price_match) return;
+
+            var bundle_price = parseFloat(bundle_price_match[0]);
+            var payment_method = form.find('input[name="payment_method"]:checked').val();
+            var fee = 0;
+            var fee_text = '';
+
+            if (payment_method === 'wallet') {
+                fee = parseFloat(kaa_mall_params.wallet_purchase_fee) || 0;
+            } else {
+                fee = parseFloat(kaa_mall_params.paystack_purchase_fee) || 0;
+            }
+
+            if (fee > 0) {
+                fee_text = '<span>Fee: GH₵' + fee.toFixed(2) + '</span>';
+            }
+
+            var total_price = bundle_price + fee;
+            var breakdown_html =
+                '<div>' +
+                '<span>Bundle Price: GH₵' + bundle_price.toFixed(2) + '</span>' +
+                fee_text +
+                '<hr style="border-top: 1px solid #444; margin: 5px 0;">' +
+                '<strong>Total: GH₵' + total_price.toFixed(2) + '</strong>' +
+                '</div>';
+
+            form.find('.price-breakdown').html(breakdown_html);
+        }
+
         // Handle AFA registration form submission
         $('#kaa-mall-afa-form').on('submit', function(e) {
             e.preventDefault();
@@ -92,6 +142,12 @@
         });
 
         function purchase_from_wallet(form) {
+            var purchase_fee = parseFloat(kaa_mall_params.wallet_purchase_fee) || 0;
+            if (purchase_fee > 0) {
+                if (!confirm("A fee of GH₵" + purchase_fee.toFixed(2) + " will be applied. Continue?")) {
+                    return;
+                }
+            }
             $.ajax({
                 url: kaa_mall_params.ajax_url,
                 type: 'POST',
@@ -109,10 +165,13 @@
         }
 
         function purchase_with_paystack(form, amount) {
+            var purchase_fee = parseFloat(kaa_mall_params.paystack_purchase_fee) || 0;
+            var total_amount = amount + purchase_fee;
+
             var handler = PaystackPop.setup({
                 key: kaa_mall_params.paystack_public_key,
                 email: kaa_mall_params.user_email,
-                amount: amount * 100,
+                amount: total_amount * 100,
                 currency: kaa_mall_params.currency,
                 ref: '' + Math.floor((Math.random() * 1000000000) + 1),
                 callback: function(response) {
@@ -180,6 +239,8 @@
                     } else {
                         bundle_select.append('<option>No bundles available</option>');
                     }
+                    // Trigger the price display update after loading prices
+                    update_bundle_price_display(bundle_select.closest('form'));
                 }
             });
         }
@@ -214,6 +275,40 @@
                         });
                     } else {
                         orders_table.append('<tr><td colspan="6">No recent orders found.</td></tr>');
+                    }
+                }
+            });
+        }
+
+        function load_wallet_transactions() {
+            var transactions_table = $('.wallet-transactions tbody');
+            transactions_table.empty().append('<tr><td colspan="5">Loading...</td></tr>');
+            $.ajax({
+                url: kaa_mall_params.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'kaa_mall_get_wallet_transactions',
+                    nonce: kaa_mall_params.nonce
+                },
+                success: function(response) {
+                    transactions_table.empty();
+                    if (response.success && response.data.length > 0) {
+                        $.each(response.data, function(index, trx) {
+                            var trx_date = new Date(trx.created_at);
+                            var formatted_date = trx_date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + trx_date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                            var amount_class = trx.amount > 0 ? 'positive' : 'negative';
+                            transactions_table.append(
+                                '<tr>' +
+                                '<td>' + formatted_date + '</td>' +
+                                '<td>' + trx.type + '</td>' +
+                                '<td class="' + amount_class + '">GH₵' + parseFloat(trx.amount).toFixed(2) + '</td>' +
+                                '<td>' + trx.details + '</td>' +
+                                '<td>GH₵' + parseFloat(trx.balance_after).toFixed(2) + '</td>' +
+                                '</tr>'
+                            );
+                        });
+                    } else {
+                        transactions_table.append('<tr><td colspan="5">No transactions found.</td></tr>');
                     }
                 }
             });

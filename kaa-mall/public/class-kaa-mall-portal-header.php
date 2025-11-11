@@ -96,6 +96,8 @@ class Kaa_Mall_Portal_Header {
                 <a href="<?php echo esc_url( get_option('kaa_mall_user_portal_url') ); ?>">Dashboard</a>
                 <?php if ( current_user_can( 'reseller' ) ) : ?>
                     <a href="<?php echo esc_url( get_option('kaa_mall_reseller_portal_url') ); ?>">Reseller Dashboard</a>
+                <?php else : ?>
+                    <a href="https://kaadatahub.shop/apply-as-a-reseller/">Apply to be a Reseller</a>
                 <?php endif; ?>
                 <a href="<?php echo esc_url( wp_logout_url( get_permalink() ) ); ?>">Logout</a>
             </nav>
