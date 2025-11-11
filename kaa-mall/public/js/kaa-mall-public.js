@@ -85,7 +85,8 @@
             update_bundle_price_display($(this).closest('form'));
         });
 
-        function update_bundle_price_display(form) {
+        function update_bundle_price_display(form, discount) {
+            discount = discount || 0;
             var bundle_select = form.find('select[name="bundle"] option:selected');
             if (!bundle_select.length || !bundle_select.val()) return;
 
@@ -108,17 +109,59 @@
                 fee_text = '<span>Fee: GH₵' + fee.toFixed(2) + '</span>';
             }
 
-            var total_price = bundle_price + fee;
+            var discount_text = '';
+            if (discount > 0) {
+                discount_text = '<span>Discount: -GH₵' + discount.toFixed(2) + '</span>';
+            }
+
+            var total_price = bundle_price + fee - discount;
             var breakdown_html =
                 '<div>' +
                 '<span>Bundle Price: GH₵' + bundle_price.toFixed(2) + '</span>' +
                 fee_text +
+                discount_text +
                 '<hr style="border-top: 1px solid #444; margin: 5px 0;">' +
                 '<strong>Total: GH₵' + total_price.toFixed(2) + '</strong>' +
                 '</div>';
 
             form.find('.price-breakdown').html(breakdown_html);
         }
+
+        // Handle AFA registration form submission
+        // Handle history download button click
+        $('body').on('click', '#download-history-btn', function(e) {
+            e.preventDefault();
+            window.location.href = kaa_mall_params.ajax_url + '?action=kaa_mall_download_history&nonce=' + kaa_mall_params.nonce;
+        });
+
+        $('body').on('click', '.apply-coupon-btn', function(e) {
+            e.preventDefault();
+            var form = $(this).closest('form');
+            var coupon_code = form.find('input[name="coupon_code"]').val();
+
+            if ( ! coupon_code ) {
+                show_notification('Please enter a coupon code.', 'error');
+                return;
+            }
+
+            $.ajax({
+                url: kaa_mall_params.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'kaa_mall_apply_coupon',
+                    coupon_code: coupon_code,
+                    nonce: kaa_mall_params.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        show_notification(response.data.message, 'success');
+                        update_bundle_price_display(form, response.data.discount_amount);
+                    } else {
+                        show_notification('Error: ' + response.data.message, 'error');
+                    }
+                }
+            });
+        });
 
         // Handle AFA registration form submission
         $('#kaa-mall-afa-form').on('submit', function(e) {

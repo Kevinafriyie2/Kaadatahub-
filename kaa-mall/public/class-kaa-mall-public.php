@@ -23,6 +23,31 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_kaa_mall_get_all_orders', array( $this, 'get_all_orders' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_balance', array( $this, 'ajax_get_wallet_balance' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_transactions', array( $this, 'get_wallet_transactions' ) );
+        add_action( 'wp_ajax_kaa_mall_download_history', array( $this, 'download_history' ) );
+        add_action( 'wp_ajax_kaa_mall_apply_coupon', array( $this, 'apply_coupon' ) );
+        add_action( 'wp_ajax_nopriv_kaa_mall_apply_coupon', array( $this, 'apply_coupon' ) );
+    }
+
+    public function apply_coupon() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+
+        $coupon_code = sanitize_text_field( $_POST['coupon_code'] );
+        $coupon = new WC_Coupon( $coupon_code );
+
+        if ( ! $coupon->get_code() ) {
+            wp_send_json_error( array( 'message' => 'Coupon does not exist.' ) );
+        }
+
+        if ( ! $coupon->is_valid() ) {
+            wp_send_json_error( array( 'message' => 'Coupon is not valid.' ) );
+        }
+
+        WC()->cart->add_discount( $coupon_code );
+
+        wp_send_json_success( array(
+            'message' => 'Coupon applied successfully.',
+            'discount_amount' => $coupon->get_amount(),
+        ) );
     }
 
     public function get_wallet_transactions() {
@@ -130,6 +155,18 @@ class Kaa_Mall_Public {
             }
         }
 
+        $reseller_instance = new Kaa_Mall_Reseller();
+        $tier = $reseller_instance->get_reseller_tier( $reseller_id );
+
+        if ( $tier ) {
+            $discount_percentage = $tier['discount_percentage'];
+            $discounted_prices = array();
+            foreach ( $admin_prices as $bundle => $price ) {
+                $discounted_prices[ $bundle ] = $price * ( 1 - ( $discount_percentage / 100 ) );
+            }
+            $admin_prices = $discounted_prices;
+        }
+
         wp_send_json_success( $admin_prices );
     }
 
@@ -228,6 +265,17 @@ class Kaa_Mall_Public {
         $user_id = get_current_user_id();
         $wallet_balance = Kaa_Mall_Wallet::get_balance( $user_id );
         $fee = floatval( get_option( 'kaa_mall_wallet_purchase_fee', 0 ) );
+
+        $coupon_code = ! empty( $_POST['coupon_code'] ) ? sanitize_text_field( $_POST['coupon_code'] ) : null;
+        $discount = 0;
+        if ( $coupon_code ) {
+            $coupon = new WC_Coupon( $coupon_code );
+            if ( $coupon->get_code() && $coupon->is_valid() ) {
+                $discount = $coupon->get_amount();
+                $final_price -= $discount;
+            }
+        }
+
         $total_cost = $final_price + $fee;
 
         if ( $wallet_balance < $total_cost ) {
@@ -251,6 +299,10 @@ class Kaa_Mall_Public {
             $order->update_meta_data( 'Network', $network );
             $order->update_meta_data( 'Bundle', $bundle );
             $order->update_meta_data( 'Phone Number', $phone_number );
+
+            if ( $coupon_code && $discount > 0 ) {
+                $order->apply_coupon( $coupon_code );
+            }
 
             if ( $reseller_id ) {
                 $order->update_meta_data( '_reseller_id', $reseller_id );
@@ -325,6 +377,15 @@ class Kaa_Mall_Public {
             }
         }
 
+        $coupon_code = ! empty( $_POST['coupon_code'] ) ? sanitize_text_field( $_POST['coupon_code'] ) : null;
+        if ( $coupon_code ) {
+            $coupon = new WC_Coupon( $coupon_code );
+            if ( $coupon->get_code() && $coupon->is_valid() ) {
+                $discount = $coupon->get_amount();
+                $final_price -= $discount;
+            }
+        }
+
         $secret_key = get_option( 'kaa_mall_paystack_secret_key' );
 
         $curl = curl_init();
@@ -372,6 +433,10 @@ class Kaa_Mall_Public {
                 $order->update_meta_data( 'Network', $network );
                 $order->update_meta_data( 'Bundle', $bundle );
                 $order->update_meta_data( 'Phone Number', $phone_number );
+
+                if ( $coupon_code ) {
+                    $order->apply_coupon( $coupon_code );
+                }
 
                 if ( $reseller_id ) {
                     $order->update_meta_data( '_reseller_id', $reseller_id );
@@ -510,6 +575,80 @@ class Kaa_Mall_Public {
         wp_send_json_success( $data );
     }
 
+    public function download_history() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+
+        if ( ! is_user_logged_in() ) {
+            wp_die( 'You must be logged in to download history.' );
+        }
+
+        $user_id = get_current_user_id();
+
+        header( 'Content-Type: text/csv' );
+        header( 'Content-Disposition: attachment; filename="kaadatahub_history.csv"' );
+
+        $output = fopen( 'php://output', 'w' );
+
+        // Wallet History
+        fputcsv( $output, array( 'Wallet History' ) );
+        fputcsv( $output, array( 'Date', 'Type', 'Amount (GHS)', 'Details', 'Balance (GHS)' ) );
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'kaa_mall_wallet_transactions';
+        $wallet_transactions = $wpdb->get_results( $wpdb->prepare(
+            "SELECT created_at, type, amount, details, balance_after FROM $table_name WHERE user_id = %d ORDER BY created_at DESC",
+            $user_id
+        ) );
+
+        if ( ! empty( $wallet_transactions ) ) {
+            foreach ( $wallet_transactions as $transaction ) {
+                fputcsv( $output, array(
+                    $transaction->created_at,
+                    ucfirst( $transaction->type ),
+                    number_format( $transaction->amount, 2 ),
+                    $transaction->details,
+                    number_format( $transaction->balance_after, 2 )
+                ) );
+            }
+        } else {
+            fputcsv( $output, array( 'No wallet transactions found.' ) );
+        }
+
+        fputcsv( $output, array() ); // Spacer row
+
+        // Purchase History
+        fputcsv( $output, array( 'Purchase History' ) );
+        fputcsv( $output, array( 'Order ID', 'Date', 'Items', 'Total (GHS)', 'Status' ) );
+
+        $orders = wc_get_orders( array(
+            'customer_id' => $user_id,
+            'limit' => -1,
+            'orderby' => 'date',
+            'order' => 'DESC',
+        ) );
+
+        if ( ! empty( $orders ) ) {
+            foreach ( $orders as $order ) {
+                $items = array();
+                foreach ( $order->get_items() as $item ) {
+                    $items[] = $item->get_name() . ' (x' . $item->get_quantity() . ')';
+                }
+                fputcsv( $output, array(
+                    $order->get_id(),
+                    $order->get_date_created()->date_i18n( 'Y-m-d H:i:s' ),
+                    implode( ', ', $items ),
+                    $order->get_total(),
+                    wc_get_order_status_name( $order->get_status() )
+                ) );
+            }
+        } else {
+            fputcsv( $output, array( 'No purchase history found.' ) );
+        }
+
+        fclose( $output );
+        wp_die();
+    }
+
     public function render_history_portal() {
         if ( ! is_user_logged_in() ) {
             return 'Please log in to view your history.';
@@ -543,7 +682,7 @@ class Kaa_Mall_Public {
                 width: 100%;
                 box-sizing: border-box;
                 position: relative;
-                z-index: 1;
+                z-index: 9999;
             }
 
             .kaa-mall-card {
@@ -579,6 +718,10 @@ class Kaa_Mall_Public {
             }
         </style>
         <div class="kaa-mall-portal">
+            <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: white;">History</h2>
+                <button id="download-history-btn" style="background-color: var(--primary-color); color: #121212; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">Download History</button>
+            </div>
             <div id="history">
                 <div class="kaa-mall-card purchase-history">
                     <h3>Purchase History</h3>
@@ -666,7 +809,7 @@ class Kaa_Mall_Public {
                 padding: 0;
                 width: 100%;
                 position: relative;
-                z-index: 1;
+                z-index: 9999;
             }
 
             .kaa-mall-header {
@@ -1119,6 +1262,11 @@ class Kaa_Mall_Public {
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
                         <div class="price-breakdown" style="padding: 10px 0;"></div>
+                        <label>Coupon Code</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" name="coupon_code" placeholder="Enter coupon code" style="margin-bottom: 0;">
+                            <button type="button" class="apply-coupon-btn" style="width: auto; padding: 10px 15px; margin-bottom: 0;">Apply</button>
+                        </div>
                         <div class="payment-method-header">
                             <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
                             <span>Payment Method</span>
@@ -1150,6 +1298,12 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
+                        <div class="price-breakdown" style="padding: 10px 0;"></div>
+                        <label>Coupon Code</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" name="coupon_code" placeholder="Enter coupon code" style="margin-bottom: 0;">
+                            <button type="button" class="apply-coupon-btn" style="width: auto; padding: 10px 15px; margin-bottom: 0;">Apply</button>
+                        </div>
                         <div class="payment-method-header">
                             <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
                             <span>Payment Method</span>
@@ -1181,6 +1335,12 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
+                        <div class="price-breakdown" style="padding: 10px 0;"></div>
+                        <label>Coupon Code</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" name="coupon_code" placeholder="Enter coupon code" style="margin-bottom: 0;">
+                            <button type="button" class="apply-coupon-btn" style="width: auto; padding: 10px 15px; margin-bottom: 0;">Apply</button>
+                        </div>
                         <div class="payment-method-header">
                             <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
                             <span>Payment Method</span>

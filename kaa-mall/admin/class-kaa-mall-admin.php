@@ -21,6 +21,34 @@ class Kaa_Mall_Admin {
         add_action( 'admin_post_kaa_mall_send_broadcast', array( $this, 'handle_send_broadcast' ) );
         add_action( 'admin_post_kaa_mall_edit_broadcast', array( $this, 'handle_edit_broadcast' ) );
         add_action( 'admin_post_kaa_mall_delete_broadcast', array( $this, 'handle_delete_broadcast' ) );
+        add_action( 'admin_post_kaa_mall_save_reseller_tiers', array( $this, 'handle_save_reseller_tiers' ) );
+    }
+
+    public function handle_save_reseller_tiers() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        check_admin_referer( 'kaa_mall_save_reseller_tiers_nonce' );
+
+        $tiers = array();
+        if ( isset( $_POST['tier_name'] ) ) {
+            foreach ( $_POST['tier_name'] as $key => $name ) {
+                if ( ! empty( $name ) ) {
+                    $tiers[] = array(
+                        'name' => sanitize_text_field( $name ),
+                        'sales_required' => floatval( $_POST['tier_sales_required'][ $key ] ),
+                        'discount_percentage' => floatval( $_POST['tier_discount_percentage'][ $key ] ),
+                    );
+                }
+            }
+        }
+
+        update_option( 'kaa_mall_reseller_tiers', $tiers );
+
+        $redirect_url = add_query_arg( 'message', 'Reseller tiers saved successfully.', wp_get_referer() );
+        wp_redirect( $redirect_url );
+        exit;
     }
 
     public function handle_edit_broadcast() {
@@ -319,6 +347,171 @@ class Kaa_Mall_Admin {
             'kaa-mall-top-up-wallet',
             array($this, 'render_top_up_wallet_page')
         );
+
+        add_submenu_page(
+            'kaa_mall',
+            'Reports',
+            'Reports',
+            'manage_options',
+            'kaa-mall-reports',
+            array( $this, 'render_reports_page' )
+        );
+
+        add_submenu_page(
+            'kaa_mall',
+            'Reseller Tiers',
+            'Reseller Tiers',
+            'manage_options',
+            'kaa-mall-reseller-tiers',
+            array( $this, 'render_reseller_tiers_page' )
+        );
+    }
+
+    public function render_reseller_tiers_page() {
+        ?>
+        <div class="wrap">
+            <h2>Reseller Tiers</h2>
+            <?php
+            if ( isset( $_GET['message'] ) ) {
+                echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $_GET['message'] ) . '</p></div>';
+            }
+            ?>
+            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                <input type="hidden" name="action" value="kaa_mall_save_reseller_tiers">
+                <?php wp_nonce_field( 'kaa_mall_save_reseller_tiers_nonce' ); ?>
+
+                <table class="wp-list-table widefat fixed striped" id="reseller-tiers-table">
+                    <thead>
+                        <tr>
+                            <th>Tier Name</th>
+                            <th>Sales Required (GHS)</th>
+                            <th>Discount (%)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tier-rows">
+                        <?php
+                        $tiers = get_option( 'kaa_mall_reseller_tiers', array() );
+                        if ( ! empty( $tiers ) ) :
+                            foreach ( $tiers as $key => $tier ) :
+                        ?>
+                                <tr>
+                                    <td><input type="text" name="tier_name[]" value="<?php echo esc_attr( $tier['name'] ); ?>" required></td>
+                                    <td><input type="number" name="tier_sales_required[]" value="<?php echo esc_attr( $tier['sales_required'] ); ?>" step="0.01" min="0" required></td>
+                                    <td><input type="number" name="tier_discount_percentage[]" value="<?php echo esc_attr( $tier['discount_percentage'] ); ?>" step="0.01" min="0" max="100" required></td>
+                                    <td><button type="button" class="button remove-tier-btn">Remove</button></td>
+                                </tr>
+                        <?php
+                            endforeach;
+                        endif;
+                        ?>
+                    </tbody>
+                </table>
+
+                <button type="button" id="add-tier-btn" class="button" style="margin-top: 20px;">Add Tier</button>
+                <?php submit_button( 'Save Tiers' ); ?>
+            </form>
+        </div>
+        <script>
+            jQuery(document).ready(function($) {
+                $('#add-tier-btn').on('click', function() {
+                    $('#tier-rows').append(
+                        '<tr>' +
+                            '<td><input type="text" name="tier_name[]" required></td>' +
+                            '<td><input type="number" name="tier_sales_required[]" step="0.01" min="0" required></td>' +
+                            '<td><input type="number" name="tier_discount_percentage[]" step="0.01" min="0" max="100" required></td>' +
+                            '<td><button type="button" class="button remove-tier-btn">Remove</button></td>' +
+                        '</tr>'
+                    );
+                });
+
+                $('#reseller-tiers-table').on('click', '.remove-tier-btn', function() {
+                    $(this).closest('tr').remove();
+                });
+            });
+        </script>
+        <?php
+    }
+
+    private function get_monthly_revenue() {
+        $start_date = date( 'Y-m-01' );
+        $end_date = date( 'Y-m-t' );
+        $args = array(
+            'post_type'      => 'shop_order',
+            'post_status'    => array( 'wc-completed', 'wc-processing' ),
+            'posts_per_page' => -1,
+            'date_query'     => array(
+                'after'     => $start_date,
+                'before'    => $end_date,
+                'inclusive' => true,
+            ),
+        );
+        $orders = wc_get_orders( $args );
+        $total = 0;
+        foreach ( $orders as $order ) {
+            $total += $order->get_total();
+        }
+        return $total;
+    }
+
+    public function render_reports_page() {
+        $monthly_revenue = $this->get_monthly_revenue();
+        $total_reseller_profit = $this->get_total_reseller_profit();
+        $popular_bundles = $this->get_popular_data_bundles();
+        ?>
+        <style>
+            .kaa-mall-reports-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+            .report-card {
+                background: #fff;
+                padding: 20px;
+                border: 1px solid #e5e5e5;
+                box-shadow: 0 1px 1px rgba(0,0,0,.04);
+            }
+            .report-card h3 {
+                margin-top: 0;
+                font-size: 16px;
+            }
+            .report-card .amount {
+                font-size: 2.5em;
+                font-weight: 500;
+                margin: 10px 0;
+            }
+            .report-card ul {
+                padding-left: 20px;
+                margin: 0;
+            }
+        </style>
+        <div class="wrap">
+            <h2>Reports</h2>
+            <div class="kaa-mall-reports-grid">
+                <div class="report-card">
+                    <h3>Revenue This Month</h3>
+                    <div class="amount"><?php echo wc_price( $monthly_revenue ); ?></div>
+                </div>
+                <div class="report-card">
+                    <h3>Total Reseller Profit</h3>
+                    <div class="amount"><?php echo wc_price( $total_reseller_profit ); ?></div>
+                </div>
+                <div class="report-card">
+                    <h3>Top Selling Bundles</h3>
+                    <ul>
+                    <?php if ( ! empty( $popular_bundles ) ) : ?>
+                        <?php foreach ( $popular_bundles as $bundle ) : ?>
+                            <li><?php echo esc_html( $bundle->post_title ); ?> (<?php echo $bundle->purchase_count; ?> sales)</li>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <li>No data yet.</li>
+                    <?php endif; ?>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 
     public function register_settings() {
