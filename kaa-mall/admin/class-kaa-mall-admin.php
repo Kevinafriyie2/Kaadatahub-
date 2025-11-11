@@ -151,16 +151,12 @@ class Kaa_Mall_Admin {
         }
 
         $search = sanitize_text_field( $_POST['search'] );
-        $users = get_users( array(
+
+        $user_query = new WP_User_Query( array(
             'search'         => '*' . esc_attr( $search ) . '*',
-            'search_columns' => array( 'user_login', 'user_email' ),
+            'search_columns' => array( 'user_login', 'user_email', 'user_nicename' ),
             'meta_query'     => array(
                 'relation' => 'OR',
-                array(
-                    'key'     => 'nickname',
-                    'value'   => $search,
-                    'compare' => 'LIKE'
-                ),
                 array(
                     'key'     => 'first_name',
                     'value'   => $search,
@@ -174,6 +170,7 @@ class Kaa_Mall_Admin {
             ),
             'number'         => 10,
         ) );
+        $users = $user_query->get_results();
 
         $results = array();
         foreach ( $users as $user ) {

@@ -771,6 +771,12 @@ class Kaa_Mall_Public {
                 </ul>
             </div>
 
+            <div class="kaa-mall-card">
+                <h3>Join Our Community</h3>
+                <p>Stay updated with the latest news and offers by joining our WhatsApp community.</p>
+                <a href="https://chat.whatsapp.com/JZEJZlNO3DV8VCyeTwzYgt" class="contact-admin-btn" style="background-color: #25D366; text-align: center; display: block;">Join Now</a>
+            </div>
+
             <?php if ( is_user_logged_in() ) : ?>
             <div class="kaa-mall-card wallet-balance">
                 <div class="wallet-balance-details">
@@ -889,6 +895,8 @@ class Kaa_Mall_Public {
                 <form id="kaa-mall-afa-form">
                     <label>Full Name</label>
                     <input type="text" name="full_name" placeholder="Enter your full name" required>
+                    <label>Phone Number</label>
+                    <input type="tel" name="phone_number" placeholder="Enter your phone number" required>
                     <label>Location</label>
                     <input type="text" name="location" placeholder="Enter your location" required>
                     <label>ID Ghana Card Number</label>
