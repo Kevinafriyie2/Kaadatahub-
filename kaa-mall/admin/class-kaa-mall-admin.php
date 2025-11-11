@@ -10,7 +10,7 @@ class Kaa_Mall_Admin {
         $this->version = $version;
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
-        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ) );
+        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
         add_action( 'admin_post_kaa_mall_top_up_wallet', array( $this, 'handle_top_up_wallet' ) );
         add_action( 'admin_post_kaa_mall_bulk_update_order_status', array( $this, 'handle_bulk_update_order_status' ) );
         add_action( 'admin_post_kaa_mall_mark_withdrawal_paid', array( $this, 'handle_mark_withdrawal_paid' ) );
@@ -171,6 +171,8 @@ class Kaa_Mall_Admin {
     }
 
     public function search_users() {
+        check_ajax_referer( 'kaa_mall_admin_nonce', 'nonce' );
+
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_send_json_error( array(), 403 );
         }
@@ -224,8 +226,28 @@ class Kaa_Mall_Admin {
         exit;
     }
 
-    public function enqueue_styles() {
-        // Styles are now inlined in the shortcode output.
+    public function enqueue_scripts( $hook ) {
+        // Only load the script on the relevant admin pages
+        if ( $hook !== 'toplevel_page_kaa_mall' && $hook !== 'kaadatahub_page_kaa-mall-top-up-wallet' ) {
+            return;
+        }
+
+        wp_enqueue_script(
+            $this->plugin_name . '_admin',
+            plugin_dir_url( __FILE__ ) . 'js/kaa-mall-admin.js',
+            array( 'jquery', 'jquery-ui-autocomplete' ),
+            $this->version,
+            true
+        );
+
+        wp_localize_script(
+            $this->plugin_name . '_admin',
+            'kaa_mall_admin_ajax',
+            array(
+                'ajax_url' => admin_url( 'admin-ajax.php' ),
+                'nonce'    => wp_create_nonce( 'kaa_mall_admin_nonce' ),
+            )
+        );
     }
 
     public function handle_top_up_wallet() {
@@ -902,73 +924,6 @@ class Kaa_Mall_Admin {
                 </form>
             </div>
         </div>
-        <script>
-            jQuery(document).ready(function($) {
-                $('#select-all-orders').on('click', function() {
-                    var checkboxes = $(this).closest('table').find('tbody input[type="checkbox"]');
-                    checkboxes.prop('checked', $(this).is(':checked'));
-                });
-
-                var searchTimer;
-                $('#kaa-mall-user-search').on('keyup', function() {
-                    clearTimeout(searchTimer);
-                    var searchTerm = $(this).val();
-                    if (searchTerm.length < 2) {
-                        $('#kaa-mall-user-search-results').empty();
-                        return;
-                    }
-
-                    searchTimer = setTimeout(function() {
-                        $.post(ajaxurl, {
-                            action: 'kaa_mall_search_users',
-                            search: searchTerm
-                        }, function(response) {
-                            var resultsContainer = $('#kaa-mall-user-search-results');
-                            resultsContainer.empty();
-                            if (response.success && response.data.length) {
-                                var list = $('<ul>');
-                                $.each(response.data, function(i, user) {
-                                    list.append($('<li>').data('userid', user.id).text(user.text));
-                                });
-                                resultsContainer.append(list);
-                            } else {
-                                resultsContainer.text('No users found.');
-                            }
-                        });
-                    }, 500); // Debounce for 500ms
-                });
-
-                $(document).on('click', '#kaa-mall-user-search-results li', function() {
-                    var userId = $(this).data('userid');
-                    var userName = $(this).text();
-                    $('#kaa-mall-user-id').val(userId);
-                    $('#kaa-mall-user-search').val(userName);
-                    $('#kaa-mall-user-search-results').empty();
-                });
-            });
-        </script>
-        <style>
-            #kaa-mall-user-search-results {
-                position: relative;
-            }
-            #kaa-mall-user-search-results ul {
-                position: absolute;
-                background: white;
-                border: 1px solid #ddd;
-                list-style: none;
-                margin: 0;
-                padding: 0;
-                width: 100%;
-                z-index: 100;
-            }
-            #kaa-mall-user-search-results li {
-                padding: 8px 12px;
-                cursor: pointer;
-            }
-            #kaa-mall-user-search-results li:hover {
-                background: #f0f0f0;
-            }
-        </style>
         <?php
         return ob_get_clean();
     }
@@ -1008,46 +963,6 @@ class Kaa_Mall_Admin {
                 </form>
             </div>
         </div>
-        <script>
-            jQuery(document).ready(function($) {
-                var searchTimer;
-                $('#kaa-mall-user-search').on('keyup', function() {
-                    clearTimeout(searchTimer);
-                    var searchTerm = $(this).val();
-                    if (searchTerm.length < 2) {
-                        $('#kaa-mall-user-search-results').empty();
-                        return;
-                    }
-
-                    searchTimer = setTimeout(function() {
-                        $.post(ajaxurl, {
-                            action: 'kaa_mall_search_users',
-                            search: searchTerm
-                        }, function(response) {
-                            var resultsContainer = $('#kaa-mall-user-search-results');
-                            resultsContainer.empty();
-                            if (response.success && response.data.length) {
-                                var list = $('<ul style="border: 1px solid #ddd; background: #fff; list-style: none; margin: 0; padding: 0; max-width: 300px;">');
-                                $.each(response.data, function(i, user) {
-                                    list.append($('<li style="padding: 8px 12px; cursor: pointer;">').data('userid', user.id).text(user.text));
-                                });
-                                resultsContainer.append(list);
-                            } else {
-                                resultsContainer.text('No users found.');
-                            }
-                        });
-                    }, 500);
-                });
-
-                $(document).on('click', '#kaa-mall-user-search-results li', function() {
-                    var userId = $(this).data('userid');
-                    var userName = $(this).text();
-                    $('#kaa-mall-user-id').val(userId);
-                    $('#kaa-mall-user-search').val(userName);
-                    $('#kaa-mall-user-search-results').empty();
-                });
-            });
-        </script>
         <?php
     }
 
