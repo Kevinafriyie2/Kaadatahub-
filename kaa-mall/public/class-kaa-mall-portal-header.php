@@ -94,7 +94,16 @@ class Kaa_Mall_Portal_Header {
             </div>
             <nav class="header-nav">
                 <a href="<?php echo esc_url( get_option('kaa_mall_user_portal_url') ); ?>">Dashboard</a>
-                <a href="<?php echo esc_url( get_option('kaa_mall_history_portal_url') ); ?>">History</a>
+                <?php
+                $history_url = get_option('kaa_mall_history_portal_url');
+                if ( empty( $history_url ) ) {
+                    $history_page = get_page_by_path( 'history' );
+                    if ( $history_page ) {
+                        $history_url = get_permalink( $history_page->ID );
+                    }
+                }
+                ?>
+                <a href="<?php echo esc_url( $history_url ); ?>">History</a>
                 <?php if ( current_user_can( 'reseller' ) ) : ?>
                     <a href="<?php echo esc_url( get_option('kaa_mall_reseller_portal_url') ); ?>">Reseller Dashboard</a>
                 <?php else : ?>

@@ -258,16 +258,8 @@ class Kaa_Mall_Admin {
             'manage_options',
             'kaa_mall',
             array( $this, 'render_admin_portal' ),
-            'dashicons-store'
-        );
-
-        add_submenu_page(
-            'kaa_mall',
-            'Dashboard',
-            'Dashboard',
-            'manage_options',
-            'kaa_mall',
-            array( $this, 'render_admin_portal' )
+            'dashicons-store',
+            2
         );
 
         add_submenu_page(
