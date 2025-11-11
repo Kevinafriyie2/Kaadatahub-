@@ -228,11 +228,6 @@ class Kaa_Mall_Admin {
         // Styles are now inlined in the shortcode output.
     }
 
-    private function get_wallet_balance( $user_id ) {
-        $balance = get_user_meta( $user_id, '_kaa_mall_wallet_balance', true );
-        return empty( $balance ) ? 0.00 : floatval( $balance );
-    }
-
     public function handle_top_up_wallet() {
         if ( ! isset( $_POST['kaa_mall_top_up_wallet_nonce'] ) || ! wp_verify_nonce( $_POST['kaa_mall_top_up_wallet_nonce'], 'kaa_mall_top_up_wallet_nonce' ) ) {
             wp_die( 'Security check failed.' );
@@ -246,10 +241,7 @@ class Kaa_Mall_Admin {
         $amount = floatval( $_POST['amount'] );
 
         if ( $user_id > 0 && $amount > 0 ) {
-            $current_balance = $this->get_wallet_balance( $user_id );
-            $new_balance = $current_balance + $amount;
-            update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
-
+            Kaa_Mall_Wallet::update_balance_and_log( $user_id, $amount, 'admin-top-up', 'Admin top-up' );
             $redirect_url = add_query_arg( 'message', 'Wallet topped up successfully.', wp_get_referer() );
         } else {
             $redirect_url = add_query_arg( 'message', 'Invalid user or amount.', wp_get_referer() );

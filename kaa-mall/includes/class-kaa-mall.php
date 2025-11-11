@@ -71,6 +71,7 @@ class Kaa_Mall {
     }
 
     private function load_dependencies() {
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-kaa-mall-wallet.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-kaa-mall-admin.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-public.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-reseller.php';

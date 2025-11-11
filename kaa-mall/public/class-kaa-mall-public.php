@@ -19,6 +19,7 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_nopriv_kaa_mall_get_bundle_prices', array( $this, 'get_bundle_prices' ) );
         add_action( 'wp_ajax_kaa_mall_afa_registration', array( $this, 'afa_registration' ) );
         add_action( 'wp_ajax_kaa_mall_get_recent_orders', array( $this, 'get_recent_orders' ) );
+        add_action( 'wp_ajax_kaa_mall_get_all_orders', array( $this, 'get_all_orders' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_balance', array( $this, 'ajax_get_wallet_balance' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_transactions', array( $this, 'get_wallet_transactions' ) );
     }
@@ -77,35 +78,10 @@ class Kaa_Mall_Public {
         wp_localize_script( 'kaa-mall-public', 'kaa_mall_params', $params );
     }
 
-    private function get_wallet_balance( $user_id ) {
-        $balance = get_user_meta( $user_id, '_kaa_mall_wallet_balance', true );
-        return empty( $balance ) ? 0.00 : floatval( $balance );
-    }
-
-    private function _update_wallet_balance_and_log( $user_id, $amount, $type, $details ) {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'kaa_mall_wallet_transactions';
-
-        $current_balance = $this->get_wallet_balance( $user_id );
-        $new_balance = $current_balance + $amount;
-        update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
-
-        $wpdb->insert(
-            $table_name,
-            array(
-                'user_id' => $user_id,
-                'amount' => $amount,
-                'type' => $type,
-                'details' => $details,
-                'balance_after' => $new_balance,
-            )
-        );
-    }
-
     public function ajax_get_wallet_balance() {
         check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $user_id = get_current_user_id();
-        $balance = $this->get_wallet_balance( $user_id );
+        $balance = Kaa_Mall_Wallet::get_balance( $user_id );
         wp_send_json_success( number_format( $balance, 2 ) );
     }
 
@@ -184,9 +160,9 @@ class Kaa_Mall_Public {
             $user_id = get_current_user_id();
             // Log the fee as a separate transaction for clarity
             if ( $fee > 0 ) {
-                $this->_update_wallet_balance_and_log( $user_id, -$fee, 'fee', 'Paystack Top-up Fee. Reference: ' . $reference );
+                Kaa_Mall_Wallet::update_balance_and_log( $user_id, -$fee, 'fee', 'Paystack Top-up Fee. Reference: ' . $reference );
             }
-            $this->_update_wallet_balance_and_log( $user_id, $top_up_amount, 'top-up', 'Paystack Top-up. Reference: ' . $reference );
+            Kaa_Mall_Wallet::update_balance_and_log( $user_id, $top_up_amount, 'top-up', 'Paystack Top-up. Reference: ' . $reference );
 
             $product = $this->get_product_by_name( 'Wallet Top-up' );
             if ( $product ) {
@@ -243,7 +219,7 @@ class Kaa_Mall_Public {
         }
 
         $user_id = get_current_user_id();
-        $wallet_balance = $this->get_wallet_balance( $user_id );
+        $wallet_balance = Kaa_Mall_Wallet::get_balance( $user_id );
         $fee = floatval( get_option( 'kaa_mall_wallet_purchase_fee', 0 ) );
         $total_cost = $final_price + $fee;
 
@@ -252,10 +228,10 @@ class Kaa_Mall_Public {
         }
 
         // Deduct the bundle price first
-        $this->_update_wallet_balance_and_log( $user_id, -$final_price, 'purchase', "{$bundle} for {$phone_number}" );
+        Kaa_Mall_Wallet::update_balance_and_log( $user_id, -$final_price, 'purchase', "{$bundle} for {$phone_number}" );
         // Then deduct the fee
         if ( $fee > 0 ) {
-            $this->_update_wallet_balance_and_log( $user_id, -$fee, 'fee', "Service fee for {$bundle}" );
+            Kaa_Mall_Wallet::update_balance_and_log( $user_id, -$fee, 'fee', "Service fee for {$bundle}" );
         }
 
         $product = $this->get_product_by_name( 'Data Bundle' );
@@ -293,7 +269,7 @@ class Kaa_Mall_Public {
         }
 
         $threshold = floatval( get_option( 'kaa_mall_low_balance_threshold', '5' ) );
-        $balance = $this->get_wallet_balance( $user_id );
+        $balance = Kaa_Mall_Wallet::get_balance( $user_id );
 
         if ( $balance < $threshold ) {
             $user = get_user_by( 'id', $user_id );
@@ -370,7 +346,7 @@ class Kaa_Mall_Public {
             if ( $user_id && $fee > 0 ) {
                  // We don't need to deduct from wallet, just log it for the user's records if they are logged in
                  // This assumes the fee was already included in the Paystack charge amount
-                $this->_update_wallet_balance_and_log( $user_id, -$fee, 'fee', "Paystack service fee for {$bundle}" );
+                Kaa_Mall_Wallet::update_balance_and_log( $user_id, -$fee, 'fee', "Paystack service fee for {$bundle}" );
             }
 
             $product = $this->get_product_by_name( 'Data Bundle' );
@@ -435,13 +411,13 @@ class Kaa_Mall_Public {
         }
 
         $user_id = get_current_user_id();
-        $wallet_balance = $this->get_wallet_balance( $user_id );
+        $wallet_balance = Kaa_Mall_Wallet::get_balance( $user_id );
 
         if ( $wallet_balance < $final_price ) {
             wp_send_json_error( array( 'message' => 'Insufficient wallet balance.' ) );
         }
 
-        $this->_update_wallet_balance_and_log( $user_id, -$final_price, 'purchase', 'AFA Registration' );
+        Kaa_Mall_Wallet::update_balance_and_log( $user_id, -$final_price, 'purchase', 'AFA Registration' );
 
         $product = $this->get_product_by_name( 'AFA Registration' );
         if ( $product ) {
@@ -479,6 +455,33 @@ class Kaa_Mall_Public {
         $args = array(
             'customer_id' => $user_id,
             'limit' => 20,
+            'orderby' => 'date',
+            'order' => 'DESC',
+        );
+        $orders = wc_get_orders( $args );
+
+        $data = array();
+        foreach ( $orders as $order ) {
+            $data[] = array(
+                'reference' => $order->get_id(),
+                'date' => $order->get_date_created()->date_i18n( 'Y-m-d H:i:s' ),
+                'network' => $order->get_meta( 'Network' ),
+                'bundle' => $order->get_meta( 'Bundle' ),
+                'phone' => $order->get_meta( 'Phone Number' ),
+                'amount' => $order->get_total(),
+                'status' => wc_get_order_status_name( $order->get_status() ),
+            );
+        }
+
+        wp_send_json_success( $data );
+    }
+
+    public function get_all_orders() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        $user_id = get_current_user_id();
+        $args = array(
+            'customer_id' => $user_id,
+            'limit' => -1, // Get all orders
             'orderby' => 'date',
             'order' => 'DESC',
         );
@@ -1039,37 +1042,39 @@ class Kaa_Mall_Public {
                 </form>
             </div>
 
-            <div class="kaa-mall-card purchase-history">
-                <h3>Purchase History</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Date</th>
-                            <th>Bundle</th>
-                            <th>Phone</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+            <div id="history">
+                <div class="kaa-mall-card purchase-history">
+                    <h3>Purchase History</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Bundle</th>
+                                <th>Phone</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
 
-            <div class="kaa-mall-card wallet-transactions">
-                <h3>Wallet History</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                            <th>Details</th>
-                            <th>Balance</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="kaa-mall-card wallet-transactions">
+                    <h3>Wallet History</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Details</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
             <?php endif; ?>
 

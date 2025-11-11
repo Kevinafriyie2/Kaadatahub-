@@ -10,7 +10,7 @@
         // Initial setup on page load
         if (kaa_mall_params.is_user_logged_in) {
             update_wallet_balance();
-            load_recent_orders();
+            load_all_orders(); // Load all orders for the history page
             load_wallet_transactions();
         }
         load_bundle_prices('mtn'); // Load default tab prices
@@ -245,14 +245,14 @@
             });
         }
 
-        function load_recent_orders() {
+        function load_all_orders() {
             var orders_table = $('.purchase-history tbody');
-            orders_table.empty().append('<tr><td colspan="4">Loading...</td></tr>');
+            orders_table.empty().append('<tr><td colspan="6">Loading...</td></tr>');
             $.ajax({
                 url: kaa_mall_params.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'kaa_mall_get_recent_orders',
+                    action: 'kaa_mall_get_all_orders',
                     nonce: kaa_mall_params.nonce
                 },
                 success: function(response) {
