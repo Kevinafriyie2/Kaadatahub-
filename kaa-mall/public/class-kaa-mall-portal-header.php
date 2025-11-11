@@ -11,13 +11,17 @@ class Kaa_Mall_Portal_Header {
                 justify-content: space-between;
                 align-items: center;
                 padding: 15px 20px;
-                background-color: #1e1e1e;
                 color: #fff;
-                border-bottom: 1px solid #333;
-                position: relative;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 1001;
+                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             }
             .header-logo a {
-                color: #ffc107;
+                color: #fff;
                 text-decoration: none;
                 font-size: 1.5em;
                 font-weight: bold;
@@ -29,8 +33,9 @@ class Kaa_Mall_Portal_Header {
                 top: 100%;
                 left: 0;
                 right: 0;
-                background-color: #1e1e1e;
-                border-top: 1px solid #333;
+                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+                border-top: 1px solid rgba(255, 255, 255, 0.2);
+                z-index: 1000;
             }
             .header-nav.active {
                 display: flex;
@@ -41,14 +46,14 @@ class Kaa_Mall_Portal_Header {
                 padding: 15px 20px;
                 font-weight: 600;
                 transition: color 0.2s ease, background-color 0.2s ease;
-                border-bottom: 1px solid #333;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             }
             .header-nav a:last-child {
                 border-bottom: none;
             }
             .header-nav a:hover {
                 color: #ffc107;
-                background-color: #2c2c2c;
+                background-color: rgba(0, 0, 0, 0.3);
             }
             .hamburger-menu {
                 display: block;
@@ -72,6 +77,9 @@ class Kaa_Mall_Portal_Header {
                     flex-direction: row;
                     position: static;
                     border: none;
+                    background: none;
+                    backdrop-filter: none;
+                    -webkit-backdrop-filter: none;
                 }
                 .header-nav a {
                     margin-left: 20px;
@@ -94,6 +102,16 @@ class Kaa_Mall_Portal_Header {
             </div>
             <nav class="header-nav">
                 <a href="<?php echo esc_url( get_option('kaa_mall_user_portal_url') ); ?>">Dashboard</a>
+                <?php
+                $history_url = get_option('kaa_mall_history_portal_url');
+                if ( empty( $history_url ) ) {
+                    $history_page = get_page_by_path( 'history' );
+                    if ( $history_page ) {
+                        $history_url = get_permalink( $history_page->ID );
+                    }
+                }
+                ?>
+                <a href="<?php echo esc_url( $history_url ); ?>">History</a>
                 <?php if ( current_user_can( 'reseller' ) ) : ?>
                     <a href="<?php echo esc_url( get_option('kaa_mall_reseller_portal_url') ); ?>">Reseller Dashboard</a>
                 <?php else : ?>

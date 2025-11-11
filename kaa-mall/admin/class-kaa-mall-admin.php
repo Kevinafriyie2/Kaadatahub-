@@ -10,7 +10,7 @@ class Kaa_Mall_Admin {
         $this->version = $version;
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
-        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ) );
+        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
         add_action( 'admin_post_kaa_mall_top_up_wallet', array( $this, 'handle_top_up_wallet' ) );
         add_action( 'admin_post_kaa_mall_bulk_update_order_status', array( $this, 'handle_bulk_update_order_status' ) );
         add_action( 'admin_post_kaa_mall_mark_withdrawal_paid', array( $this, 'handle_mark_withdrawal_paid' ) );
@@ -21,6 +21,34 @@ class Kaa_Mall_Admin {
         add_action( 'admin_post_kaa_mall_send_broadcast', array( $this, 'handle_send_broadcast' ) );
         add_action( 'admin_post_kaa_mall_edit_broadcast', array( $this, 'handle_edit_broadcast' ) );
         add_action( 'admin_post_kaa_mall_delete_broadcast', array( $this, 'handle_delete_broadcast' ) );
+        add_action( 'admin_post_kaa_mall_save_reseller_tiers', array( $this, 'handle_save_reseller_tiers' ) );
+    }
+
+    public function handle_save_reseller_tiers() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        check_admin_referer( 'kaa_mall_save_reseller_tiers_nonce' );
+
+        $tiers = array();
+        if ( isset( $_POST['tier_name'] ) ) {
+            foreach ( $_POST['tier_name'] as $key => $name ) {
+                if ( ! empty( $name ) ) {
+                    $tiers[] = array(
+                        'name' => sanitize_text_field( $name ),
+                        'sales_required' => floatval( $_POST['tier_sales_required'][ $key ] ),
+                        'discount_percentage' => floatval( $_POST['tier_discount_percentage'][ $key ] ),
+                    );
+                }
+            }
+        }
+
+        update_option( 'kaa_mall_reseller_tiers', $tiers );
+
+        $redirect_url = add_query_arg( 'message', 'Reseller tiers saved successfully.', wp_get_referer() );
+        wp_redirect( $redirect_url );
+        exit;
     }
 
     public function handle_edit_broadcast() {
@@ -171,6 +199,8 @@ class Kaa_Mall_Admin {
     }
 
     public function search_users() {
+        check_ajax_referer( 'kaa_mall_admin_nonce', 'nonce' );
+
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_send_json_error( array(), 403 );
         }
@@ -224,13 +254,28 @@ class Kaa_Mall_Admin {
         exit;
     }
 
-    public function enqueue_styles() {
-        // Styles are now inlined in the shortcode output.
-    }
+    public function enqueue_scripts( $hook ) {
+        // Only load the script on the relevant admin pages
+        if ( $hook !== 'toplevel_page_kaa_mall' && $hook !== 'kaadatahub_page_kaa-mall-top-up-wallet' ) {
+            return;
+        }
 
-    private function get_wallet_balance( $user_id ) {
-        $balance = get_user_meta( $user_id, '_kaa_mall_wallet_balance', true );
-        return empty( $balance ) ? 0.00 : floatval( $balance );
+        wp_enqueue_script(
+            $this->plugin_name . '_admin',
+            plugin_dir_url( __FILE__ ) . 'js/kaa-mall-admin.js',
+            array( 'jquery', 'jquery-ui-autocomplete' ),
+            $this->version,
+            true
+        );
+
+        wp_localize_script(
+            $this->plugin_name . '_admin',
+            'kaa_mall_admin_ajax',
+            array(
+                'ajax_url' => admin_url( 'admin-ajax.php' ),
+                'nonce'    => wp_create_nonce( 'kaa_mall_admin_nonce' ),
+            )
+        );
     }
 
     public function handle_top_up_wallet() {
@@ -246,10 +291,7 @@ class Kaa_Mall_Admin {
         $amount = floatval( $_POST['amount'] );
 
         if ( $user_id > 0 && $amount > 0 ) {
-            $current_balance = $this->get_wallet_balance( $user_id );
-            $new_balance = $current_balance + $amount;
-            update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
-
+            Kaa_Mall_Wallet::update_balance_and_log( $user_id, $amount, 'admin-top-up', 'Admin top-up' );
             $redirect_url = add_query_arg( 'message', 'Wallet topped up successfully.', wp_get_referer() );
         } else {
             $redirect_url = add_query_arg( 'message', 'Invalid user or amount.', wp_get_referer() );
@@ -266,16 +308,8 @@ class Kaa_Mall_Admin {
             'manage_options',
             'kaa_mall',
             array( $this, 'render_admin_portal' ),
-            'dashicons-store'
-        );
-
-        add_submenu_page(
-            'kaa_mall',
-            'Dashboard',
-            'Dashboard',
-            'manage_options',
-            'kaa_mall',
-            array( $this, 'render_admin_portal' )
+            'dashicons-store',
+            2
         );
 
         add_submenu_page(
@@ -304,6 +338,180 @@ class Kaa_Mall_Admin {
             'kaa-mall-broadcasts',
             array($this, 'display_broadcasts_page')
         );
+
+        add_submenu_page(
+            'kaa_mall',
+            'Top Up Wallet',
+            'Top Up Wallet',
+            'manage_options',
+            'kaa-mall-top-up-wallet',
+            array($this, 'render_top_up_wallet_page')
+        );
+
+        add_submenu_page(
+            'kaa_mall',
+            'Reports',
+            'Reports',
+            'manage_options',
+            'kaa-mall-reports',
+            array( $this, 'render_reports_page' )
+        );
+
+        add_submenu_page(
+            'kaa_mall',
+            'Reseller Tiers',
+            'Reseller Tiers',
+            'manage_options',
+            'kaa-mall-reseller-tiers',
+            array( $this, 'render_reseller_tiers_page' )
+        );
+    }
+
+    public function render_reseller_tiers_page() {
+        ?>
+        <div class="wrap">
+            <h2>Reseller Tiers</h2>
+            <?php
+            if ( isset( $_GET['message'] ) ) {
+                echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $_GET['message'] ) . '</p></div>';
+            }
+            ?>
+            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                <input type="hidden" name="action" value="kaa_mall_save_reseller_tiers">
+                <?php wp_nonce_field( 'kaa_mall_save_reseller_tiers_nonce' ); ?>
+
+                <table class="wp-list-table widefat fixed striped" id="reseller-tiers-table">
+                    <thead>
+                        <tr>
+                            <th>Tier Name</th>
+                            <th>Sales Required (GHS)</th>
+                            <th>Discount (%)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tier-rows">
+                        <?php
+                        $tiers = get_option( 'kaa_mall_reseller_tiers', array() );
+                        if ( ! empty( $tiers ) ) :
+                            foreach ( $tiers as $key => $tier ) :
+                        ?>
+                                <tr>
+                                    <td><input type="text" name="tier_name[]" value="<?php echo esc_attr( $tier['name'] ); ?>" required></td>
+                                    <td><input type="number" name="tier_sales_required[]" value="<?php echo esc_attr( $tier['sales_required'] ); ?>" step="0.01" min="0" required></td>
+                                    <td><input type="number" name="tier_discount_percentage[]" value="<?php echo esc_attr( $tier['discount_percentage'] ); ?>" step="0.01" min="0" max="100" required></td>
+                                    <td><button type="button" class="button remove-tier-btn">Remove</button></td>
+                                </tr>
+                        <?php
+                            endforeach;
+                        endif;
+                        ?>
+                    </tbody>
+                </table>
+
+                <button type="button" id="add-tier-btn" class="button" style="margin-top: 20px;">Add Tier</button>
+                <?php submit_button( 'Save Tiers' ); ?>
+            </form>
+        </div>
+        <script>
+            jQuery(document).ready(function($) {
+                $('#add-tier-btn').on('click', function() {
+                    $('#tier-rows').append(
+                        '<tr>' +
+                            '<td><input type="text" name="tier_name[]" required></td>' +
+                            '<td><input type="number" name="tier_sales_required[]" step="0.01" min="0" required></td>' +
+                            '<td><input type="number" name="tier_discount_percentage[]" step="0.01" min="0" max="100" required></td>' +
+                            '<td><button type="button" class="button remove-tier-btn">Remove</button></td>' +
+                        '</tr>'
+                    );
+                });
+
+                $('#reseller-tiers-table').on('click', '.remove-tier-btn', function() {
+                    $(this).closest('tr').remove();
+                });
+            });
+        </script>
+        <?php
+    }
+
+    private function get_monthly_revenue() {
+        $start_date = date( 'Y-m-01' );
+        $end_date = date( 'Y-m-t' );
+        $args = array(
+            'post_type'      => 'shop_order',
+            'post_status'    => array( 'wc-completed', 'wc-processing' ),
+            'posts_per_page' => -1,
+            'date_query'     => array(
+                'after'     => $start_date,
+                'before'    => $end_date,
+                'inclusive' => true,
+            ),
+        );
+        $orders = wc_get_orders( $args );
+        $total = 0;
+        foreach ( $orders as $order ) {
+            $total += $order->get_total();
+        }
+        return $total;
+    }
+
+    public function render_reports_page() {
+        $monthly_revenue = $this->get_monthly_revenue();
+        $total_reseller_profit = $this->get_total_reseller_profit();
+        $popular_bundles = $this->get_popular_data_bundles();
+        ?>
+        <style>
+            .kaa-mall-reports-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+            .report-card {
+                background: #fff;
+                padding: 20px;
+                border: 1px solid #e5e5e5;
+                box-shadow: 0 1px 1px rgba(0,0,0,.04);
+            }
+            .report-card h3 {
+                margin-top: 0;
+                font-size: 16px;
+            }
+            .report-card .amount {
+                font-size: 2.5em;
+                font-weight: 500;
+                margin: 10px 0;
+            }
+            .report-card ul {
+                padding-left: 20px;
+                margin: 0;
+            }
+        </style>
+        <div class="wrap">
+            <h2>Reports</h2>
+            <div class="kaa-mall-reports-grid">
+                <div class="report-card">
+                    <h3>Revenue This Month</h3>
+                    <div class="amount"><?php echo wc_price( $monthly_revenue ); ?></div>
+                </div>
+                <div class="report-card">
+                    <h3>Total Reseller Profit</h3>
+                    <div class="amount"><?php echo wc_price( $total_reseller_profit ); ?></div>
+                </div>
+                <div class="report-card">
+                    <h3>Top Selling Bundles</h3>
+                    <ul>
+                    <?php if ( ! empty( $popular_bundles ) ) : ?>
+                        <?php foreach ( $popular_bundles as $bundle ) : ?>
+                            <li><?php echo esc_html( $bundle->post_title ); ?> (<?php echo $bundle->purchase_count; ?> sales)</li>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <li>No data yet.</li>
+                    <?php endif; ?>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <?php
     }
 
     public function register_settings() {
@@ -313,6 +521,7 @@ class Kaa_Mall_Admin {
         register_setting( 'kaa_mall_options', 'kaa_mall_mtn_out_of_stock' );
         register_setting( 'kaa_mall_options', 'kaa_mall_airteltigo_out_of_stock' );
         register_setting( 'kaa_mall_options', 'kaa_mall_vodafone_out_of_stock' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_afa_out_of_stock' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_application_fee' );
         register_setting( 'kaa_mall_options', 'kaa_mall_afa_registration_fee' );
         register_setting( 'kaa_mall_options', 'kaa_mall_low_balance_threshold' );
@@ -325,6 +534,7 @@ class Kaa_Mall_Admin {
         register_setting( 'kaa_mall_options', 'kaa_mall_user_portal_url' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_portal_url' );
         register_setting( 'kaa_mall_options', 'kaa_mall_whatsapp_number' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_disable_coupons' );
     }
 
     public function render_settings_page() {
@@ -377,6 +587,10 @@ class Kaa_Mall_Admin {
                         <td><input type="number" name="kaa_mall_afa_registration_fee" value="<?php echo esc_attr( get_option('kaa_mall_afa_registration_fee', '13') ); ?>" step="0.01" /></td>
                     </tr>
                     <tr valign="top">
+                        <th scope="row">AFA Registration Out of Stock</th>
+                        <td><label><input type="checkbox" name="kaa_mall_afa_out_of_stock" value="1" <?php checked( get_option( 'kaa_mall_afa_out_of_stock' ), 1 ); ?>> Mark AFA registration as out of stock</label></td>
+                    </tr>
+                    <tr valign="top">
                         <th scope="row">Default WhatsApp Number</th>
                         <td><input type="text" name="kaa_mall_whatsapp_number" value="<?php echo esc_attr( get_option('kaa_mall_whatsapp_number') ); ?>" placeholder="e.g., 233201858375" />
                         <p class="description">Enter the default WhatsApp number for the 'Contact Admin' button. Resellers can override this.</p></td>
@@ -392,6 +606,14 @@ class Kaa_Mall_Admin {
                     <tr valign="top">
                         <th scope="row">Low Balance Threshold</th>
                         <td><input type="number" name="kaa_mall_low_balance_threshold" value="<?php echo esc_attr( get_option('kaa_mall_low_balance_threshold', '5') ); ?>" step="0.01" /></td>
+                    </tr>
+                </table>
+
+                <h3>Coupon Settings</h3>
+                <table class="form-table">
+                    <tr valign="top">
+                        <th scope="row">Disable Coupons</th>
+                        <td><label><input type="checkbox" name="kaa_mall_disable_coupons" value="1" <?php checked( get_option( 'kaa_mall_disable_coupons' ), 1 ); ?>> Disable coupon functionality on the user portal</label></td>
                     </tr>
                 </table>
 
@@ -757,28 +979,6 @@ class Kaa_Mall_Admin {
                         </tbody>
                     </table>
                 </div>
-                <div class="admin-section">
-                    <h3>Top Up User Wallet</h3>
-                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-                        <input type="hidden" name="action" value="kaa_mall_top_up_wallet">
-                        <?php wp_nonce_field( 'kaa_mall_top_up_wallet_nonce', 'kaa_mall_top_up_wallet_nonce' ); ?>
-                        <table class="form-table">
-                            <tr valign="top">
-                                <th scope="row">Search User</th>
-                                <td>
-                                    <input type="text" id="kaa-mall-user-search" placeholder="Search by username or email...">
-                                    <input type="hidden" name="user_id" id="kaa-mall-user-id">
-                                    <div id="kaa-mall-user-search-results"></div>
-                                </td>
-                            </tr>
-                            <tr valign="top">
-                                <th scope="row">Amount</th>
-                                <td><input type="number" name="amount" step="0.01" min="0.01" required /></td>
-                            </tr>
-                        </table>
-                        <?php submit_button( 'Top Up Wallet' ); ?>
-                    </form>
-                </div>
 
                 <div class="admin-section">
                     <h3>User Wallet Balances</h3>
@@ -926,75 +1126,46 @@ class Kaa_Mall_Admin {
                 </form>
             </div>
         </div>
-        <script>
-            jQuery(document).ready(function($) {
-                $('#select-all-orders').on('click', function() {
-                    var checkboxes = $(this).closest('table').find('tbody input[type="checkbox"]');
-                    checkboxes.prop('checked', $(this).is(':checked'));
-                });
-
-                var searchTimer;
-                $('#kaa-mall-user-search').on('keyup', function() {
-                    clearTimeout(searchTimer);
-                    var searchTerm = $(this).val();
-                    if (searchTerm.length < 2) {
-                        $('#kaa-mall-user-search-results').empty();
-                        return;
-                    }
-
-                    searchTimer = setTimeout(function() {
-                        $.post(ajaxurl, {
-                            action: 'kaa_mall_search_users',
-                            search: searchTerm
-                        }, function(response) {
-                            var resultsContainer = $('#kaa-mall-user-search-results');
-                            resultsContainer.empty();
-                            if (response.success && response.data.length) {
-                                var list = $('<ul>');
-                                $.each(response.data, function(i, user) {
-                                    list.append($('<li>').data('userid', user.id).text(user.text));
-                                });
-                                resultsContainer.append(list);
-                            } else {
-                                resultsContainer.text('No users found.');
-                            }
-                        });
-                    }, 500); // Debounce for 500ms
-                });
-
-                $(document).on('click', '#kaa-mall-user-search-results li', function() {
-                    var userId = $(this).data('userid');
-                    var userName = $(this).text();
-                    $('#kaa-mall-user-id').val(userId);
-                    $('#kaa-mall-user-search').val(userName);
-                    $('#kaa-mall-user-search-results').empty();
-                });
-            });
-        </script>
-        <style>
-            #kaa-mall-user-search-results {
-                position: relative;
-            }
-            #kaa-mall-user-search-results ul {
-                position: absolute;
-                background: white;
-                border: 1px solid #ddd;
-                list-style: none;
-                margin: 0;
-                padding: 0;
-                width: 100%;
-                z-index: 100;
-            }
-            #kaa-mall-user-search-results li {
-                padding: 8px 12px;
-                cursor: pointer;
-            }
-            #kaa-mall-user-search-results li:hover {
-                background: #f0f0f0;
-            }
-        </style>
         <?php
         return ob_get_clean();
+    }
+
+    public function render_top_up_wallet_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return 'You do not have permission to view this page.';
+        }
+        ?>
+        <div class="wrap">
+            <h2>Top Up User Wallet</h2>
+            <?php
+            if ( isset( $_GET['message'] ) ) {
+                echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $_GET['message'] ) . '</p></div>';
+            }
+            ?>
+            <div class="admin-section">
+                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                    <input type="hidden" name="action" value="kaa_mall_top_up_wallet">
+                    <?php wp_nonce_field( 'kaa_mall_top_up_wallet_nonce', 'kaa_mall_top_up_wallet_nonce' ); ?>
+                    <table class="form-table">
+                        <tr valign="top">
+                            <th scope="row">Search User</th>
+                            <td>
+                                <input type="text" id="kaa-mall-user-search" placeholder="Search by username or email..." style="width: 300px;">
+                                <input type="hidden" name="user_id" id="kaa-mall-user-id">
+                                <div id="kaa-mall-user-search-results"></div>
+                                <p class="description">Start typing a name or email, then select a user from the list that appears.</p>
+                            </td>
+                        </tr>
+                        <tr valign="top">
+                            <th scope="row">Amount</th>
+                            <td><input type="number" name="amount" step="0.01" min="0.01" required /></td>
+                        </tr>
+                    </table>
+                    <?php submit_button( 'Top Up Wallet' ); ?>
+                </form>
+            </div>
+        </div>
+        <?php
     }
 
     public function display_reseller_applications_page() {

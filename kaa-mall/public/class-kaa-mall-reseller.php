@@ -9,8 +9,69 @@ class Kaa_Mall_Reseller {
         add_action( 'wp_ajax_kaa_mall_save_reseller_prices', array( $this, 'save_reseller_prices' ) );
         add_action( 'wp_ajax_kaa_mall_save_shop_name', array( $this, 'save_shop_name' ) );
         add_action( 'wp_ajax_kaa_mall_save_whatsapp_number', array( $this, 'save_whatsapp_number' ) );
+        add_action( 'wp_ajax_kaa_mall_save_whatsapp_group_link', array( $this, 'save_whatsapp_group_link' ) );
         add_action( 'wp_ajax_kaa_mall_request_withdrawal', array( $this, 'request_withdrawal' ) );
         add_action( 'wp_ajax_kaa_mall_submit_reseller_application', array( $this, 'submit_reseller_application' ) );
+        add_action( 'wp_ajax_kaa_mall_get_reseller_analytics', array( $this, 'get_reseller_analytics' ) );
+    }
+
+    public function get_reseller_analytics() {
+        check_ajax_referer( 'kaa_mall_reseller_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'reseller' ) ) {
+            wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
+        }
+
+        $reseller_id = get_current_user_id();
+
+        // Daily Sales Data
+        $daily_sales = array();
+        for ( $i = 6; $i >= 0; $i-- ) {
+            $date = date( 'Y-m-d', strtotime( "-$i days" ) );
+            $daily_sales[ date( 'D', strtotime( $date ) ) ] = 0;
+        }
+
+        $daily_orders = wc_get_orders( array(
+            'limit' => -1,
+            'status' => array( 'wc-completed', 'wc-processing' ),
+            'date_created' => '>=' . date( 'Y-m-d', strtotime( '-6 days' ) ),
+            'meta_key' => '_reseller_id',
+            'meta_value' => $reseller_id,
+        ) );
+
+        foreach ( $daily_orders as $order ) {
+            $date_key = date( 'D', strtotime( $order->get_date_created() ) );
+            if ( isset( $daily_sales[ $date_key ] ) ) {
+                $daily_sales[ $date_key ] += $order->get_total();
+            }
+        }
+
+        // Weekly Sales Data
+        $weekly_sales = array();
+        for ( $i = 3; $i >= 0; $i-- ) {
+            $date = strtotime( "-$i week" );
+            $weekly_sales[ 'Week ' . date( 'W', $date ) ] = 0;
+        }
+
+        $weekly_orders = wc_get_orders( array(
+            'limit' => -1,
+            'status' => array( 'wc-completed', 'wc-processing' ),
+            'date_created' => '>=' . date( 'Y-m-d', strtotime( '-3 weeks' ) ),
+            'meta_key' => '_reseller_id',
+            'meta_value' => $reseller_id,
+        ) );
+
+        foreach ( $weekly_orders as $order ) {
+            $week_key = 'Week ' . date( 'W', strtotime( $order->get_date_created() ) );
+            if ( isset( $weekly_sales[ $week_key ] ) ) {
+                $weekly_sales[ $week_key ] += $order->get_total();
+            }
+        }
+
+        wp_send_json_success( array(
+            'daily_sales' => $daily_sales,
+            'weekly_sales' => $weekly_sales,
+        ) );
     }
 
     public function submit_reseller_application() {
@@ -91,9 +152,10 @@ class Kaa_Mall_Reseller {
         if ( is_page() || is_single() ) { // Basic check to see if we are on a page that might contain the shortcode
             global $post;
             if ( has_shortcode( $post->post_content, 'kaa_reseller_portal' ) ) {
+                wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '3.7.0', true );
                 $js_file_url = plugin_dir_url( __FILE__ ) . 'js/kaa-mall-reseller.js';
                 $js_version = filemtime( plugin_dir_path( __FILE__ ) . 'js/kaa-mall-reseller.js' );
-                wp_enqueue_script( 'kaa-mall-reseller', $js_file_url, array( 'jquery' ), $js_version, true );
+                wp_enqueue_script( 'kaa-mall-reseller', $js_file_url, array( 'jquery', 'chart-js' ), $js_version, true );
                 wp_localize_script( 'kaa-mall-reseller', 'kaa_mall_reseller_params', array(
                     'ajax_url' => admin_url( 'admin-ajax.php' ),
                     'nonce' => wp_create_nonce( 'kaa_mall_reseller_nonce' ),
@@ -191,6 +253,21 @@ class Kaa_Mall_Reseller {
         wp_send_json_success( array( 'message' => 'WhatsApp number updated successfully.' ) );
     }
 
+    public function save_whatsapp_group_link() {
+        check_ajax_referer( 'kaa_mall_reseller_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'reseller' ) ) {
+            wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
+        }
+
+        $whatsapp_group_link = sanitize_text_field( $_POST['whatsapp_group_link'] );
+        $reseller_id = get_current_user_id();
+
+        update_user_meta( $reseller_id, '_kaa_mall_whatsapp_group_link', $whatsapp_group_link );
+
+        wp_send_json_success( array( 'message' => 'WhatsApp group link updated successfully.' ) );
+    }
+
     public function request_withdrawal() {
         check_ajax_referer( 'kaa_mall_reseller_nonce', 'nonce' );
 
@@ -265,7 +342,7 @@ class Kaa_Mall_Reseller {
         return empty( $balance ) ? 0.00 : floatval( $balance );
     }
 
-    private function get_total_reseller_sales( $reseller_id ) {
+    public function get_total_reseller_sales( $reseller_id ) {
         $args = array(
             'post_type' => 'shop_order',
             'post_status' => array_keys( wc_get_order_statuses() ),
@@ -306,6 +383,28 @@ class Kaa_Mall_Reseller {
             }
         }
         return $total_profit;
+    }
+
+    public function get_reseller_tier( $reseller_id ) {
+        $tiers = get_option( 'kaa_mall_reseller_tiers', array() );
+        if ( empty( $tiers ) ) {
+            return null;
+        }
+
+        // Sort tiers by sales required, descending
+        usort( $tiers, function( $a, $b ) {
+            return $b['sales_required'] - $a['sales_required'];
+        } );
+
+        $total_sales = $this->get_total_reseller_sales( $reseller_id );
+
+        foreach ( $tiers as $tier ) {
+            if ( $total_sales >= $tier['sales_required'] ) {
+                return $tier;
+            }
+        }
+
+        return null;
     }
 
     public function render_apply_form() {
@@ -413,18 +512,20 @@ class Kaa_Mall_Reseller {
             :root {
                 --primary-color: #ffc107;
                 --secondary-color: #8a2be2;
-                --background-color: #121212;
-                --card-background-color: #1e1e1e;
-                --text-color: #e0e0e0;
+                --text-color: #ffffff;
                 --heading-color: #ffffff;
-                --border-color: #333333;
+                --border-color: rgba(255, 255, 255, 0.2);
                 --shadow-color: rgba(0, 0, 0, 0.5);
             }
 
+
             .kaa-mall-reseller-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                background-color: var(--background-color);
                 color: var(--text-color);
+                padding-top: 100px;
+                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            }
+            .kaa-mall-reseller-portal-inner {
                 padding: 20px;
             }
             .reseller-header h2 {
@@ -439,10 +540,13 @@ class Kaa_Mall_Reseller {
                 gap: 20px;
             }
             .reseller-card {
-                background: var(--card-background-color);
-                border-radius: 12px;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 16px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid var(--border-color);
                 padding: 25px;
-                box-shadow: 0 5px 15px var(--shadow-color);
             }
             .reseller-card h3 {
                 font-size: 1.4em;
@@ -472,7 +576,7 @@ class Kaa_Mall_Reseller {
                 margin-bottom: 15px;
                 border: 1px solid var(--border-color);
                 border-radius: 8px;
-                background-color: #2c2c2c;
+                background-color: rgba(0, 0, 0, 0.2);
                 color: var(--text-color);
                 font-size: 1em;
                 box-sizing: border-box;
@@ -542,7 +646,7 @@ class Kaa_Mall_Reseller {
             }
             #loginform input[type="text"],
             #loginform input[type="password"] {
-                background-color: #2c2c2c;
+                background-color: rgba(0, 0, 0, 0.2);
                 border: 1px solid var(--border-color);
                 color: var(--text-color);
                 width: 100%;
@@ -563,17 +667,59 @@ class Kaa_Mall_Reseller {
             #loginform .forgetmenot label {
                 color: var(--text-color);
             }
+
+            @media screen and (max-width: 768px) {
+                .reseller-grid {
+                    grid-template-columns: 1fr;
+                }
+                .reseller-header h2 {
+                    font-size: 2em;
+                }
+                .reseller-card {
+                    padding: 20px;
+                }
+                .profit-balance {
+                    font-size: 2.2em;
+                }
+                .analytics-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
         </style>
 
         <div class="kaa-mall-reseller-portal">
-            <div class="reseller-header">
-                <h2>Reseller Dashboard</h2>
-            </div>
+            <div class="kaa-mall-reseller-portal-inner">
+                <div class="reseller-header">
+                    <h2>Reseller Dashboard</h2>
+                </div>
 
-            <div class="reseller-grid">
+                <div class="reseller-grid">
+                <div class="reseller-card" style="grid-column: 1 / -1;">
+                    <h3>Analytics</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h4>Daily Sales</h4>
+                            <canvas id="daily-sales-chart"></canvas>
+                        </div>
+                        <div>
+                            <h4>Weekly Sales</h4>
+                            <canvas id="weekly-sales-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="reseller-card">
                     <h3>Your Reseller ID</h3>
                     <p class="profit-balance"><?php echo esc_html( $reseller_id ); ?></p>
+                </div>
+
+                <div class="reseller-card">
+                    <h3>Your WhatsApp Group Link</h3>
+                    <form id="kaa-mall-whatsapp-group-link-form">
+                        <label for="whatsapp_group_link">Set your WhatsApp group link</label>
+                        <input type="text" id="whatsapp_group_link" name="whatsapp_group_link" value="<?php echo esc_attr( get_user_meta( $reseller_id, '_kaa_mall_whatsapp_group_link', true ) ); ?>" placeholder="e.g., https://chat.whatsapp.com/your-group-id">
+                        <button type="submit">Save WhatsApp Group Link</button>
+                    </form>
                 </div>
 
                 <div class="reseller-card">
@@ -637,6 +783,27 @@ class Kaa_Mall_Reseller {
                         <input type="text" id="kaa-mall-referral-link" value="<?php echo $referral_link; ?>" readonly>
                         <button id="kaa-mall-copy-btn">Copy</button>
                     </div>
+                </div>
+
+                <div class="reseller-card" style="grid-column: 1 / -1;">
+                    <h3>Marketing Toolkit</h3>
+                    <?php
+                    $marketing_messages = get_posts( array(
+                        'post_type' => 'kaa_mall_marketing',
+                        'numberposts' => -1,
+                    ) );
+                    if ( ! empty( $marketing_messages ) ) :
+                    ?>
+                        <?php foreach ( $marketing_messages as $message ) : ?>
+                            <div class="marketing-message" style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);">
+                                <h4><?php echo esc_html( $message->post_title ); ?></h4>
+                                <div class="message-content" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px;"><?php echo wpautop( $message->post_content ); ?></div>
+                                <button class="copy-marketing-message-btn">Copy Message</button>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <p>No marketing messages available at the moment. Check back later!</p>
+                    <?php endif; ?>
                 </div>
 
                 <div class="reseller-card" style="grid-column: 1 / -1;">
@@ -750,6 +917,7 @@ class Kaa_Mall_Reseller {
                         ?>
                     </tbody>
                 </table>
+            </div>
             </div>
         </div>
         <?php

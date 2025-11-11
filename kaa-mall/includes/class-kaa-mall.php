@@ -15,6 +15,22 @@ class Kaa_Mall {
         add_action( 'init', array( $this, 'register_withdrawal_post_type' ) );
         add_action( 'init', array( $this, 'register_reseller_application_post_type' ) );
         add_action( 'init', array( $this, 'register_broadcast_post_type' ) );
+        add_action( 'init', array( $this, 'register_marketing_post_type' ) );
+    }
+
+    public function register_marketing_post_type() {
+        register_post_type( 'kaa_mall_marketing',
+            array(
+                'labels'      => array(
+                    'name'          => __( 'Marketing Toolkit', 'kaa-mall' ),
+                    'singular_name' => __( 'Marketing Message', 'kaa-mall' ),
+                ),
+                'public'      => false,
+                'show_ui'     => true,
+                'show_in_menu'=> 'kaa_mall',
+                'supports'    => array( 'title', 'editor' ),
+            )
+        );
     }
 
     public function register_broadcast_post_type() {
@@ -71,6 +87,7 @@ class Kaa_Mall {
     }
 
     private function load_dependencies() {
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-kaa-mall-wallet.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-kaa-mall-admin.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-public.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-reseller.php';
