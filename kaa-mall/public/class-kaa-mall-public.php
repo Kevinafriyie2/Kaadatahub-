@@ -678,7 +678,7 @@ class Kaa_Mall_Public {
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 color: var(--text-color);
-                padding: 20px;
+                padding: 80px 20px 20px;
                 width: 100%;
                 box-sizing: border-box;
                 position: relative;
@@ -806,7 +806,7 @@ class Kaa_Mall_Public {
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 color: var(--text-color);
-                padding: 0;
+                padding: 60px 0 0;
                 width: 100%;
                 position: relative;
                 z-index: 9999;
@@ -1262,11 +1262,13 @@ class Kaa_Mall_Public {
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
                         <div class="price-breakdown" style="padding: 10px 0;"></div>
+                        <?php if ( ! get_option( 'kaa_mall_disable_coupons' ) ) : ?>
                         <label>Coupon Code</label>
                         <div style="display: flex; gap: 10px;">
                             <input type="text" name="coupon_code" placeholder="Enter coupon code" style="margin-bottom: 0;">
                             <button type="button" class="apply-coupon-btn" style="width: auto; padding: 10px 15px; margin-bottom: 0;">Apply</button>
                         </div>
+                        <?php endif; ?>
                         <div class="payment-method-header">
                             <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
                             <span>Payment Method</span>
@@ -1299,11 +1301,13 @@ class Kaa_Mall_Public {
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
                         <div class="price-breakdown" style="padding: 10px 0;"></div>
+                        <?php if ( ! get_option( 'kaa_mall_disable_coupons' ) ) : ?>
                         <label>Coupon Code</label>
                         <div style="display: flex; gap: 10px;">
                             <input type="text" name="coupon_code" placeholder="Enter coupon code" style="margin-bottom: 0;">
                             <button type="button" class="apply-coupon-btn" style="width: auto; padding: 10px 15px; margin-bottom: 0;">Apply</button>
                         </div>
+                        <?php endif; ?>
                         <div class="payment-method-header">
                             <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
                             <span>Payment Method</span>
@@ -1336,11 +1340,13 @@ class Kaa_Mall_Public {
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
                         <div class="price-breakdown" style="padding: 10px 0;"></div>
+                        <?php if ( ! get_option( 'kaa_mall_disable_coupons' ) ) : ?>
                         <label>Coupon Code</label>
                         <div style="display: flex; gap: 10px;">
                             <input type="text" name="coupon_code" placeholder="Enter coupon code" style="margin-bottom: 0;">
                             <button type="button" class="apply-coupon-btn" style="width: auto; padding: 10px 15px; margin-bottom: 0;">Apply</button>
                         </div>
+                        <?php endif; ?>
                         <div class="payment-method-header">
                             <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
                             <span>Payment Method</span>

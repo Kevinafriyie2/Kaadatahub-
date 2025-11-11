@@ -534,6 +534,7 @@ class Kaa_Mall_Admin {
         register_setting( 'kaa_mall_options', 'kaa_mall_user_portal_url' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_portal_url' );
         register_setting( 'kaa_mall_options', 'kaa_mall_whatsapp_number' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_disable_coupons' );
     }
 
     public function render_settings_page() {
@@ -605,6 +606,14 @@ class Kaa_Mall_Admin {
                     <tr valign="top">
                         <th scope="row">Low Balance Threshold</th>
                         <td><input type="number" name="kaa_mall_low_balance_threshold" value="<?php echo esc_attr( get_option('kaa_mall_low_balance_threshold', '5') ); ?>" step="0.01" /></td>
+                    </tr>
+                </table>
+
+                <h3>Coupon Settings</h3>
+                <table class="form-table">
+                    <tr valign="top">
+                        <th scope="row">Disable Coupons</th>
+                        <td><label><input type="checkbox" name="kaa_mall_disable_coupons" value="1" <?php checked( get_option( 'kaa_mall_disable_coupons' ), 1 ); ?>> Disable coupon functionality on the user portal</label></td>
                     </tr>
                 </table>
 
