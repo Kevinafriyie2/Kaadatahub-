@@ -175,8 +175,8 @@ class Kaa_Mall_Public {
             if ( $product ) {
                 $order = wc_create_order();
                 $order->set_customer_id( $user_id );
-                $order->add_product( $product, 1, array( 'subtotal' => $amount, 'total' => $amount ) );
-                $order->set_total( $amount );
+                $order->add_product( $product, 1, array( 'subtotal' => $top_up_amount, 'total' => $top_up_amount ) );
+                $order->set_total( $top_up_amount );
                 $order->set_status( 'completed' );
                 $order->save();
             }
@@ -530,6 +530,12 @@ class Kaa_Mall_Public {
                 --border-color: #333333;
                 --shadow-color: rgba(0, 0, 0, 0.5);
             }
+
+            body {
+                padding: 0;
+                margin: 0;
+            }
+
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 background-color: var(--background-color);
@@ -538,6 +544,7 @@ class Kaa_Mall_Public {
                 width: 100%;
                 box-sizing: border-box;
             }
+
             .kaa-mall-card {
                 background: var(--card-background-color);
                 border-radius: 12px;
@@ -545,16 +552,26 @@ class Kaa_Mall_Public {
                 padding: 20px;
                 margin-bottom: 20px;
             }
+
+            .purchase-history, .wallet-transactions {
+                overflow-x: auto;
+            }
+
             .purchase-history table, .wallet-transactions table {
                 width: 100%;
                 border-collapse: collapse;
                 min-width: 600px;
             }
+
             .purchase-history th, .purchase-history td,
             .wallet-transactions th, .wallet-transactions td {
                 padding: 10px;
                 text-align: left;
                 border-bottom: 1px solid var(--border-color);
+            }
+
+            .purchase-history th, .wallet-transactions th {
+                font-weight: bold;
             }
         </style>
         <div class="kaa-mall-portal">
