@@ -8,7 +8,6 @@ class Kaa_Mall_Admin {
     public function __construct( $plugin_name, $version ) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
-        add_shortcode( 'kaa_admin_portal', array( $this, 'render_admin_portal' ) );
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ) );
@@ -20,7 +19,33 @@ class Kaa_Mall_Admin {
         add_action( 'admin_post_kaa_mall_approve_reseller', array( $this, 'handle_approve_reseller' ) );
         add_action( 'admin_post_kaa_mall_deny_reseller', array( $this, 'handle_deny_reseller' ) );
         add_action( 'admin_post_kaa_mall_send_broadcast', array( $this, 'handle_send_broadcast' ) );
+        add_action( 'admin_post_kaa_mall_edit_broadcast', array( $this, 'handle_edit_broadcast' ) );
         add_action( 'admin_post_kaa_mall_delete_broadcast', array( $this, 'handle_delete_broadcast' ) );
+    }
+
+    public function handle_edit_broadcast() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        check_admin_referer( 'kaa_mall_edit_broadcast_nonce', 'kaa_mall_edit_broadcast_nonce' );
+
+        $broadcast_id = intval( $_POST['broadcast_id'] );
+        $subject = sanitize_text_field( $_POST['broadcast_subject'] );
+        $message = wp_kses_post( $_POST['broadcast_message'] );
+
+        wp_update_post( array(
+            'ID' => $broadcast_id,
+            'post_title' => $subject,
+            'post_content' => $message,
+        ) );
+
+        $redirect_url = add_query_arg( array(
+            'page' => 'kaa-mall-broadcasts',
+            'message' => 'Broadcast updated successfully.'
+        ), admin_url( 'admin.php' ) );
+        wp_redirect( $redirect_url );
+        exit;
     }
 
     public function handle_delete_broadcast() {
@@ -236,12 +261,30 @@ class Kaa_Mall_Admin {
 
     public function add_admin_menu() {
         add_menu_page(
-            'KAA Mall Settings',
-            'KAA Mall',
+            'Kaadatahub',
+            'Kaadatahub',
             'manage_options',
             'kaa_mall',
-            array( $this, 'render_settings_page' ),
+            array( $this, 'render_admin_portal' ),
             'dashicons-store'
+        );
+
+        add_submenu_page(
+            'kaa_mall',
+            'Dashboard',
+            'Dashboard',
+            'manage_options',
+            'kaa_mall',
+            array( $this, 'render_admin_portal' )
+        );
+
+        add_submenu_page(
+            'kaa_mall',
+            'Settings',
+            'Settings',
+            'manage_options',
+            'kaa-mall-settings',
+            array( $this, 'render_settings_page' )
         );
 
         add_submenu_page(
@@ -271,13 +314,17 @@ class Kaa_Mall_Admin {
         register_setting( 'kaa_mall_options', 'kaa_mall_airteltigo_out_of_stock' );
         register_setting( 'kaa_mall_options', 'kaa_mall_vodafone_out_of_stock' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_application_fee' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_afa_registration_fee' );
         register_setting( 'kaa_mall_options', 'kaa_mall_low_balance_threshold' );
         register_setting( 'kaa_mall_options', 'kaa_mall_enable_low_balance_alerts' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_bundle_service_fee' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_topup_service_fee' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_public_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_secret_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_business_email' );
         register_setting( 'kaa_mall_options', 'kaa_mall_user_portal_url' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_portal_url' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_whatsapp_number' );
     }
 
     public function render_settings_page() {
@@ -324,6 +371,15 @@ class Kaa_Mall_Admin {
                     <tr valign="top">
                         <th scope="row">Application Fee</th>
                         <td><input type="number" name="kaa_mall_reseller_application_fee" value="<?php echo esc_attr( get_option('kaa_mall_reseller_application_fee', '10') ); ?>" step="0.01" /></td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">AFA Registration Base Price</th>
+                        <td><input type="number" name="kaa_mall_afa_registration_fee" value="<?php echo esc_attr( get_option('kaa_mall_afa_registration_fee', '13') ); ?>" step="0.01" /></td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">Default WhatsApp Number</th>
+                        <td><input type="text" name="kaa_mall_whatsapp_number" value="<?php echo esc_attr( get_option('kaa_mall_whatsapp_number') ); ?>" placeholder="e.g., 233201858375" />
+                        <p class="description">Enter the default WhatsApp number for the 'Contact Admin' button. Resellers can override this.</p></td>
                     </tr>
                 </table>
 
@@ -988,6 +1044,38 @@ class Kaa_Mall_Admin {
     }
 
     public function display_broadcasts_page() {
+        if ( isset( $_GET['action'] ) && $_GET['action'] == 'edit' ) {
+            $this->display_edit_broadcast_page();
+        } else {
+            $this->display_broadcast_list_page();
+        }
+    }
+
+    private function display_edit_broadcast_page() {
+        $broadcast_id = intval( $_GET['broadcast_id'] );
+        $broadcast = get_post( $broadcast_id );
+        ?>
+        <div class="wrap">
+            <h2>Edit Broadcast Message</h2>
+            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                <input type="hidden" name="action" value="kaa_mall_edit_broadcast">
+                <input type="hidden" name="broadcast_id" value="<?php echo esc_attr( $broadcast_id ); ?>">
+                <?php wp_nonce_field( 'kaa_mall_edit_broadcast_nonce', 'kaa_mall_edit_broadcast_nonce' ); ?>
+                <p>
+                    <label for="broadcast_subject">Subject</label>
+                    <input type="text" name="broadcast_subject" id="broadcast_subject" class="widefat" value="<?php echo esc_attr( $broadcast->post_title ); ?>" required>
+                </p>
+                <p>
+                    <label for="broadcast_message">Message</label>
+                    <textarea name="broadcast_message" id="broadcast_message" class="widefat" rows="5" required><?php echo esc_textarea( $broadcast->post_content ); ?></textarea>
+                </p>
+                <?php submit_button( 'Update Broadcast' ); ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    private function display_broadcast_list_page() {
         ?>
         <div class="wrap">
             <h2>Broadcast Messages</h2>
@@ -1018,12 +1106,15 @@ class Kaa_Mall_Admin {
                                             <td><?php echo get_the_date( '', $broadcast ); ?></td>
                                             <td><?php echo esc_html( $broadcast->post_title ); ?></td>
                                             <td><?php echo esc_html( $broadcast->post_content ); ?></td>
-                                            <td><a href="<?php echo esc_url( add_query_arg( array( 'action' => 'kaa_mall_delete_broadcast', 'broadcast_id' => $broadcast->ID ), admin_url( 'admin-post.php' ) ) ); ?>" class="button">Delete</a></td>
+                                            <td>
+                                                <a href="<?php echo esc_url( add_query_arg( array( 'page' => 'kaa-mall-broadcasts', 'action' => 'edit', 'broadcast_id' => $broadcast->ID ), admin_url( 'admin.php' ) ) ); ?>" class="button">Edit</a>
+                                                <a href="<?php echo esc_url( add_query_arg( array( 'action' => 'kaa_mall_delete_broadcast', 'broadcast_id' => $broadcast->ID ), admin_url( 'admin-post.php' ) ) ); ?>" class="button">Delete</a>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else : ?>
                                     <tr>
-                                        <td colspan="3">No broadcasts sent yet.</td>
+                                        <td colspan="4">No broadcasts sent yet.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>

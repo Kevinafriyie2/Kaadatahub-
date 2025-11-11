@@ -20,6 +20,21 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_kaa_mall_afa_registration', array( $this, 'afa_registration' ) );
         add_action( 'wp_ajax_kaa_mall_get_recent_orders', array( $this, 'get_recent_orders' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_balance', array( $this, 'ajax_get_wallet_balance' ) );
+        add_action( 'wp_ajax_kaa_mall_get_wallet_transactions', array( $this, 'get_wallet_transactions' ) );
+    }
+
+    public function get_wallet_transactions() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'kaa_mall_wallet_transactions';
+        $user_id = get_current_user_id();
+
+        $results = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM $table_name WHERE user_id = %d ORDER BY created_at DESC LIMIT 50",
+            $user_id
+        ) );
+
+        wp_send_json_success( $results );
     }
 
     public function init_session() {
@@ -46,6 +61,10 @@ class Kaa_Mall_Public {
             'is_user_logged_in' => is_user_logged_in(),
             'user_email' => '',
             'currency' => 'GHS', // Default currency
+            'wallet_topup_fee' => get_option( 'kaa_mall_wallet_topup_fee', 0 ),
+            'wallet_purchase_fee' => get_option( 'kaa_mall_wallet_purchase_fee', 0 ),
+            'paystack_topup_fee' => get_option( 'kaa_mall_paystack_topup_fee', 0 ),
+            'paystack_purchase_fee' => get_option( 'kaa_mall_paystack_purchase_fee', 0 ),
         );
 
         if ( is_user_logged_in() ) {
@@ -61,6 +80,26 @@ class Kaa_Mall_Public {
     private function get_wallet_balance( $user_id ) {
         $balance = get_user_meta( $user_id, '_kaa_mall_wallet_balance', true );
         return empty( $balance ) ? 0.00 : floatval( $balance );
+    }
+
+    private function _update_wallet_balance_and_log( $user_id, $amount, $type, $details ) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'kaa_mall_wallet_transactions';
+
+        $current_balance = $this->get_wallet_balance( $user_id );
+        $new_balance = $current_balance + $amount;
+        update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
+
+        $wpdb->insert(
+            $table_name,
+            array(
+                'user_id' => $user_id,
+                'amount' => $amount,
+                'type' => $type,
+                'details' => $details,
+                'balance_after' => $new_balance,
+            )
+        );
     }
 
     public function ajax_get_wallet_balance() {
@@ -138,11 +177,16 @@ class Kaa_Mall_Public {
 
         $result = json_decode($response);
         if ( 'success' === $result->data->status ) {
-            $amount = $result->data->amount / 100; // Convert from pesewas
+            $total_amount_paid = $result->data->amount / 100; // Convert from pesewas
+            $fee = floatval( get_option( 'kaa_mall_paystack_topup_fee', 0 ) );
+            $top_up_amount = $total_amount_paid - $fee;
+
             $user_id = get_current_user_id();
-            $current_balance = $this->get_wallet_balance( $user_id );
-            $new_balance = $current_balance + $amount;
-            update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
+            // Log the fee as a separate transaction for clarity
+            if ( $fee > 0 ) {
+                $this->_update_wallet_balance_and_log( $user_id, -$fee, 'fee', 'Paystack Top-up Fee. Reference: ' . $reference );
+            }
+            $this->_update_wallet_balance_and_log( $user_id, $top_up_amount, 'top-up', 'Paystack Top-up. Reference: ' . $reference );
 
             $product = $this->get_product_by_name( 'Wallet Top-up' );
             if ( $product ) {
@@ -200,13 +244,19 @@ class Kaa_Mall_Public {
 
         $user_id = get_current_user_id();
         $wallet_balance = $this->get_wallet_balance( $user_id );
+        $fee = floatval( get_option( 'kaa_mall_wallet_purchase_fee', 0 ) );
+        $total_cost = $final_price + $fee;
 
-        if ( $wallet_balance < $final_price ) {
+        if ( $wallet_balance < $total_cost ) {
             wp_send_json_error( array( 'message' => 'Insufficient wallet balance.' ) );
         }
 
-        $new_balance = $wallet_balance - $final_price;
-        update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
+        // Deduct the bundle price first
+        $this->_update_wallet_balance_and_log( $user_id, -$final_price, 'purchase', "{$bundle} for {$phone_number}" );
+        // Then deduct the fee
+        if ( $fee > 0 ) {
+            $this->_update_wallet_balance_and_log( $user_id, -$fee, 'fee', "Service fee for {$bundle}" );
+        }
 
         $product = $this->get_product_by_name( 'Data Bundle' );
         if ( $product ) {
@@ -314,7 +364,14 @@ class Kaa_Mall_Public {
 
         $result = json_decode($response);
         if ( 'success' === $result->data->status ) {
+            $fee = floatval( get_option( 'kaa_mall_paystack_purchase_fee', 0 ) );
             $user_id = is_user_logged_in() ? get_current_user_id() : 0;
+
+            if ( $user_id && $fee > 0 ) {
+                 // We don't need to deduct from wallet, just log it for the user's records if they are logged in
+                 // This assumes the fee was already included in the Paystack charge amount
+                $this->_update_wallet_balance_and_log( $user_id, -$fee, 'fee', "Paystack service fee for {$bundle}" );
+            }
 
             $product = $this->get_product_by_name( 'Data Bundle' );
             if ( $product ) {
@@ -366,7 +423,7 @@ class Kaa_Mall_Public {
         $location = sanitize_text_field( $_POST['location'] );
         $ghana_card = sanitize_text_field( $_POST['ghana_card'] );
 
-        $afa_fee = 13.00; // This is a fixed admin price
+        $afa_fee = floatval( get_option( 'kaa_mall_afa_registration_fee', '13' ) );
         $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
         $final_price = $afa_fee;
 
@@ -384,8 +441,7 @@ class Kaa_Mall_Public {
             wp_send_json_error( array( 'message' => 'Insufficient wallet balance.' ) );
         }
 
-        $new_balance = $wallet_balance - $final_price;
-        update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
+        $this->_update_wallet_balance_and_log( $user_id, -$final_price, 'purchase', 'AFA Registration' );
 
         $product = $this->get_product_by_name( 'AFA Registration' );
         if ( $product ) {
@@ -803,6 +859,7 @@ class Kaa_Mall_Public {
                         <input type="tel" name="phone_number" placeholder="0241234567" required>
                         <label>Select Bundle</label>
                         <select name="bundle" required></select>
+                        <div class="price-breakdown" style="padding: 10px 0;"></div>
                         <div class="payment-method-header">
                             <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
                             <span>Payment Method</span>
@@ -901,11 +958,21 @@ class Kaa_Mall_Public {
                     <input type="text" name="location" placeholder="Enter your location" required>
                     <label>ID Ghana Card Number</label>
                     <input type="text" name="ghana_card" placeholder="GHA-XXXXXXXXX-X" required>
+                    <?php
+                    $afa_fee = floatval( get_option( 'kaa_mall_afa_registration_fee', '13' ) );
+                    $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+                    if ( $reseller_id ) {
+                        $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_afa', true );
+                        if ( ! empty( $reseller_prices ) && isset( $reseller_prices['registration'] ) ) {
+                            $afa_fee = $reseller_prices['registration'];
+                        }
+                    }
+                    ?>
                     <div class="registration-fee">
                         <span>Registration Fee</span>
-                        <span>GH₵13.00</span>
+                        <span><?php echo wc_price( $afa_fee ); ?></span>
                     </div>
-                    <button type="submit">Register Now - GH₵13</button>
+                    <button type="submit">Register Now - <?php echo wc_price( $afa_fee ); ?></button>
                 </form>
             </div>
 
@@ -925,12 +992,38 @@ class Kaa_Mall_Public {
                     <tbody></tbody>
                 </table>
             </div>
+
+            <div class="kaa-mall-card wallet-transactions">
+                <h3>Wallet History</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Details</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
             <?php endif; ?>
 
             <div class="kaa-mall-card need-help">
                 <h3>Need Help?</h3>
                 <p>Our support team is here to help you 24/7</p>
-                <a href="https://wa.me/233201858375" class="contact-admin-btn">Contact the Admin</a>
+                <?php
+                $whatsapp_number = get_option( 'kaa_mall_whatsapp_number', '233201858375' );
+                $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+                if ( $reseller_id ) {
+                    $reseller_whatsapp = get_user_meta( $reseller_id, '_kaa_mall_whatsapp_number', true );
+                    if ( ! empty( $reseller_whatsapp ) ) {
+                        $whatsapp_number = $reseller_whatsapp;
+                    }
+                }
+                ?>
+                <a href="https://wa.me/<?php echo esc_attr( $whatsapp_number ); ?>" class="contact-admin-btn">Contact Support</a>
             </div>
         </div>
         <?php

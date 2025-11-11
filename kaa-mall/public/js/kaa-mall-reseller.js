@@ -45,6 +45,21 @@
             });
         });
 
+        $('#kaa-mall-whatsapp-number-form').on('submit', function(e) {
+            e.preventDefault();
+
+            var form = $(this);
+            var data = form.serialize() + '&action=kaa_mall_save_whatsapp_number&nonce=' + kaa_mall_reseller_params.nonce;
+
+            $.post(kaa_mall_reseller_params.ajax_url, data, function(response) {
+                if (response.success) {
+                    alert(response.data.message);
+                } else {
+                    alert('An error occurred: ' + response.data.message);
+                }
+            });
+        });
+
         $('#kaa-mall-withdrawal-form').on('submit', function(e) {
             e.preventDefault();
 

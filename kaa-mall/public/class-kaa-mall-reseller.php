@@ -8,6 +8,7 @@ class Kaa_Mall_Reseller {
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
         add_action( 'wp_ajax_kaa_mall_save_reseller_prices', array( $this, 'save_reseller_prices' ) );
         add_action( 'wp_ajax_kaa_mall_save_shop_name', array( $this, 'save_shop_name' ) );
+        add_action( 'wp_ajax_kaa_mall_save_whatsapp_number', array( $this, 'save_whatsapp_number' ) );
         add_action( 'wp_ajax_kaa_mall_request_withdrawal', array( $this, 'request_withdrawal' ) );
         add_action( 'wp_ajax_kaa_mall_submit_reseller_application', array( $this, 'submit_reseller_application' ) );
     }
@@ -173,6 +174,21 @@ class Kaa_Mall_Reseller {
             'shop_name' => $shop_name,
             'referral_link' => $referral_link,
         ) );
+    }
+
+    public function save_whatsapp_number() {
+        check_ajax_referer( 'kaa_mall_reseller_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'reseller' ) ) {
+            wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
+        }
+
+        $whatsapp_number = sanitize_text_field( $_POST['whatsapp_number'] );
+        $reseller_id = get_current_user_id();
+
+        update_user_meta( $reseller_id, '_kaa_mall_whatsapp_number', $whatsapp_number );
+
+        wp_send_json_success( array( 'message' => 'WhatsApp number updated successfully.' ) );
     }
 
     public function request_withdrawal() {
@@ -561,6 +577,15 @@ class Kaa_Mall_Reseller {
                 </div>
 
                 <div class="reseller-card">
+                    <h3>Your WhatsApp Number</h3>
+                    <form id="kaa-mall-whatsapp-number-form">
+                        <label for="whatsapp_number">Set your customer-facing WhatsApp number</label>
+                        <input type="text" id="whatsapp_number" name="whatsapp_number" value="<?php echo esc_attr( get_user_meta( $reseller_id, '_kaa_mall_whatsapp_number', true ) ); ?>" placeholder="e.g., 233201858375">
+                        <button type="submit">Save WhatsApp Number</button>
+                    </form>
+                </div>
+
+                <div class="reseller-card">
                     <h3>Your Profit Wallet</h3>
                     <p>Your current profit balance is:</p>
                     <p class="profit-balance"><?php echo wc_price( $profit_balance ); ?></p>
@@ -622,6 +647,7 @@ class Kaa_Mall_Reseller {
                         <button class="tab-link active" data-network="mtn">MTN</button>
                         <button class="tab-link" data-network="airteltigo">AirtelTigo</button>
                         <button class="tab-link" data-network="vodafone">Vodafone</button>
+                        <button class="tab-link" data-network="afa">AFA Registration</button>
                     </div>
 
                     <?php foreach ( array('mtn', 'airteltigo', 'vodafone') as $network ) : ?>
@@ -654,6 +680,33 @@ class Kaa_Mall_Reseller {
                             </form>
                         </div>
                     <?php endforeach; ?>
+
+                    <div id="reseller-prices-afa" class="network-tab-content">
+                        <form class="reseller-prices-form" data-network="afa">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Service</th>
+                                        <th>Base Price</th>
+                                        <th>Your Selling Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    $admin_price = floatval( get_option( 'kaa_mall_afa_registration_fee', '13' ) );
+                                    $reseller_prices = $this->get_reseller_prices( $reseller_id, 'afa' );
+                                    $reseller_price = isset( $reseller_prices['registration'] ) ? $reseller_prices['registration'] : $admin_price;
+                                    ?>
+                                    <tr>
+                                        <td>AFA Registration</td>
+                                        <td><?php echo wc_price( $admin_price ); ?></td>
+                                        <td><input type="number" name="prices[registration]" value="<?php echo esc_attr( $reseller_price ); ?>" step="0.01" min="<?php echo esc_attr( $admin_price ); ?>"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <button type="submit">Save AFA Price</button>
+                        </form>
+                    </div>
                 </div>
 
                 <div class="reseller-card" style="grid-column: 1 / -1;">
