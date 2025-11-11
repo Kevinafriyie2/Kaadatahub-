@@ -518,10 +518,6 @@ class Kaa_Mall_Reseller {
                 --shadow-color: rgba(0, 0, 0, 0.5);
             }
 
-            body {
-                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-                background-attachment: fixed;
-            }
 
             .kaa-mall-reseller-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;

@@ -668,12 +668,6 @@ class Kaa_Mall_Public {
                 --shadow-color: rgba(0, 0, 0, 0.5);
             }
 
-            body {
-                padding: 0;
-                margin: 0;
-                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-                background-attachment: fixed;
-            }
 
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -796,12 +790,6 @@ class Kaa_Mall_Public {
                 --shadow-color: rgba(0, 0, 0, 0.5);
             }
 
-            body {
-                padding: 0;
-                margin: 0;
-                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-                background-attachment: fixed;
-            }
 
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
