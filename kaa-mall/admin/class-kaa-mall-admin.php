@@ -723,29 +723,6 @@ class Kaa_Mall_Admin {
                     </ul>
                 </div>
                 <div class="admin-section">
-                    <h3>Top Up User Wallet</h3>
-                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-                        <input type="hidden" name="action" value="kaa_mall_top_up_wallet">
-                        <?php wp_nonce_field( 'kaa_mall_top_up_wallet_nonce', 'kaa_mall_top_up_wallet_nonce' ); ?>
-                        <table class="form-table">
-                            <tr valign="top">
-                                <th scope="row">Search User</th>
-                                <td>
-                                    <input type="text" id="kaa-mall-user-search" placeholder="Search by username or email...">
-                                    <input type="hidden" name="user_id" id="kaa-mall-user-id">
-                                    <div id="kaa-mall-user-search-results"></div>
-                                    <p class="description">Start typing a name or email, then select a user from the list that appears.</p>
-                                </td>
-                            </tr>
-                            <tr valign="top">
-                                <th scope="row">Amount</th>
-                                <td><input type="number" name="amount" step="0.01" min="0.01" required /></td>
-                            </tr>
-                        </table>
-                        <?php submit_button( 'Top Up Wallet' ); ?>
-                    </form>
-                </div>
-                <div class="admin-section">
                     <h3>Reseller Leaderboard</h3>
                     <table>
                         <thead>

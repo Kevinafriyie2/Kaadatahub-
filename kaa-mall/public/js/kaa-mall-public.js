@@ -168,9 +168,14 @@
             var purchase_fee = parseFloat(kaa_mall_params.paystack_purchase_fee) || 0;
             var total_amount = amount + purchase_fee;
 
+            var user_email = kaa_mall_params.user_email;
+            if (!kaa_mall_params.is_user_logged_in) {
+                user_email = form.find('input[name="email"]').val();
+            }
+
             var handler = PaystackPop.setup({
                 key: kaa_mall_params.paystack_public_key,
-                email: kaa_mall_params.user_email,
+                email: user_email,
                 amount: total_amount * 100,
                 currency: kaa_mall_params.currency,
                 ref: '' + Math.floor((Math.random() * 1000000000) + 1),
