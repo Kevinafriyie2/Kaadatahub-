@@ -542,6 +542,8 @@ class Kaa_Mall_Public {
                 padding: 20px;
                 width: 100%;
                 box-sizing: border-box;
+                position: relative;
+                z-index: 1;
             }
 
             .kaa-mall-card {
@@ -663,6 +665,8 @@ class Kaa_Mall_Public {
                 color: var(--text-color);
                 padding: 0;
                 width: 100%;
+                position: relative;
+                z-index: 1;
             }
 
             .kaa-mall-header {
@@ -934,6 +938,44 @@ class Kaa_Mall_Public {
                 font-weight: bold;
             }
 
+            .recent-orders-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .recent-orders-list li {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px 0;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .recent-orders-list li:last-child {
+                border-bottom: none;
+            }
+            .order-details {
+                flex-grow: 1;
+            }
+            .order-total {
+                margin: 0 15px;
+            }
+            .order-status {
+                padding: 3px 12px;
+                border-radius: 20px;
+                font-size: 0.8em;
+                font-weight: 500;
+                text-transform: capitalize;
+                min-width: 80px;
+                text-align: center;
+            }
+            .order-status.status-processing { background-color: #ffc107; color: #000; }
+            .order-status.status-completed { background-color: #28a745; color: #fff; }
+            .order-status.status-on-hold { background-color: #17a2b8; color: #fff; }
+            .order-status.status-failed { background-color: #dc3545; color: #fff; }
+            .order-status.status-cancelled { background-color: #6c757d; color: #fff; }
+            .order-status.status-refunded { background-color: #fd7e14; color: #fff; }
+            .order-status.status-pending { background-color: #6c757d; color: #fff; }
+
             .need-help {
                 text-align: center;
             }
@@ -1025,6 +1067,39 @@ class Kaa_Mall_Public {
                 </div>
                 <button class="top-up-wallet-btn">Top Up Wallet</button>
             </div>
+
+            <div class="kaa-mall-card">
+                <h3>Recent Orders</h3>
+                <?php
+                $orders = wc_get_orders( array(
+                    'customer_id' => get_current_user_id(),
+                    'limit' => 3,
+                    'orderby' => 'date',
+                    'order' => 'DESC',
+                ) );
+                if ( ! empty( $orders ) ) :
+                ?>
+                <ul class="recent-orders-list">
+                    <?php foreach ( $orders as $order ) : ?>
+                    <li>
+                        <div class="order-details">
+                            <strong>Order #<?php echo $order->get_id(); ?></strong>
+                            <br>
+                            <small><?php echo $order->get_date_created()->date_i18n( 'F j, Y' ); ?></small>
+                        </div>
+                        <div class="order-total">
+                            <?php echo $order->get_formatted_order_total(); ?>
+                        </div>
+                        <div class="order-status status-<?php echo $order->get_status(); ?>">
+                            <?php echo wc_get_order_status_name( $order->get_status() ); ?>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php else : ?>
+                <p>You have no recent orders.</p>
+                <?php endif; ?>
+            </div>
             <?php endif; ?>
 
             <div class="kaa-mall-card data-bundles">
@@ -1059,7 +1134,7 @@ class Kaa_Mall_Public {
                             <label class="payment-option">
                                 <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
                                 <span class="radio-custom"><span class="radio-dot"></span></span>
-                                Paystack (Card/Mobile Money)
+                                Pay with MoMo
                             </label>
                         </div>
                         <button type="submit">Buy MTN Bundle</button>
@@ -1090,7 +1165,7 @@ class Kaa_Mall_Public {
                             <label class="payment-option">
                                 <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
                                 <span class="radio-custom"><span class="radio-dot"></span></span>
-                                Paystack (Card/Mobile Money)
+                                Pay with MoMo
                             </label>
                         </div>
                         <button type="submit">Buy AirtelTigo Bundle</button>
@@ -1121,7 +1196,7 @@ class Kaa_Mall_Public {
                             <label class="payment-option">
                                 <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
                                 <span class="radio-custom"><span class="radio-dot"></span></span>
-                                Paystack (Card/Mobile Money)
+                                Pay with MoMo
                             </label>
                         </div>
                         <button type="submit">Buy Vodafone Bundle</button>

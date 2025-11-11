@@ -11,10 +11,14 @@ class Kaa_Mall_Portal_Header {
                 justify-content: space-between;
                 align-items: center;
                 padding: 15px 20px;
-                background-color: #1e1e1e;
                 color: #fff;
-                border-bottom: 1px solid #333;
                 position: relative;
+                background: rgba(255, 255, 255, 0.1);
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                margin-bottom: 20px;
             }
             .header-logo a {
                 color: #ffc107;
@@ -29,8 +33,11 @@ class Kaa_Mall_Portal_Header {
                 top: 100%;
                 left: 0;
                 right: 0;
-                background-color: #1e1e1e;
-                border-top: 1px solid #333;
+                background: rgba(0, 0, 0, 0.4);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border-top: 1px solid rgba(255, 255, 255, 0.2);
+                z-index: 1000;
             }
             .header-nav.active {
                 display: flex;
@@ -41,14 +48,14 @@ class Kaa_Mall_Portal_Header {
                 padding: 15px 20px;
                 font-weight: 600;
                 transition: color 0.2s ease, background-color 0.2s ease;
-                border-bottom: 1px solid #333;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             }
             .header-nav a:last-child {
                 border-bottom: none;
             }
             .header-nav a:hover {
                 color: #ffc107;
-                background-color: #2c2c2c;
+                background-color: rgba(0, 0, 0, 0.3);
             }
             .hamburger-menu {
                 display: block;
@@ -72,6 +79,9 @@ class Kaa_Mall_Portal_Header {
                     flex-direction: row;
                     position: static;
                     border: none;
+                    background: none;
+                    backdrop-filter: none;
+                    -webkit-backdrop-filter: none;
                 }
                 .header-nav a {
                     margin-left: 20px;
