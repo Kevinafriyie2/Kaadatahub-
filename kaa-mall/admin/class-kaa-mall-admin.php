@@ -313,6 +313,7 @@ class Kaa_Mall_Admin {
         register_setting( 'kaa_mall_options', 'kaa_mall_mtn_out_of_stock' );
         register_setting( 'kaa_mall_options', 'kaa_mall_airteltigo_out_of_stock' );
         register_setting( 'kaa_mall_options', 'kaa_mall_vodafone_out_of_stock' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_afa_out_of_stock' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_application_fee' );
         register_setting( 'kaa_mall_options', 'kaa_mall_afa_registration_fee' );
         register_setting( 'kaa_mall_options', 'kaa_mall_low_balance_threshold' );
@@ -375,6 +376,10 @@ class Kaa_Mall_Admin {
                     <tr valign="top">
                         <th scope="row">AFA Registration Base Price</th>
                         <td><input type="number" name="kaa_mall_afa_registration_fee" value="<?php echo esc_attr( get_option('kaa_mall_afa_registration_fee', '13') ); ?>" step="0.01" /></td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">AFA Registration Out of Stock</th>
+                        <td><label><input type="checkbox" name="kaa_mall_afa_out_of_stock" value="1" <?php checked( get_option( 'kaa_mall_afa_out_of_stock' ), 1 ); ?>> Mark AFA registration as out of stock</label></td>
                     </tr>
                     <tr valign="top">
                         <th scope="row">Default WhatsApp Number</th>

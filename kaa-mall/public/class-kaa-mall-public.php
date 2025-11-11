@@ -537,13 +537,17 @@ class Kaa_Mall_Public {
                 --shadow-color: rgba(0, 0, 0, 0.5);
             }
 
+            body {
+                padding: 0;
+                margin: 0;
+            }
+
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 background-color: var(--background-color);
                 color: var(--text-color);
-                padding: 20px;
-                max-width: 500px;
-                margin: 0 auto;
+                padding: 0;
+                width: 100%;
             }
 
             .kaa-mall-header {
@@ -597,6 +601,12 @@ class Kaa_Mall_Public {
                 padding: 10px 20px;
                 border-radius: 8px;
                 cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .top-up-wallet-btn:hover {
+                transform: scale(1.02);
+                opacity: 0.9;
             }
 
             .data-bundles .network-tabs {
@@ -612,6 +622,12 @@ class Kaa_Mall_Public {
                 cursor: pointer;
                 padding: 10px;
                 font-size: 1em;
+                transition: all 0.3s ease;
+            }
+
+            .data-bundles .tab-link:hover {
+                color: var(--primary-color);
+                transform: translateY(-2px);
             }
 
             .data-bundles .tab-link.active {
@@ -651,6 +667,12 @@ class Kaa_Mall_Public {
                 color: #121212;
                 font-weight: bold;
                 cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .bundle-form button:hover {
+                transform: scale(1.02);
+                opacity: 0.9;
             }
 
             .payment-method-header {
@@ -755,6 +777,12 @@ class Kaa_Mall_Public {
                 color: #121212;
                 font-weight: bold;
                 cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            #kaa-mall-afa-form button:hover {
+                transform: scale(1.02);
+                opacity: 0.9;
             }
 
             .registration-fee {
@@ -797,6 +825,31 @@ class Kaa_Mall_Public {
                 border-radius: 8px;
                 text-decoration: none;
                 font-weight: bold;
+                transition: all 0.3s ease;
+            }
+
+            .contact-admin-btn:hover {
+                transform: scale(1.02);
+                opacity: 0.9;
+            }
+
+            @media screen and (max-width: 600px) {
+                .kaa-mall-portal {
+                    padding-left: 15px;
+                    padding-right: 15px;
+                }
+                .wallet-balance {
+                    flex-direction: column;
+                    gap: 15px;
+                    align-items: flex-start;
+                }
+                .data-bundles .network-tabs {
+                    gap: 10px;
+                }
+                .data-bundles .tab-link {
+                    padding: 8px;
+                    font-size: 0.9em;
+                }
             }
         </style>
         <div class="kaa-mall-portal">
@@ -830,7 +883,17 @@ class Kaa_Mall_Public {
             <div class="kaa-mall-card">
                 <h3>Join Our Community</h3>
                 <p>Stay updated with the latest news and offers by joining our WhatsApp community.</p>
-                <a href="https://chat.whatsapp.com/JZEJZlNO3DV8VCyeTwzYgt" class="contact-admin-btn" style="background-color: #25D366; text-align: center; display: block;">Join Now</a>
+                <?php
+                $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+                $whatsapp_group_link = 'https://chat.whatsapp.com/JZEJZlNO3DV8VCyeTwzYgt'; // Default link
+                if ( $reseller_id ) {
+                    $reseller_whatsapp_group_link = get_user_meta( $reseller_id, '_kaa_mall_whatsapp_group_link', true );
+                    if ( ! empty( $reseller_whatsapp_group_link ) ) {
+                        $whatsapp_group_link = $reseller_whatsapp_group_link;
+                    }
+                }
+                ?>
+                <a href="<?php echo esc_url( $whatsapp_group_link ); ?>" class="contact-admin-btn" style="background-color: #25D366; text-align: center; display: block;">Join Now</a>
             </div>
 
             <?php if ( is_user_logged_in() ) : ?>
@@ -945,7 +1008,7 @@ class Kaa_Mall_Public {
                 </div>
             </div>
 
-            <?php if ( is_user_logged_in() ) : ?>
+            <?php if ( is_user_logged_in() && ! get_option( 'kaa_mall_afa_out_of_stock' ) ) : ?>
             <div class="kaa-mall-card afa-registration">
                 <h3>AFA Bundle Registration</h3>
                 <p>Register for AFA bundles and get amazing benefits!</p>

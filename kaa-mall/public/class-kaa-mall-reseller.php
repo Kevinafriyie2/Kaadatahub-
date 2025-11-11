@@ -9,6 +9,7 @@ class Kaa_Mall_Reseller {
         add_action( 'wp_ajax_kaa_mall_save_reseller_prices', array( $this, 'save_reseller_prices' ) );
         add_action( 'wp_ajax_kaa_mall_save_shop_name', array( $this, 'save_shop_name' ) );
         add_action( 'wp_ajax_kaa_mall_save_whatsapp_number', array( $this, 'save_whatsapp_number' ) );
+        add_action( 'wp_ajax_kaa_mall_save_whatsapp_group_link', array( $this, 'save_whatsapp_group_link' ) );
         add_action( 'wp_ajax_kaa_mall_request_withdrawal', array( $this, 'request_withdrawal' ) );
         add_action( 'wp_ajax_kaa_mall_submit_reseller_application', array( $this, 'submit_reseller_application' ) );
     }
@@ -189,6 +190,21 @@ class Kaa_Mall_Reseller {
         update_user_meta( $reseller_id, '_kaa_mall_whatsapp_number', $whatsapp_number );
 
         wp_send_json_success( array( 'message' => 'WhatsApp number updated successfully.' ) );
+    }
+
+    public function save_whatsapp_group_link() {
+        check_ajax_referer( 'kaa_mall_reseller_nonce', 'nonce' );
+
+        if ( ! current_user_can( 'reseller' ) ) {
+            wp_send_json_error( array( 'message' => 'You do not have permission to perform this action.' ) );
+        }
+
+        $whatsapp_group_link = sanitize_text_field( $_POST['whatsapp_group_link'] );
+        $reseller_id = get_current_user_id();
+
+        update_user_meta( $reseller_id, '_kaa_mall_whatsapp_group_link', $whatsapp_group_link );
+
+        wp_send_json_success( array( 'message' => 'WhatsApp group link updated successfully.' ) );
     }
 
     public function request_withdrawal() {
@@ -574,6 +590,15 @@ class Kaa_Mall_Reseller {
                 <div class="reseller-card">
                     <h3>Your Reseller ID</h3>
                     <p class="profit-balance"><?php echo esc_html( $reseller_id ); ?></p>
+                </div>
+
+                <div class="reseller-card">
+                    <h3>Your WhatsApp Group Link</h3>
+                    <form id="kaa-mall-whatsapp-group-link-form">
+                        <label for="whatsapp_group_link">Set your WhatsApp group link</label>
+                        <input type="text" id="whatsapp_group_link" name="whatsapp_group_link" value="<?php echo esc_attr( get_user_meta( $reseller_id, '_kaa_mall_whatsapp_group_link', true ) ); ?>" placeholder="e.g., https://chat.whatsapp.com/your-group-id">
+                        <button type="submit">Save WhatsApp Group Link</button>
+                    </form>
                 </div>
 
                 <div class="reseller-card">
