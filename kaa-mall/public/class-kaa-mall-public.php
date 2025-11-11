@@ -672,11 +672,12 @@ class Kaa_Mall_Public {
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 color: var(--text-color);
-                padding: 20px;
+                padding: 100px 20px 20px;
                 width: 100%;
                 box-sizing: border-box;
                 position: relative;
                 z-index: 1;
+                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             }
 
             .kaa-mall-card {
@@ -794,10 +795,11 @@ class Kaa_Mall_Public {
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 color: var(--text-color);
-                padding: 0;
+                padding: 100px 20px 20px;
                 width: 100%;
                 position: relative;
                 z-index: 1;
+                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             }
 
             .kaa-mall-header {

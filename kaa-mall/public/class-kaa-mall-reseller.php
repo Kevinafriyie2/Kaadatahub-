@@ -522,6 +522,10 @@ class Kaa_Mall_Reseller {
             .kaa-mall-reseller-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 color: var(--text-color);
+                padding-top: 100px;
+                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            }
+            .kaa-mall-reseller-portal-inner {
                 padding: 20px;
             }
             .reseller-header h2 {
@@ -684,11 +688,12 @@ class Kaa_Mall_Reseller {
         </style>
 
         <div class="kaa-mall-reseller-portal">
-            <div class="reseller-header">
-                <h2>Reseller Dashboard</h2>
-            </div>
+            <div class="kaa-mall-reseller-portal-inner">
+                <div class="reseller-header">
+                    <h2>Reseller Dashboard</h2>
+                </div>
 
-            <div class="reseller-grid">
+                <div class="reseller-grid">
                 <div class="reseller-card" style="grid-column: 1 / -1;">
                     <h3>Analytics</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -912,6 +917,7 @@ class Kaa_Mall_Reseller {
                         ?>
                     </tbody>
                 </table>
+            </div>
             </div>
         </div>
         <?php
