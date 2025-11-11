@@ -9,6 +9,7 @@ class Kaa_Mall_Public {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
         add_shortcode( 'kaa_user_portal', array( $this, 'render_user_portal' ) );
+        add_shortcode( 'kaa_mall_history_portal', array( $this, 'render_history_portal' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
         add_action( 'wp_ajax_kaa_mall_verify_paystack_transaction', array( $this, 'verify_paystack_transaction' ) );
         add_action( 'wp_ajax_nopriv_kaa_mall_verify_paystack_transaction', array( $this, 'verify_paystack_transaction' ) );
@@ -47,6 +48,11 @@ class Kaa_Mall_Public {
     }
 
     public function enqueue_scripts() {
+        global $post;
+        if ( ! is_a( $post, 'WP_Post' ) || ( ! has_shortcode( $post->post_content, 'kaa_user_portal' ) && ! has_shortcode( $post->post_content, 'kaa_mall_history_portal' ) ) ) {
+            return;
+        }
+
         $js_file_path = plugin_dir_path( __FILE__ ) . 'js/kaa-mall-public.js';
         $js_file_url = plugin_dir_url( __FILE__ ) . 'js/kaa-mall-public.js';
         $js_version = filemtime( $js_file_path );
@@ -130,6 +136,7 @@ class Kaa_Mall_Public {
     public function verify_paystack_transaction() {
         check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $reference = sanitize_text_field( $_POST['reference'] );
+        $amount = floatval( $_POST['amount'] );
 
         $secret_key = get_option( 'kaa_mall_paystack_secret_key' );
 
@@ -501,6 +508,93 @@ class Kaa_Mall_Public {
         }
 
         wp_send_json_success( $data );
+    }
+
+    public function render_history_portal() {
+        if ( ! is_user_logged_in() ) {
+            return 'Please log in to view your history.';
+        }
+
+        ob_start();
+
+        echo Kaa_Mall_Portal_Header::render();
+        ?>
+        <style>
+            :root {
+                --primary-color: #ffc107;
+                --secondary-color: #8a2be2;
+                --background-color: #121212;
+                --card-background-color: #1e1e1e;
+                --text-color: #e0e0e0;
+                --heading-color: #ffffff;
+                --border-color: #333333;
+                --shadow-color: rgba(0, 0, 0, 0.5);
+            }
+            .kaa-mall-portal {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                background-color: var(--background-color);
+                color: var(--text-color);
+                padding: 20px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .kaa-mall-card {
+                background: var(--card-background-color);
+                border-radius: 12px;
+                box-shadow: 0 5px 15px var(--shadow-color);
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            .purchase-history table, .wallet-transactions table {
+                width: 100%;
+                border-collapse: collapse;
+                min-width: 600px;
+            }
+            .purchase-history th, .purchase-history td,
+            .wallet-transactions th, .wallet-transactions td {
+                padding: 10px;
+                text-align: left;
+                border-bottom: 1px solid var(--border-color);
+            }
+        </style>
+        <div class="kaa-mall-portal">
+            <div id="history">
+                <div class="kaa-mall-card purchase-history">
+                    <h3>Purchase History</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Bundle</th>
+                                <th>Phone</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="kaa-mall-card wallet-transactions">
+                    <h3>Wallet History</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Details</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
     }
 
     public function render_user_portal() {
@@ -1011,7 +1105,7 @@ class Kaa_Mall_Public {
                 </div>
             </div>
 
-            <?php if ( is_user_logged_in() && ! get_option( 'kaa_mall_afa_out_of_stock' ) ) : ?>
+            <?php if ( (is_user_logged_in() || WC()->session->get( 'kaa_mall_reseller_id' )) && ! get_option( 'kaa_mall_afa_out_of_stock' ) ) : ?>
             <div class="kaa-mall-card afa-registration">
                 <h3>AFA Bundle Registration</h3>
                 <p>Register for AFA bundles and get amazing benefits!</p>
@@ -1042,40 +1136,6 @@ class Kaa_Mall_Public {
                 </form>
             </div>
 
-            <div id="history">
-                <div class="kaa-mall-card purchase-history">
-                    <h3>Purchase History</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Date</th>
-                                <th>Bundle</th>
-                                <th>Phone</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-
-                <div class="kaa-mall-card wallet-transactions">
-                    <h3>Wallet History</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Amount</th>
-                                <th>Details</th>
-                                <th>Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
             <?php endif; ?>
 
             <div class="kaa-mall-card need-help">

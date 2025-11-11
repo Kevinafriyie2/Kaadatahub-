@@ -94,7 +94,7 @@ class Kaa_Mall_Portal_Header {
             </div>
             <nav class="header-nav">
                 <a href="<?php echo esc_url( get_option('kaa_mall_user_portal_url') ); ?>">Dashboard</a>
-                <a href="<?php echo esc_url( rtrim(get_option('kaa_mall_user_portal_url'), '/') ); ?>#history">History</a>
+                <a href="https://kaadatahub.shop/history/">History</a>
                 <?php if ( current_user_can( 'reseller' ) ) : ?>
                     <a href="<?php echo esc_url( get_option('kaa_mall_reseller_portal_url') ); ?>">Reseller Dashboard</a>
                 <?php else : ?>

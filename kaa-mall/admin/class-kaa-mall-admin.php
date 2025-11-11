@@ -766,6 +766,7 @@ class Kaa_Mall_Admin {
                                     <input type="text" id="kaa-mall-user-search" placeholder="Search by username or email...">
                                     <input type="hidden" name="user_id" id="kaa-mall-user-id">
                                     <div id="kaa-mall-user-search-results"></div>
+                                    <p class="description">Start typing a name or email, then select a user from the list that appears.</p>
                                 </td>
                             </tr>
                             <tr valign="top">
