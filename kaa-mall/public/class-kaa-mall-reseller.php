@@ -667,6 +667,24 @@ class Kaa_Mall_Reseller {
             #loginform .forgetmenot label {
                 color: var(--text-color);
             }
+
+            @media screen and (max-width: 768px) {
+                .reseller-grid {
+                    grid-template-columns: 1fr;
+                }
+                .reseller-header h2 {
+                    font-size: 2em;
+                }
+                .reseller-card {
+                    padding: 20px;
+                }
+                .profit-balance {
+                    font-size: 2.2em;
+                }
+                .analytics-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
         </style>
 
         <div class="kaa-mall-reseller-portal">

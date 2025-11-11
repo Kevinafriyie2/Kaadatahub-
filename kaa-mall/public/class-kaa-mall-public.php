@@ -678,11 +678,11 @@ class Kaa_Mall_Public {
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 color: var(--text-color);
-                padding: 80px 20px 20px;
+                padding: 20px;
                 width: 100%;
                 box-sizing: border-box;
                 position: relative;
-                z-index: 9999;
+                z-index: 1;
             }
 
             .kaa-mall-card {
@@ -806,10 +806,10 @@ class Kaa_Mall_Public {
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 color: var(--text-color);
-                padding: 60px 0 0;
+                padding: 0;
                 width: 100%;
                 position: relative;
-                z-index: 9999;
+                z-index: 1;
             }
 
             .kaa-mall-header {
@@ -1186,22 +1186,6 @@ class Kaa_Mall_Public {
                 </ul>
             </div>
 
-            <div class="kaa-mall-card">
-                <h3>Join Our Community</h3>
-                <p>Stay updated with the latest news and offers by joining our WhatsApp community.</p>
-                <?php
-                $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-                $whatsapp_group_link = 'https://chat.whatsapp.com/JZEJZlNO3DV8VCyeTwzYgt'; // Default link
-                if ( $reseller_id ) {
-                    $reseller_whatsapp_group_link = get_user_meta( $reseller_id, '_kaa_mall_whatsapp_group_link', true );
-                    if ( ! empty( $reseller_whatsapp_group_link ) ) {
-                        $whatsapp_group_link = $reseller_whatsapp_group_link;
-                    }
-                }
-                ?>
-                <a href="<?php echo esc_url( $whatsapp_group_link ); ?>" class="contact-admin-btn" style="background-color: #25D366; text-align: center; display: block;">Join Now</a>
-            </div>
-
             <?php if ( is_user_logged_in() ) : ?>
             <div class="kaa-mall-card wallet-balance">
                 <div class="wallet-balance-details">
@@ -1209,39 +1193,6 @@ class Kaa_Mall_Public {
                     <span class="balance-amount"></span>
                 </div>
                 <button class="top-up-wallet-btn">Top Up Wallet</button>
-            </div>
-
-            <div class="kaa-mall-card">
-                <h3>Recent Orders</h3>
-                <?php
-                $orders = wc_get_orders( array(
-                    'customer_id' => get_current_user_id(),
-                    'limit' => 3,
-                    'orderby' => 'date',
-                    'order' => 'DESC',
-                ) );
-                if ( ! empty( $orders ) ) :
-                ?>
-                <ul class="recent-orders-list">
-                    <?php foreach ( $orders as $order ) : ?>
-                    <li>
-                        <div class="order-details">
-                            <strong>Order #<?php echo $order->get_id(); ?></strong>
-                            <br>
-                            <small><?php echo $order->get_date_created()->date_i18n( 'F j, Y' ); ?></small>
-                        </div>
-                        <div class="order-total">
-                            <?php echo $order->get_formatted_order_total(); ?>
-                        </div>
-                        <div class="order-status status-<?php echo $order->get_status(); ?>">
-                            <?php echo wc_get_order_status_name( $order->get_status() ); ?>
-                        </div>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-                <?php else : ?>
-                <p>You have no recent orders.</p>
-                <?php endif; ?>
             </div>
             <?php endif; ?>
 
@@ -1402,6 +1353,57 @@ class Kaa_Mall_Public {
             </div>
 
             <?php endif; ?>
+
+            <?php if ( is_user_logged_in() ) : ?>
+            <div class="kaa-mall-card">
+                <h3>Recent Orders</h3>
+                <?php
+                $orders = wc_get_orders( array(
+                    'customer_id' => get_current_user_id(),
+                    'limit' => 3,
+                    'orderby' => 'date',
+                    'order' => 'DESC',
+                ) );
+                if ( ! empty( $orders ) ) :
+                ?>
+                <ul class="recent-orders-list">
+                    <?php foreach ( $orders as $order ) : ?>
+                    <li>
+                        <div class="order-details">
+                            <strong>Order #<?php echo $order->get_id(); ?></strong>
+                            <br>
+                            <small><?php echo $order->get_date_created()->date_i18n( 'F j, Y' ); ?></small>
+                        </div>
+                        <div class="order-total">
+                            <?php echo $order->get_formatted_order_total(); ?>
+                        </div>
+                        <div class="order-status status-<?php echo $order->get_status(); ?>">
+                            <?php echo wc_get_order_status_name( $order->get_status() ); ?>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php else : ?>
+                <p>You have no recent orders.</p>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
+            <div class="kaa-mall-card">
+                <h3>Join Our Community</h3>
+                <p>Stay updated with the latest news and offers by joining our WhatsApp community.</p>
+                <?php
+                $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+                $whatsapp_group_link = 'https://chat.whatsapp.com/JZEJZlNO3DV8VCyeTwzYgt'; // Default link
+                if ( $reseller_id ) {
+                    $reseller_whatsapp_group_link = get_user_meta( $reseller_id, '_kaa_mall_whatsapp_group_link', true );
+                    if ( ! empty( $reseller_whatsapp_group_link ) ) {
+                        $whatsapp_group_link = $reseller_whatsapp_group_link;
+                    }
+                }
+                ?>
+                <a href="<?php echo esc_url( $whatsapp_group_link ); ?>" class="contact-admin-btn" style="background-color: #25D366; text-align: center; display: block;">Join Now</a>
+            </div>
 
             <div class="kaa-mall-card need-help">
                 <h3>Need Help?</h3>
