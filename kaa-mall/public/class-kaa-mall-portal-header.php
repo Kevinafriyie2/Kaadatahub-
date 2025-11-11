@@ -12,16 +12,16 @@ class Kaa_Mall_Portal_Header {
                 align-items: center;
                 padding: 15px 20px;
                 color: #fff;
-                position: relative;
-                background: rgba(255, 255, 255, 0.1);
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 1001;
+                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
                 box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-                margin-bottom: 20px;
             }
             .header-logo a {
-                color: #ffc107;
+                color: #fff;
                 text-decoration: none;
                 font-size: 1.5em;
                 font-weight: bold;
@@ -33,9 +33,7 @@ class Kaa_Mall_Portal_Header {
                 top: 100%;
                 left: 0;
                 right: 0;
-                background: rgba(0, 0, 0, 0.4);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
+                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
                 border-top: 1px solid rgba(255, 255, 255, 0.2);
                 z-index: 1000;
             }

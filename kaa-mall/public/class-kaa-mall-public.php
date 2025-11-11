@@ -673,6 +673,7 @@ class Kaa_Mall_Public {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 color: var(--text-color);
                 padding: 100px 20px 20px;
+                padding-top: 80px;
                 width: 100%;
                 box-sizing: border-box;
                 position: relative;
@@ -796,6 +797,7 @@ class Kaa_Mall_Public {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 color: var(--text-color);
                 padding: 100px 20px 20px;
+                padding-top: 80px;
                 width: 100%;
                 position: relative;
                 z-index: 1;
