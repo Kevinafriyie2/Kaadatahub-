@@ -523,22 +523,21 @@ class Kaa_Mall_Public {
             :root {
                 --primary-color: #ffc107;
                 --secondary-color: #8a2be2;
-                --background-color: #121212;
-                --card-background-color: #1e1e1e;
-                --text-color: #e0e0e0;
+                --text-color: #ffffff;
                 --heading-color: #ffffff;
-                --border-color: #333333;
+                --border-color: rgba(255, 255, 255, 0.2);
                 --shadow-color: rgba(0, 0, 0, 0.5);
             }
 
             body {
                 padding: 0;
                 margin: 0;
+                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+                background-attachment: fixed;
             }
 
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                background-color: var(--background-color);
                 color: var(--text-color);
                 padding: 20px;
                 width: 100%;
@@ -546,9 +545,12 @@ class Kaa_Mall_Public {
             }
 
             .kaa-mall-card {
-                background: var(--card-background-color);
-                border-radius: 12px;
-                box-shadow: 0 5px 15px var(--shadow-color);
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 16px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid var(--border-color);
                 padding: 20px;
                 margin-bottom: 20px;
             }
@@ -643,33 +645,36 @@ class Kaa_Mall_Public {
             :root {
                 --primary-color: #ffc107;
                 --secondary-color: #8a2be2;
-                --background-color: #121212;
-                --card-background-color: #1e1e1e;
-                --text-color: #e0e0e0;
+                --text-color: #ffffff;
                 --heading-color: #ffffff;
-                --border-color: #333333;
+                --border-color: rgba(255, 255, 255, 0.2);
                 --shadow-color: rgba(0, 0, 0, 0.5);
             }
 
             body {
                 padding: 0;
                 margin: 0;
+                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+                background-attachment: fixed;
             }
 
             .kaa-mall-portal {
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                background-color: var(--background-color);
                 color: var(--text-color);
                 padding: 0;
                 width: 100%;
             }
 
             .kaa-mall-header {
-                background: linear-gradient(135deg, #ff8c00, #ffc107);
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 16px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid var(--border-color);
                 color: white;
                 padding: 20px;
                 text-align: center;
-                border-radius: 12px;
                 margin-bottom: 20px;
             }
 
@@ -684,15 +689,17 @@ class Kaa_Mall_Public {
             }
 
             .kaa-mall-card {
-                background: var(--card-background-color);
-                border-radius: 12px;
-                box-shadow: 0 5px 15px var(--shadow-color);
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 16px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid var(--border-color);
                 padding: 20px;
                 margin-bottom: 20px;
             }
 
             .wallet-balance {
-                background: linear-gradient(135deg, #8a2be2, #4a00e0);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -770,7 +777,7 @@ class Kaa_Mall_Public {
                 margin-bottom: 15px;
                 border: 1px solid var(--border-color);
                 border-radius: 8px;
-                background-color: #2c2c2c;
+                background-color: rgba(0, 0, 0, 0.2);
                 color: var(--text-color);
                 font-size: 1em;
                 box-sizing: border-box;
@@ -811,7 +818,7 @@ class Kaa_Mall_Public {
             .payment-option {
                 display: flex;
                 align-items: center;
-                background-color: #2c2c2c;
+                background-color: rgba(0, 0, 0, 0.2);
                 padding: 15px;
                 border-radius: 8px;
                 border: 1px solid var(--border-color);
@@ -855,7 +862,7 @@ class Kaa_Mall_Public {
             }
 
             .afa-registration {
-                background: linear-gradient(135deg, #9b59b6, #8e44ad);
+                /* The background is now handled by .kaa-mall-card */
             }
 
             .afa-registration h3,
