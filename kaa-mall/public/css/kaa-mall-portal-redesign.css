@@ -189,6 +189,50 @@ body {
     margin-top: 0;
 }
 
+.transaction-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.transaction-table th,
+.transaction-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.transaction-table th {
+    background-color: #f4f7fa;
+    font-weight: 600;
+}
+
+.transaction-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.status-completed, .status-processing {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-completed {
+    background-color: #e4f8f0;
+    color: #28a745;
+}
+
+.status-processing {
+    background-color: #fff2e6;
+    color: #fd7e14;
+}
+
+.status-failed, .status-cancelled {
+    background-color: #fbeae5;
+    color: #dc3545;
+}
+
 /* Bottom Navigation */
 .kaa-mall-bottom-nav {
     display: none;

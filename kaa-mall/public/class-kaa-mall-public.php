@@ -461,6 +461,11 @@ class Kaa_Mall_Public {
                     <ul>
                         <li><a href="/reseller-portal" class="nav-link"><i class="fas fa-user-tie"></i> Reseller Dashboard</a></li>
                     </ul>
+                    <?php else : ?>
+                    <p class="nav-section-title">RESELLER</p>
+                    <ul>
+                        <li><a href="https://kaadatahub.shop/apply-as-a-reseller/" class="nav-link"><i class="fas fa-user-tie"></i> Apply to be a Reseller</a></li>
+                    </ul>
                     <?php endif; ?>
                 </nav>
             </div>

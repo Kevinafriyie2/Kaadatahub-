@@ -13,10 +13,10 @@ class Kaa_Mall {
         $this->define_admin_hooks();
         $this->define_public_hooks();
         add_action( 'init', array( $this, 'add_rewrite_rules' ) );
-        add_action( 'init', array( $this, 'register_withdrawal_post_type' ) );
+        add_action( 'init', array( $this, 'register_post_types' ) );
     }
 
-    public function register_withdrawal_post_type() {
+    public function register_post_types() {
         register_post_type( 'kaa_withdrawal',
             array(
                 'labels'      => array(
@@ -29,6 +29,23 @@ class Kaa_Mall {
                 'supports'    => array( 'title' ),
                 'capabilities' => array(
                     'create_posts' => 'do_not_allow', // Disable creation from admin UI
+                ),
+                'map_meta_cap' => true,
+            )
+        );
+
+        register_post_type( 'reseller_application',
+            array(
+                'labels'      => array(
+                    'name'          => __( 'Reseller Applications', 'kaa-mall' ),
+                    'singular_name' => __( 'Reseller Application', 'kaa-mall' ),
+                ),
+                'public'      => false,
+                'show_ui'     => true,
+                'show_in_menu'=> 'kaa_mall',
+                'supports'    => array( 'title', 'author' ),
+                'capabilities' => array(
+                    'create_posts' => 'do_not_allow',
                 ),
                 'map_meta_cap' => true,
             )

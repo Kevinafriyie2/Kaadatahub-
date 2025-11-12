@@ -15,6 +15,84 @@ class Kaa_Mall_Admin {
         add_action( 'admin_post_kaa_mall_top_up_wallet', array( $this, 'handle_top_up_wallet' ) );
         add_action( 'admin_post_kaa_mall_bulk_update_order_status', array( $this, 'handle_bulk_update_order_status' ) );
         add_action( 'admin_post_kaa_mall_mark_withdrawal_paid', array( $this, 'handle_mark_withdrawal_paid' ) );
+        add_action( 'admin_post_kaa_mall_approve_reseller', array( $this, 'handle_approve_reseller' ) );
+        add_action( 'admin_post_kaa_mall_deny_reseller', array( $this, 'handle_deny_reseller' ) );
+    }
+
+    public function handle_approve_reseller() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        $application_id = intval( $_GET['application_id'] );
+        $user_id = get_post_field( 'post_author', $application_id );
+
+        $user = new WP_User( $user_id );
+        $user->add_role( 'reseller' );
+
+        wp_update_post( array(
+            'ID' => $application_id,
+            'post_status' => 'publish',
+        ) );
+
+        wp_redirect( admin_url( 'admin.php?page=kaa_mall_reseller_applications' ) );
+        exit;
+    }
+
+    public function handle_deny_reseller() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'You do not have permission to perform this action.' );
+        }
+
+        $application_id = intval( $_GET['application_id'] );
+        wp_update_post( array(
+            'ID' => $application_id,
+            'post_status' => 'trash',
+        ) );
+
+        wp_redirect( admin_url( 'admin.php?page=kaa_mall_reseller_applications' ) );
+        exit;
+    }
+
+    public function render_reseller_applications_page() {
+        $args = array(
+            'post_type' => 'reseller_application',
+            'post_status' => 'pending',
+            'posts_per_page' => -1,
+        );
+        $applications = get_posts( $args );
+        ?>
+        <div class="wrap">
+            <h2>Reseller Applications</h2>
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th>Applicant</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ( ! empty( $applications ) ) : ?>
+                        <?php foreach ( $applications as $application ) : ?>
+                            <tr>
+                                <td><?php echo get_the_author_meta( 'display_name', $application->post_author ); ?></td>
+                                <td><?php echo get_the_date( '', $application ); ?></td>
+                                <td>
+                                    <a href="<?php echo esc_url( add_query_arg( array( 'action' => 'kaa_mall_approve_reseller', 'application_id' => $application->ID ), admin_url( 'admin-post.php' ) ) ); ?>" class="button button-primary">Approve</a>
+                                    <a href="<?php echo esc_url( add_query_arg( array( 'action' => 'kaa_mall_deny_reseller', 'application_id' => $application->ID ), admin_url( 'admin-post.php' ) ) ); ?>" class="button">Deny</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <tr>
+                            <td colspan="3">No pending applications.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
     }
 
     public function handle_mark_withdrawal_paid() {
@@ -77,6 +155,14 @@ class Kaa_Mall_Admin {
             array( $this, 'render_settings_page' ),
             'dashicons-store'
         );
+        add_submenu_page(
+            'kaa_mall',
+            'Reseller Applications',
+            'Reseller Applications',
+            'manage_options',
+            'kaa_mall_reseller_applications',
+            array( $this, 'render_reseller_applications_page' )
+        );
     }
 
     public function register_settings() {
@@ -88,6 +174,7 @@ class Kaa_Mall_Admin {
         register_setting( 'kaa_mall_options', 'kaa_mall_business_email' );
         register_setting( 'kaa_mall_options', 'kaa_mall_user_portal_url' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_portal_url' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_reseller_application_fee' );
     }
 
     public function render_settings_page() {
@@ -126,6 +213,13 @@ class Kaa_Mall_Admin {
                     <tr valign="top">
                         <th scope="row">Reseller Portal URL</th>
                         <td><input type="text" name="kaa_mall_reseller_portal_url" value="<?php echo esc_attr( get_option('kaa_mall_reseller_portal_url') ); ?>" size="50" /></td>
+                    </tr>
+                </table>
+                <h3>Reseller Settings</h3>
+                <table class="form-table">
+                    <tr valign="top">
+                        <th scope="row">Reseller Application Fee</th>
+                        <td><input type="number" name="kaa_mall_reseller_application_fee" value="<?php echo esc_attr( get_option('kaa_mall_reseller_application_fee', '50') ); ?>" /></td>
                     </tr>
                 </table>
 

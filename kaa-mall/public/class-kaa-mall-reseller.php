@@ -4,22 +4,76 @@ class Kaa_Mall_Reseller {
 
     public function __construct() {
         add_shortcode( 'kaa_reseller_portal', array( $this, 'render_reseller_portal' ) );
+        add_shortcode( 'kaa_reseller_apply', array( $this, 'render_reseller_application_form' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
         add_action( 'wp_ajax_kaa_mall_save_reseller_prices', array( $this, 'save_reseller_prices' ) );
         add_action( 'wp_ajax_kaa_mall_save_shop_name', array( $this, 'save_shop_name' ) );
         add_action( 'wp_ajax_kaa_mall_request_withdrawal', array( $this, 'request_withdrawal' ) );
+        add_action( 'wp_ajax_kaa_mall_handle_reseller_application', array( $this, 'handle_reseller_application' ) );
+    }
+
+    public function render_reseller_application_form() {
+        if ( ! is_user_logged_in() ) {
+            return '<p>You must be logged in to apply to be a reseller.</p>';
+        }
+
+        $user = wp_get_current_user();
+        if ( in_array( 'reseller', (array) $user->roles ) ) {
+            return '<p>You are already a reseller.</p>';
+        }
+
+        $fee = get_option( 'kaa_mall_reseller_application_fee', '50' );
+
+        ob_start();
+        ?>
+        <div class="kaa-mall-reseller-apply">
+            <h2>Become a Reseller</h2>
+            <p>Join our reseller program and start earning today!</p>
+            <p><strong>Application Fee:</strong> <?php echo wc_price( $fee ); ?></p>
+            <button id="kaa-mall-apply-btn" data-fee="<?php echo esc_attr( $fee ); ?>">Pay & Apply</button>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    public function handle_reseller_application() {
+        check_ajax_referer( 'kaa_mall_reseller_nonce', 'nonce' );
+
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'You must be logged in to apply.' ) );
+        }
+
+        $user_id = get_current_user_id();
+        $user = get_user_by( 'id', $user_id );
+
+        // Create a new reseller application post
+        $post_id = wp_insert_post( array(
+            'post_title' => 'Reseller Application - ' . $user->display_name,
+            'post_type' => 'reseller_application',
+            'post_status' => 'pending',
+            'post_author' => $user_id,
+        ) );
+
+        if ( $post_id ) {
+            wp_send_json_success( array( 'message' => 'Your application has been submitted for review.' ) );
+        } else {
+            wp_send_json_error( array( 'message' => 'Could not submit your application.' ) );
+        }
     }
 
     public function enqueue_scripts() {
         if ( is_page() || is_single() ) { // Basic check to see if we are on a page that might contain the shortcode
             global $post;
-            if ( has_shortcode( $post->post_content, 'kaa_reseller_portal' ) ) {
+            if ( has_shortcode( $post->post_content, 'kaa_reseller_portal' ) || has_shortcode( $post->post_content, 'kaa_reseller_apply' ) ) {
+                wp_enqueue_script( 'paystack-inline', 'https://js.paystack.co/v1/inline.js', array(), null, false );
                 $js_file_url = plugin_dir_url( __FILE__ ) . 'js/kaa-mall-reseller.js';
                 $js_version = filemtime( plugin_dir_path( __FILE__ ) . 'js/kaa-mall-reseller.js' );
-                wp_enqueue_script( 'kaa-mall-reseller', $js_file_url, array( 'jquery' ), $js_version, true );
+                wp_enqueue_script( 'kaa-mall-reseller', $js_file_url, array( 'jquery', 'paystack-inline' ), $js_version, true );
                 wp_localize_script( 'kaa-mall-reseller', 'kaa_mall_reseller_params', array(
                     'ajax_url' => admin_url( 'admin-ajax.php' ),
                     'nonce' => wp_create_nonce( 'kaa_mall_reseller_nonce' ),
+                    'paystack_public_key' => get_option( 'kaa_mall_paystack_public_key' ),
+                    'user_email' => wp_get_current_user()->user_email,
                 ) );
             }
         }

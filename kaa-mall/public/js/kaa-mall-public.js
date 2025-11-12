@@ -48,22 +48,34 @@
                 success: function(response) {
                     transactions_list.empty();
                     if (response.success && response.data.length > 0) {
+                        var table = `
+                            <table class="transaction-table">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Date</th>
+                                        <th>Bundle</th>
+                                        <th>Phone</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
                         $.each(response.data, function(index, order) {
-                            var order_html = `
-                                <div class="transaction-item">
-                                    <div class="transaction-details">
-                                        <p><strong>Bundle:</strong> ${order.bundle || 'N/A'}</p>
-                                        <p><strong>Phone:</strong> ${order.phone || 'N/A'}</p>
-                                        <p><strong>Date:</strong> ${new Date(order.date).toLocaleString()}</p>
-                                    </div>
-                                    <div class="transaction-amount">
-                                        <p>GH₵ ${parseFloat(order.amount).toFixed(2)}</p>
-                                        <span>${order.status}</span>
-                                    </div>
-                                </div>
+                            table += `
+                                <tr>
+                                    <td>${order.reference}</td>
+                                    <td>${new Date(order.date).toLocaleString()}</td>
+                                    <td>${order.bundle || 'N/A'}</td>
+                                    <td>${order.phone || 'N/A'}</td>
+                                    <td>GH₵ ${parseFloat(order.amount).toFixed(2)}</td>
+                                    <td><span class="status-${order.status.toLowerCase()}">${order.status}</span></td>
+                                </tr>
                             `;
-                            transactions_list.append(order_html);
                         });
+                        table += '</tbody></table>';
+                        transactions_list.html(table);
                     } else {
                         transactions_list.html('<p>No recent transactions found.</p>');
                     }
