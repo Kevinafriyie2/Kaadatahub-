@@ -492,6 +492,7 @@ class Kaa_Mall_Public {
             }
 
             $order->save();
+        }
 
         $this->check_and_send_low_balance_alert( $user_id );
         wp_send_json_success();
