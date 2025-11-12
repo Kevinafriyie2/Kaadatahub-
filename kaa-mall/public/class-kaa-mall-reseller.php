@@ -601,7 +601,7 @@ class Kaa_Mall_Reseller {
                         <i class="fas fa-bell"></i>
                         <i class="fas fa-user" id="profile-icon"></i>
                     </div>
-                     <div class="profile-popup">
+                     <div class="profile-popup" style="display: none;">
                         <div class="profile-header">
                             <span class="profile-name"><?php echo esc_html( $current_user->display_name ); ?></span>
                             <button class="close-popup-btn">&times;</button>
