@@ -223,15 +223,89 @@ class Kaa_Mall_Admin {
                     </tr>
                 </table>
 
-                <h3>MTN Prices</h3>
-                <textarea name="kaa_mall_mtn_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_mtn_prices') ); ?></textarea>
-                <h3>AirtelTigo Prices</h3>
-                <textarea name="kaa_mall_airteltigo_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_airteltigo_prices') ); ?></textarea>
-                <h3>Vodafone Prices</h3>
-                <textarea name="kaa_mall_vodafone_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_vodafone_prices') ); ?></textarea>
+                <h3>Network Prices</h3>
+                <div id="kaa-mall-price-manager">
+                    <?php
+                    $networks = ['mtn', 'airteltigo', 'vodafone', 'telecel'];
+                    foreach ($networks as $network) {
+                        ?>
+                        <div class="network-prices" id="prices-<?php echo $network; ?>">
+                            <h4><?php echo ucfirst($network); ?> Bundles</h4>
+                            <table class="wp-list-table widefat fixed striped">
+                                <thead>
+                                    <tr>
+                                        <th>Bundle Name</th>
+                                        <th>Price (GH₵)</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    $prices_str = get_option('kaa_mall_' . $network . '_prices');
+                                    if (!empty($prices_str)) {
+                                        $lines = explode("\n", $prices_str);
+                                        foreach ($lines as $line) {
+                                            $parts = explode('=', $line);
+                                            if (count($parts) == 2) {
+                                                $name = trim($parts[0]);
+                                                $price = trim($parts[1]);
+                                                ?>
+                                                <tr>
+                                                    <td><input type="text" value="<?php echo esc_attr($name); ?>" class="bundle-name"></td>
+                                                    <td><input type="number" step="0.01" value="<?php echo esc_attr($price); ?>" class="bundle-price"></td>
+                                                    <td><button type="button" class="button remove-price-row">Remove</button></td>
+                                                </tr>
+                                                <?php
+                                            }
+                                        }
+                                    }
+                                    ?>
+                                </tbody>
+                            </table>
+                            <button type="button" class="button add-price-row" data-network="<?php echo $network; ?>">Add Row</button>
+                        </div>
+                        <input type="hidden" name="kaa_mall_<?php echo $network; ?>_prices" id="hidden-prices-<?php echo $network; ?>">
+                        <?php
+                    }
+                    ?>
+                </div>
                 <?php submit_button(); ?>
             </form>
         </div>
+        <script>
+            jQuery(document).ready(function($) {
+                $('#kaa-mall-price-manager').on('click', '.add-price-row', function() {
+                    var network = $(this).data('network');
+                    var table_body = $('#prices-' + network).find('tbody');
+                    var new_row = '<tr>' +
+                        '<td><input type="text" class="bundle-name"></td>' +
+                        '<td><input type="number" step="0.01" class="bundle-price"></td>' +
+                        '<td><button type="button" class="button remove-price-row">Remove</button></td>' +
+                        '</tr>';
+                    table_body.append(new_row);
+                });
+
+                $('#kaa-mall-price-manager').on('click', '.remove-price-row', function() {
+                    $(this).closest('tr').remove();
+                });
+
+                $('form').on('submit', function() {
+                    var networks = ['mtn', 'airteltigo', 'vodafone', 'telecel'];
+                    networks.forEach(function(network) {
+                        var prices_str = '';
+                        var table_rows = $('#prices-' + network).find('tbody tr');
+                        table_rows.each(function() {
+                            var name = $(this).find('.bundle-name').val().trim();
+                            var price = $(this).find('.bundle-price').val().trim();
+                            if (name && price) {
+                                prices_str += name + '=' + price + '\n';
+                            }
+                        });
+                        $('#hidden-prices-' + network).val(prices_str.trim());
+                    });
+                });
+            });
+        </script>
         <?php
     }
 

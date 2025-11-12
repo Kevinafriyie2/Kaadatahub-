@@ -60,12 +60,13 @@ class Kaa_Mall_Public {
         wp_send_json_success( number_format( $balance, 2 ) );
     }
 
-    private function get_product_by_name( $product_name ) {
-        $product = get_page_by_title( $product_name, OBJECT, 'product' );
-        if ( $product ) {
-            return wc_get_product( $product->ID );
+    private function get_product_by_stored_id( $product_key ) {
+        $option_name = 'kaa_mall_' . str_replace( '-', '_', sanitize_title( $product_key ) ) . '_product_id';
+        $product_id = get_option( $option_name );
+        if ( ! $product_id ) {
+            return null;
         }
-        return null;
+        return wc_get_product( $product_id );
     }
 
     public function get_bundle_prices() {
@@ -83,6 +84,9 @@ class Kaa_Mall_Public {
                 }
             }
         }
+
+        // Trim the selected bundle to avoid validation issues
+        $bundle = trim( $bundle );
 
         $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
         if ( $reseller_id ) {
@@ -130,14 +134,14 @@ class Kaa_Mall_Public {
             $new_balance = $current_balance + $amount;
             update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
 
-            $product = $this->get_product_by_name( 'Wallet Top-up' );
+            $product = $this->get_product_by_stored_id( 'Wallet Top-up' );
             if ( $product ) {
                 $order = wc_create_order();
                 $order->set_customer_id( $user_id );
                 $order->add_product( $product, 1, array( 'subtotal' => $amount, 'total' => $amount ) );
                 $order->set_total( $amount );
                 $order->calculate_totals();
-                $order->set_status( 'completed' );
+                $order->payment_complete();
                 $order->save();
             }
 
@@ -158,6 +162,9 @@ class Kaa_Mall_Public {
         $network = sanitize_text_field( $_POST['network'] );
         $bundle = sanitize_text_field( $_POST['bundle'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
+
+        // Trim the selected bundle to avoid validation issues
+        $bundle = trim( $bundle );
 
         $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
         $admin_prices = array();
@@ -195,7 +202,7 @@ class Kaa_Mall_Public {
         $new_balance = $wallet_balance - $final_price;
         update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
 
-        $product = $this->get_product_by_name( 'Data Bundle' );
+        $product = $this->get_product_by_stored_id( 'Data Bundle' );
         if ( $product ) {
             $order = wc_create_order();
             $order->set_customer_id( $user_id );
@@ -231,6 +238,9 @@ class Kaa_Mall_Public {
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
         $reference = sanitize_text_field( $_POST['reference'] );
         $email = is_user_logged_in() ? wp_get_current_user()->user_email : sanitize_email( $_POST['email'] );
+
+        // Trim the selected bundle to avoid validation issues
+        $bundle = trim( $bundle );
 
         if ( ! is_user_logged_in() && ! is_email( $email ) ) {
             wp_send_json_error( array( 'message' => 'A valid email is required for guest checkout.' ) );
@@ -287,7 +297,7 @@ class Kaa_Mall_Public {
         if ( 'success' === $result->data->status ) {
             $user_id = is_user_logged_in() ? get_current_user_id() : 0;
 
-            $product = $this->get_product_by_name( 'Data Bundle' );
+            $product = $this->get_product_by_stored_id( 'Data Bundle' );
             if ( $product ) {
                 $order = wc_create_order();
 
@@ -300,7 +310,7 @@ class Kaa_Mall_Public {
                 $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
                 $order->set_total( $final_price );
                 $order->calculate_totals();
-                $order->set_status( 'processing' );
+                $order->payment_complete();
                 $order->update_meta_data( 'Network', $network );
                 $order->update_meta_data( 'Bundle', $bundle );
                 $order->update_meta_data( 'Phone Number', $phone_number );
@@ -359,7 +369,7 @@ class Kaa_Mall_Public {
         $new_balance = $wallet_balance - $final_price;
         update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
 
-        $product = $this->get_product_by_name( 'AFA Registration' );
+        $product = $this->get_product_by_stored_id( 'AFA Registration' );
         if ( $product ) {
             $order = wc_create_order();
             $order->set_customer_id( $user_id );
