@@ -1,0 +1,50 @@
+/* Kaadatahub Frontend CSS */
+
+:root {
+    --primary-color: #6d28d9;
+    --secondary-color: #a855f7;
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --text-color: #fff;
+    --border-radius: 15px;
+}
+
+body.kdh-dashboard-page {
+    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+}
+
+.kdh-dashboard-container {
+    padding: 2rem;
+    color: var(--text-color);
+}
+
+.kdh-card {
+    background: var(--glass-bg);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.kdh-btn {
+    background: linear-gradient(to right, var(--secondary-color), var(--primary-color));
+    color: var(--text-color);
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.kdh-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .kdh-dashboard-container {
+        padding: 1rem;
+    }
+}

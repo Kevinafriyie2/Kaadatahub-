@@ -1,0 +1,18 @@
+/* Kaadatahub Admin CSS */
+
+.kdh-admin-wrap {
+    margin-top: 20px;
+}
+
+.kdh-admin-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.kdh-admin-card h2 {
+    margin-top: 0;
+    font-size: 20px;
+}
