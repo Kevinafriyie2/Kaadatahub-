@@ -398,6 +398,12 @@ class Kaa_Mall_Public {
             return;
         }
 
+        $product = $this->get_product_by_name( 'Data Bundle' );
+        if ( ! $product ) {
+            wp_send_json_error( array( 'message' => 'Data bundle product not found. Please contact support.' ) );
+            return;
+        }
+
         $network = sanitize_text_field( $_POST['network'] );
         $bundle = sanitize_text_field( $_POST['bundle'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
@@ -455,10 +461,8 @@ class Kaa_Mall_Public {
             Kaa_Mall_Wallet::update_balance_and_log( $user_id, -$fee, 'fee', "Service fee for {$bundle}" );
         }
 
-        $product = $this->get_product_by_name( 'Data Bundle' );
-        if ( $product ) {
-            $order = wc_create_order();
-            $order->set_customer_id( $user_id );
+        $order = wc_create_order();
+        $order->set_customer_id( $user_id );
             $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
             $order->set_total( $final_price );
             $order->set_status( 'processing' );
@@ -511,6 +515,12 @@ class Kaa_Mall_Public {
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
         $reference = sanitize_text_field( $_POST['reference'] );
         $email = is_user_logged_in() ? wp_get_current_user()->user_email : sanitize_email( $_POST['email'] );
+
+        $product = $this->get_product_by_name( 'Data Bundle' );
+        if ( ! $product ) {
+            wp_send_json_error( array( 'message' => 'Data bundle product not found. Please contact support.' ) );
+            return;
+        }
 
         if ( ! is_user_logged_in() && ! is_email( $email ) ) {
             wp_send_json_error( array( 'message' => 'A valid email is required for guest checkout.' ) );
@@ -583,11 +593,9 @@ class Kaa_Mall_Public {
                 Kaa_Mall_Wallet::update_balance_and_log( $user_id, -$fee, 'fee', "Paystack service fee for {$bundle}" );
             }
 
-            $product = $this->get_product_by_name( 'Data Bundle' );
-            if ( $product ) {
-                $order = wc_create_order();
+            $order = wc_create_order();
 
-                if ( $user_id ) {
+            if ( $user_id ) {
                     $order->set_customer_id( $user_id );
                 } else {
                     $order->set_billing_email( $email );
