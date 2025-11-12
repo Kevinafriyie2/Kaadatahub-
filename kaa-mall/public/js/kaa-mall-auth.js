@@ -13,8 +13,8 @@
         });
 
         // Password visibility toggle
-        $('.password-toggle').on('click', function() {
-            var input = $(this).prev('input[type="password"], input[type="text"]');
+        $('#togglePassword').on('click', function() {
+            var input = $('#user_pass');
             if (input.attr('type') === 'password') {
                 input.attr('type', 'text');
                 $(this).removeClass('fa-eye').addClass('fa-eye-slash');
@@ -22,6 +22,18 @@
                 input.attr('type', 'password');
                 $(this).removeClass('fa-eye-slash').addClass('fa-eye');
             }
+        });
+
+        $('#show-register').on('click', function(e) {
+            e.preventDefault();
+            $('#login').hide();
+            $('#register').show();
+        });
+
+        $('#show-login').on('click', function(e) {
+            e.preventDefault();
+            $('#register').hide();
+            $('#login').show();
         });
 
         $('#kaa-mall-register-form').on('submit', function(e) {

@@ -9,6 +9,71 @@
             $('.sidebar-overlay').addClass('open');
         });
 
+        // Profile popup toggle
+        $('#profile-icon').on('click', function(e) {
+            e.stopPropagation();
+            $('.profile-popup').toggleClass('open');
+        });
+
+        $('.close-popup-btn').on('click', function() {
+            $('.profile-popup').removeClass('open');
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.profile-popup').length && !$(e.target).is('#profile-icon')) {
+                $('.profile-popup').removeClass('open');
+            }
+        });
+
+        // Dark mode toggle
+        $('.dark-mode-toggle').on('click', function() {
+            $('body').toggleClass('dark-mode');
+            if ($('body').hasClass('dark-mode')) {
+                localStorage.setItem('darkMode', 'enabled');
+            } else {
+                localStorage.setItem('darkMode', 'disabled');
+            }
+        });
+
+        // Check for saved dark mode preference
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            $('body').addClass('dark-mode');
+        }
+
+        // Top-up functionality
+        $('.top-up-btn').on('click', function() {
+            var amount = prompt("Enter amount to top up:");
+            if (amount) {
+                var handler = PaystackPop.setup({
+                    key: kaa_mall_params.paystack_public_key,
+                    email: kaa_mall_params.user_email,
+                    amount: amount * 100,
+                    currency: kaa_mall_params.currency,
+                    ref: ''+Math.floor((Math.random() * 1000000000) + 1),
+                    callback: function(response) {
+                        var data = {
+                            'action': 'kaa_mall_verify_paystack_transaction',
+                            'reference': response.reference,
+                            'amount': amount,
+                            'nonce': kaa_mall_params.nonce
+                        };
+                        $.post(kaa_mall_params.ajax_url, data, function(res) {
+                            if (res.success) {
+                                alert('Top-up successful!');
+                                updateWalletBalance();
+                            } else {
+                                alert('An error occurred: ' + res.data.message);
+                            }
+                        });
+                    },
+                    onClose: function() {
+                        alert('Transaction was not completed, window closed.');
+                    }
+                });
+                handler.openIframe();
+            }
+        });
+
         $('.close-sidebar-btn, .sidebar-overlay').on('click', function() {
             $('.kaa-mall-sidebar').removeClass('open');
             $('.sidebar-overlay').removeClass('open');

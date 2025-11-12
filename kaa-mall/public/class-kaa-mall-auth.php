@@ -57,34 +57,33 @@ class Kaa_Mall_Auth {
                 <div class="kaa-mall-dynamic-content-wrapper">
                     <div class="auth-header" style="text-align: center; margin-bottom: 20px;">
                          <h2 class="brand-title" style="text-align: center; margin-bottom: 10px;">Kaadatahub</h2>
-                        <p>Welcome! Please sign in or register to continue.</p>
-                    </div>
-
-                    <div class="auth-tabs" style="display: flex; background-color: #f0f2f5; border-radius: 8px; padding: 5px; margin-bottom: 20px;">
-                        <button class="tab-link active" data-tab="login" style="flex: 1; padding: 10px; border: none; background-color: #fff; border-radius: 6px; cursor: pointer; font-weight: 600; color: #8a2be2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Sign In</button>
-                        <button class="tab-link" data-tab="register" style="flex: 1; padding: 10px; border: none; background: none; border-radius: 6px; cursor: pointer; font-weight: 500; color: #555;">Sign Up</button>
+                        <p>Welcome back! Please enter your detail</p>
                     </div>
 
                     <div id="login" class="auth-tab-content active">
                         <form id="kaa-mall-login-form" class="kaa-mall-form" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>" method="post">
                             <div class="form-group">
-                                <label for="user_login">Email or Username</label>
-                                <input type="text" name="log" id="user_login" required>
+                                <label for="user_login" style="display: none;">Email</label>
+                                <input type="text" name="log" id="user_login" required placeholder="kevinadfrifiye2@gmail.com" style="background-color: #ffffcc;">
                             </div>
                             <div class="form-group">
-                                <label for="user_pass">Password</label>
-                                <input type="password" name="pwd" id="user_pass" required>
+                                <label for="user_pass" style="display: none;">Password</label>
+                                <div style="position: relative;">
+                                    <input type="password" name="pwd" id="user_pass" required placeholder=".........." style="background-color: #ffffcc; padding-right: 40px;">
+                                    <i class="fas fa-eye" id="togglePassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer;"></i>
+                                </div>
                             </div>
                              <div class="form-options" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 14px;">
                                 <div class="remember-me">
                                     <input type="checkbox" name="rememberme" id="rememberme" value="forever">
                                     <label for="rememberme" style="font-weight: normal; margin-left: 5px;">Remember me</label>
                                 </div>
-                                <a href="<?php echo esc_url( wp_lostpassword_url() ); ?>" style="color: #8a2be2; text-decoration: none;">Forgot password?</a>
+                                <a href="<?php echo esc_url( wp_lostpassword_url() ); ?>" style="color: #007bff; text-decoration: none;">Forgot Password?</a>
                             </div>
                             <input type="hidden" name="redirect_to" value="<?php echo esc_url( get_option('kaa_mall_user_portal_url') ); ?>">
-                            <button type="submit" class="kaa-mall-btn">Sign In</button>
+                            <button type="submit" class="kaa-mall-btn" style="background-color: #007bff; border-color: #007bff;">Login</button>
                         </form>
+                        <p style="text-align: center; margin-top: 20px;">Don't have an account? <a href="#" id="show-register" style="color: #007bff; text-decoration: none;">Sign Up</a></p>
                     </div>
 
                     <div id="register" class="auth-tab-content" style="display: none;">
@@ -102,6 +101,7 @@ class Kaa_Mall_Auth {
                                 <input type="password" name="password" id="reg_password" required>
                             </div>
                             <button type="submit" class="kaa-mall-btn">Sign Up</button>
+                            <p style="text-align: center; margin-top: 20px;">Already have an account? <a href="#" id="show-login" style="color: #007bff; text-decoration: none;">Login</a></p>
                         </form>
                     </div>
                 </div>

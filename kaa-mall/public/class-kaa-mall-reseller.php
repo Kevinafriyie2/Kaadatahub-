@@ -594,8 +594,25 @@ class Kaa_Mall_Reseller {
                         <span>Hello, <?php echo esc_html( $current_user->display_name ); ?></span>
                     </div>
                     <div class="header-icons">
+                        <div class="dark-mode-toggle">
+                            <i class="fas fa-sun"></i>
+                            <i class="fas fa-moon"></i>
+                        </div>
                         <i class="fas fa-bell"></i>
-                        <i class="fas fa-user"></i>
+                        <i class="fas fa-user" id="profile-icon"></i>
+                    </div>
+                     <div class="profile-popup">
+                        <div class="profile-header">
+                            <span class="profile-name"><?php echo esc_html( $current_user->display_name ); ?></span>
+                            <span class="profile-role">Reseller</span>
+                            <button class="close-popup-btn">&times;</button>
+                        </div>
+                        <ul class="profile-menu">
+                            <li><a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>"><i class="fas fa-user-circle"></i> My Profile</a></li>
+                            <li><a href="#"><i class="fas fa-question-circle"></i> Support</a></li>
+                            <li><a href="#"><i class="fas fa-cog"></i> Setting</a></li>
+                            <li><a href="<?php echo esc_url( wp_logout_url( get_permalink() ) ); ?>"><i class="fas fa-sign-out-alt"></i> Log Out</a></li>
+                        </ul>
                     </div>
                 </div>
 

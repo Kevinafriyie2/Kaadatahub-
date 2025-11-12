@@ -454,3 +454,155 @@ body {
     font-weight: 600;
     font-size: 14px;
 }
+
+/* Profile Popup */
+.profile-popup {
+    display: none;
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    width: 280px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+    z-index: 1001;
+    overflow: hidden;
+}
+
+.profile-popup.open {
+    display: block;
+}
+
+.profile-header {
+    background-color: #f0f2f5;
+    padding: 15px;
+    position: relative;
+}
+
+.profile-header .profile-name {
+    display: block;
+    font-weight: 600;
+    color: #333;
+}
+
+.profile-header .profile-role {
+    font-size: 14px;
+    color: #888;
+}
+
+.profile-header .close-popup-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.profile-menu {
+    list-style: none;
+    padding: 10px;
+    margin: 0;
+}
+
+.profile-menu li a {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-radius: 8px;
+    color: #555;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.profile-menu li a:hover {
+    background-color: #f0f2f5;
+}
+
+.profile-menu li a i {
+    margin-right: 15px;
+}
+
+/* Dark Mode Toggle */
+.dark-mode-toggle {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    background-color: #f0f2f5;
+    border-radius: 20px;
+    padding: 5px;
+    margin-right: 15px;
+}
+
+.dark-mode-toggle i {
+    font-size: 14px;
+    padding: 5px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.dark-mode-toggle .fa-sun {
+    background-color: #fff;
+    color: #8a2be2;
+}
+
+.dark-mode-toggle .fa-moon {
+    color: #555;
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+.dark-mode .kaa-mall-sidebar,
+.dark-mode .kaa-mall-main-content,
+.dark-mode .sales-performance-card,
+.dark-mode .recent-transactions-card,
+.dark-mode .kaa-mall-dynamic-content-wrapper,
+.dark-mode .profile-popup {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+.dark-mode .brand-title,
+.dark-mode .sidebar-nav li a,
+.dark-mode .header-user-info,
+.dark-mode .header-icons i,
+.dark-mode .sales-performance-card h3,
+.dark-mode .recent-transactions-card h3,
+.dark-mode .kaa-mall-dynamic-content-wrapper h3,
+.dark-mode .profile-header .profile-name,
+.dark-mode .profile-menu li a {
+    color: #e0e0e0;
+}
+
+.dark-mode .sidebar-nav li a:hover,
+.dark-mode .sidebar-nav li a.active {
+    background-color: #8a2be2;
+    color: #ffffff;
+}
+
+.dark-mode .balance-card {
+    background-color: #2a0a4a;
+}
+
+.dark-mode .action-icons {
+    background-color: #1e1e1e;
+}
+
+.dark-mode .dark-mode-toggle {
+    background-color: #2a0a4a;
+}
+
+.dark-mode .dark-mode-toggle .fa-sun {
+    background-color: transparent;
+    color: #fff;
+}
+
+.dark-mode .dark-mode-toggle .fa-moon {
+    background-color: #fff;
+    color: #8a2be2;
+}
