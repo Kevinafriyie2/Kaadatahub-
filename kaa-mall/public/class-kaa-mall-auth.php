@@ -11,7 +11,8 @@ class Kaa_Mall_Auth {
     public function enqueue_scripts() {
         if ( is_page() || is_single() ) {
             global $post;
-            if ( has_shortcode( $post->post_content, 'kaa_auth_portal' ) ) {
+            if ( is_a($post, 'WP_Post') && has_shortcode( $post->post_content, 'kaa_auth_portal' ) ) {
+                wp_enqueue_style( 'kaa-mall-portal-redesign', plugin_dir_url( __FILE__ ) . 'css/kaa-mall-portal-redesign.css', array(), '1.0.0' );
                 $js_file_url = plugin_dir_url( __FILE__ ) . 'js/kaa-mall-auth.js';
                 $js_version = filemtime( plugin_dir_path( __FILE__ ) . 'js/kaa-mall-auth.js' );
                 wp_enqueue_script( 'kaa-mall-auth', $js_file_url, array( 'jquery' ), $js_version, true );
@@ -51,237 +52,59 @@ class Kaa_Mall_Auth {
 
         ob_start();
         ?>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-
-            .kaa-auth-portal {
-                font-family: 'Poppins', sans-serif;
-                max-width: 420px;
-                margin: 50px auto;
-                padding: 40px;
-                background-color: #ffffff;
-                border-radius: 24px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-                color: #555;
-            }
-
-            .auth-header {
-                text-align: center;
-                margin-bottom: 30px;
-            }
-
-            .auth-header .icon {
-                font-size: 48px;
-                color: #6a5af9;
-                margin-bottom: 15px;
-            }
-
-            .auth-header h1 {
-                font-size: 28px;
-                font-weight: 700;
-                color: #333;
-                margin: 0;
-            }
-
-            .auth-header p {
-                color: #888;
-                margin-top: 5px;
-            }
-
-            .auth-info-box {
-                background-color: #eef2ff;
-                border-left: 4px solid #6a5af9;
-                padding: 15px;
-                margin-bottom: 30px;
-                border-radius: 8px;
-                font-size: 14px;
-            }
-             .auth-info-box .new-badge {
-                background-color: #6a5af9;
-                color: white;
-                font-size: 10px;
-                padding: 2px 6px;
-                border-radius: 4px;
-                margin-left: 5px;
-                font-weight: 600;
-            }
-
-            .auth-tabs {
-                display: flex;
-                background-color: #f4f4f7;
-                border-radius: 12px;
-                padding: 5px;
-                margin-bottom: 30px;
-            }
-
-            .auth-tabs .tab-link {
-                flex: 1;
-                background: none;
-                border: none;
-                color: #555;
-                cursor: pointer;
-                padding: 12px;
-                font-size: 16px;
-                font-weight: 600;
-                border-radius: 8px;
-                transition: all 0.3s ease;
-            }
-
-            .auth-tabs .tab-link.active {
-                background-color: #ffffff;
-                color: #6a5af9;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            }
-
-            .auth-tab-content {
-                display: none;
-            }
-
-            .auth-tab-content.active {
-                display: block;
-            }
-
-            .form-group {
-                position: relative;
-                margin-bottom: 20px;
-            }
-
-            .form-group .form-icon {
-                position: absolute;
-                top: 50%;
-                left: 15px;
-                transform: translateY(-50%);
-                color: #aaa;
-            }
-
-            .form-group input[type="text"],
-            .form-group input[type="email"],
-            .form-group input[type="password"] {
-                width: 100%;
-                padding: 14px 14px 14px 45px;
-                border: 1px solid #ddd;
-                border-radius: 12px;
-                background-color: #f9f9f9;
-                color: #333;
-                font-size: 15px;
-                transition: border-color 0.2s ease, box-shadow 0.2s ease;
-                box-sizing: border-box;
-            }
-
-            .form-group input:focus {
-                outline: none;
-                border-color: #6a5af9;
-                box-shadow: 0 0 0 3px rgba(106, 90, 249, 0.2);
-            }
-
-            .form-group .password-toggle {
-                position: absolute;
-                top: 50%;
-                right: 15px;
-                transform: translateY(-50%);
-                color: #aaa;
-                cursor: pointer;
-            }
-
-            .form-options {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 30px;
-                font-size: 14px;
-            }
-
-            .form-options .remember-me {
-                display: flex;
-                align-items: center;
-            }
-
-            .form-options .remember-me input {
-                margin-right: 8px;
-            }
-
-            .form-options a {
-                color: #6a5af9;
-                text-decoration: none;
-                font-weight: 500;
-            }
-
-            .form-submit-button {
-                width: 100%;
-                padding: 15px;
-                border: none;
-                border-radius: 12px;
-                background: linear-gradient(to right, #6a5af9, #8a7dfc);
-                color: #ffffff;
-                font-weight: 600;
-                cursor: pointer;
-                font-size: 16px;
-                transition: all 0.3s ease;
-                box-shadow: 0 5px 15px rgba(106, 90, 249, 0.3);
-            }
-            .form-submit-button:hover {
-                 transform: translateY(-2px);
-                 box-shadow: 0 8px 20px rgba(106, 90, 249, 0.4);
-            }
-        </style>
-        <div class="kaa-auth-portal">
-            <div class="auth-header">
-                <div class="icon"><i class="fas fa-user-circle"></i></div>
-                <h1>WELCOME TO KAA MALL</h1>
-                <p>Your shopping destination in Ghana</p>
-            </div>
-
-            <div class="auth-info-box">
-                <span><i class="fas fa-info-circle"></i> <strong>Sign in</strong> if you have an account.</span><br>
-                <span><strong>Sign up</strong> if you're new. <span class="new-badge">NEW</span></span>
-            </div>
-
-            <div class="auth-tabs">
-                <button class="tab-link active" data-tab="login">Sign In</button>
-                <button class="tab-link" data-tab="register">Sign Up</button>
-            </div>
-
-            <div id="login" class="auth-tab-content active">
-                <form id="kaa-mall-login-form" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>" method="post">
-                    <div class="form-group">
-                        <i class="fas fa-envelope form-icon"></i>
-                        <input type="text" name="log" id="user_login" placeholder="Email or Username" required>
+         <div class="kaa-mall-portal-body" style="height: auto; display: flex; justify-content: center; align-items: center; padding: 40px 0; background-color: #f7f8fc;">
+            <div class="kaa-mall-main-content" style="width: 100%; max-width: 450px;">
+                <div class="kaa-mall-dynamic-content-wrapper">
+                    <div class="auth-header" style="text-align: center; margin-bottom: 20px;">
+                         <h2 class="brand-title" style="text-align: center; margin-bottom: 10px;">Kaadatahub</h2>
+                        <p>Welcome back! Please enter your detail</p>
                     </div>
-                    <div class="form-group">
-                        <i class="fas fa-lock form-icon"></i>
-                        <input type="password" name="pwd" id="user_pass" placeholder="Password" required>
-                        <i class="fas fa-eye password-toggle"></i>
-                    </div>
-                    <div class="form-options">
-                        <div class="remember-me">
-                            <input type="checkbox" name="rememberme" id="rememberme" value="forever">
-                            <label for="rememberme">Remember me</label>
-                        </div>
-                        <a href="<?php echo esc_url( wp_lostpassword_url() ); ?>">Forgot password?</a>
-                    </div>
-                    <input type="hidden" name="redirect_to" value="<?php echo esc_url( get_option('kaa_mall_user_portal_url') ); ?>">
-                    <button type="submit" class="form-submit-button">Sign In &rarr;</button>
-                </form>
-            </div>
 
-            <div id="register" class="auth-tab-content">
-                <form id="kaa-mall-register-form">
-                    <div class="form-group">
-                        <i class="fas fa-user form-icon"></i>
-                        <input type="text" name="username" id="reg_username" placeholder="Username" required>
+                    <div id="login" class="auth-tab-content active">
+                        <form id="kaa-mall-login-form" class="kaa-mall-form" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>" method="post">
+                            <div class="form-group">
+                                <label for="user_login" style="display: none;">Email</label>
+                                <input type="text" name="log" id="user_login" required placeholder="Email Address">
+                            </div>
+                            <div class="form-group">
+                                <label for="user_pass" style="display: none;">Password</label>
+                                <div style="position: relative;">
+                                    <input type="password" name="pwd" id="user_pass" required placeholder="Password">
+                                    <i class="fas fa-eye" id="togglePassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer;"></i>
+                                </div>
+                            </div>
+                             <div class="form-options" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 14px;">
+                                <div class="remember-me">
+                                    <input type="checkbox" name="rememberme" id="rememberme" value="forever">
+                                    <label for="rememberme" style="font-weight: normal; margin-left: 5px;">Remember me</label>
+                                </div>
+                                <a href="<?php echo esc_url( wp_lostpassword_url() ); ?>" style="color: #007bff; text-decoration: none;">Forgot Password?</a>
+                            </div>
+                            <input type="hidden" name="redirect_to" value="<?php echo esc_url( get_option('kaa_mall_user_portal_url') ); ?>">
+                            <button type="submit" class="kaa-mall-btn" style="background-color: #007bff; border-color: #007bff;">Login</button>
+                        </form>
+                        <p style="text-align: center; margin-top: 20px;">Don't have an account? <a href="#" id="show-register" style="color: #007bff; text-decoration: none;">Sign Up</a></p>
                     </div>
-                    <div class="form-group">
-                        <i class="fas fa-envelope form-icon"></i>
-                        <input type="email" name="email" id="reg_email" placeholder="Email" required>
+
+                    <div id="register" class="auth-tab-content" style="display: none;">
+                        <form id="kaa-mall-register-form" class="kaa-mall-form">
+                            <div class="form-group">
+                                 <label for="reg_username">Username</label>
+                                <input type="text" name="username" id="reg_username" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="reg_email">Email</label>
+                                <input type="email" name="email" id="reg_email" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="reg_password">Password</label>
+                                <input type="password" name="password" id="reg_password" required>
+                            </div>
+                            <button type="submit" class="kaa-mall-btn">Sign Up</button>
+                            <p style="text-align: center; margin-top: 20px;">Already have an account? <a href="#" id="show-login" style="color: #007bff; text-decoration: none;">Login</a></p>
+                        </form>
                     </div>
-                    <div class="form-group">
-                        <i class="fas fa-lock form-icon"></i>
-                        <input type="password" name="password" id="reg_password" placeholder="Password" required>
-                         <i class="fas fa-eye password-toggle"></i>
-                    </div>
-                    <button type="submit" class="form-submit-button">Sign Up</button>
-                </form>
+                </div>
             </div>
         </div>
         <?php

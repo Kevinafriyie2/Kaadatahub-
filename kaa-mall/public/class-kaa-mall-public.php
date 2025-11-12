@@ -26,7 +26,174 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_kaa_mall_download_history', array( $this, 'download_history' ) );
         add_action( 'wp_ajax_kaa_mall_apply_coupon', array( $this, 'apply_coupon' ) );
         add_action( 'wp_ajax_nopriv_kaa_mall_apply_coupon', array( $this, 'apply_coupon' ) );
+
+        // Hooks for dynamic content loading
+        add_action( 'wp_ajax_kaa_mall_get_data_bundle_form', array( $this, 'ajax_get_data_bundle_form' ) );
+        add_action( 'wp_ajax_kaa_mall_get_afa_registration_form', array( $this, 'ajax_get_afa_registration_form' ) );
+        add_action( 'wp_ajax_kaa_mall_get_wallet_view', array( $this, 'ajax_get_wallet_view' ) );
+        add_action( 'wp_ajax_kaa_mall_get_referral_view', array( $this, 'ajax_get_referral_view' ) );
+
+        add_action( 'init', array( $this, 'init_session' ) );
     }
+
+    public function ajax_get_referral_view() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        echo $this->render_referral_view();
+        wp_die();
+    }
+
+    // AJAX handlers for dynamic content
+    public function ajax_get_data_bundle_form() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        $network = sanitize_text_field($_POST['network']);
+        echo $this->render_data_bundle_form($network);
+        wp_die();
+    }
+
+    public function ajax_get_afa_registration_form() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        echo $this->render_afa_registration_form();
+        wp_die();
+    }
+
+    public function ajax_get_wallet_view() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        echo $this->render_wallet_view();
+        wp_die();
+    }
+
+
+    public function render_data_bundle_form( $network ) {
+        ob_start();
+        $network_name = ucfirst($network);
+        if ($network === 'vodafone') {
+            $network_name = 'Telecel';
+        }
+        ?>
+        <div class="kaa-mall-dynamic-content-wrapper">
+            <h3>Buy <?php echo esc_html($network_name); ?> Bundle</h3>
+            <form id="kaa-mall-bundle-purchase-form" class="kaa-mall-form" data-network="<?php echo esc_attr($network); ?>">
+                <div class="form-group">
+                    <label for="bundle-options">Select Bundle</label>
+                    <select id="bundle-options" name="bundle" required>
+                        <option value="">Loading bundles...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="phone-number">Phone Number</label>
+                    <input type="tel" id="phone-number" name="phone_number" required>
+                </div>
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <div class="payment-method-options">
+                        <label><input type="radio" name="payment_method" value="wallet" checked> Wallet</label>
+                        <label><input type="radio" name="payment_method" value="paystack"> Pay with MTN Momo</label>
+                    </div>
+                </div>
+                 <?php if ( ! is_user_logged_in() ): ?>
+                <div class="form-group" id="guest-email-field" style="display: none;">
+                    <label for="guest-email">Email</label>
+                    <input type="email" id="guest-email" name="email">
+                </div>
+                <?php endif; ?>
+                <div class="price-breakdown"></div>
+                <div class="form-group">
+                    <button type="submit" class="kaa-mall-btn">Purchase</button>
+                </div>
+            </form>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    public function render_afa_registration_form() {
+        ob_start();
+        ?>
+        <div class="kaa-mall-dynamic-content-wrapper">
+             <h3>AFA Registration</h3>
+             <form id="kaa-mall-afa-registration-form" class="kaa-mall-form">
+                <div class="form-group">
+                    <label for="afa-full-name">Full Name</label>
+                    <input type="text" id="afa-full-name" name="full_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="afa-phone-number">Phone Number</label>
+                    <input type="tel" id="afa-phone-number" name="phone_number" required>
+                </div>
+                 <div class="form-group">
+                    <label for="afa-location">Location</label>
+                    <input type="text" id="afa-location" name="location" required>
+                </div>
+                <div class="form-group">
+                    <label for="afa-ghana-card">Ghana Card Number</label>
+                    <input type="text" id="afa-ghana-card" name="ghana_card" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="kaa-mall-btn">Register</button>
+                </div>
+             </form>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    public function render_wallet_view() {
+        ob_start();
+        ?>
+        <div class="kaa-mall-dynamic-content-wrapper">
+            <h3>Wallet</h3>
+            <div class="balance-card">
+                 <div class="balance-info">
+                    <p>My Balance</p>
+                    <h2 class="balance-amount">GH₵ ...</h2>
+                </div>
+                <div class="balance-actions">
+                    <button class="hide-balance-btn">Hide</button>
+                    <button class="top-up-btn">Top Up</button>
+                </div>
+            </div>
+             <div class="recent-transactions-card">
+                <h3>Recent Wallet Transactions</h3>
+                <ul class="transactions-list" id="wallet-transactions-list">
+                    <!-- Transactions will be loaded here by JS -->
+                </ul>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    private function get_referral_link() {
+        if ( ! is_user_logged_in() ) {
+            return '';
+        }
+        $user_id = get_current_user_id();
+        $shop_name = get_user_meta( $user_id, '_kaa_mall_shop_name', true );
+        if ( $shop_name ) {
+            return home_url( '/?ref_shop=' . $shop_name );
+        }
+        return home_url( '/?ref=' . $user_id );
+    }
+
+    public function render_referral_view() {
+        ob_start();
+        $referral_link = $this->get_referral_link();
+        ?>
+        <div class="kaa-mall-dynamic-content-wrapper">
+            <h3>Refer a Friend</h3>
+            <p>Share your unique link to earn rewards when your friends make a purchase.</p>
+            <div class="form-group">
+                <label for="referral-link">Your Referral Link</label>
+                <input type="text" id="referral-link" value="<?php echo esc_url($referral_link); ?>" readonly>
+            </div>
+             <div class="form-group">
+                <button class="kaa-mall-btn" onclick="navigator.clipboard.writeText('<?php echo esc_url($referral_link); ?>')">Copy Link</button>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
 
     public function apply_coupon() {
         check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
@@ -65,7 +232,11 @@ class Kaa_Mall_Public {
     }
 
     public function init_session() {
-        if ( class_exists('WooCommerce') && ! is_admin() && ! defined( 'DOING_AJAX' ) ) {
+        if ( function_exists('WC') && class_exists('WC_Session_Handler') ) {
+            if ( is_null( WC()->session ) ) {
+                WC()->session = new WC_Session_Handler();
+                WC()->session->init();
+            }
             if ( WC()->session && ! WC()->session->has_session() ) {
                 WC()->session->set_customer_session_cookie( true );
             }
@@ -84,6 +255,7 @@ class Kaa_Mall_Public {
 
         wp_enqueue_script( 'paystack-inline', 'https://js.paystack.co/v1/inline.js', array(), $this->version, false );
         wp_enqueue_script( 'kaa-mall-public', $js_file_url, array( 'jquery', 'paystack-inline' ), $js_version, false );
+        wp_enqueue_style( 'kaa-mall-portal-redesign', plugin_dir_url( __FILE__ ) . 'css/kaa-mall-portal-redesign.css', array(), $this->version );
 
         $user = wp_get_current_user();
         $params = array(
@@ -232,6 +404,12 @@ class Kaa_Mall_Public {
             return;
         }
 
+        $product = $this->get_product_by_name( 'Data Bundle' );
+        if ( ! $product ) {
+            wp_send_json_error( array( 'message' => 'Data bundle product not found. Please contact support.' ) );
+            return;
+        }
+
         $network = sanitize_text_field( $_POST['network'] );
         $bundle = sanitize_text_field( $_POST['bundle'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
@@ -289,10 +467,8 @@ class Kaa_Mall_Public {
             Kaa_Mall_Wallet::update_balance_and_log( $user_id, -$fee, 'fee', "Service fee for {$bundle}" );
         }
 
-        $product = $this->get_product_by_name( 'Data Bundle' );
-        if ( $product ) {
-            $order = wc_create_order();
-            $order->set_customer_id( $user_id );
+        $order = wc_create_order();
+        $order->set_customer_id( $user_id );
             $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
             $order->set_total( $final_price );
             $order->set_status( 'processing' );
@@ -345,6 +521,12 @@ class Kaa_Mall_Public {
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
         $reference = sanitize_text_field( $_POST['reference'] );
         $email = is_user_logged_in() ? wp_get_current_user()->user_email : sanitize_email( $_POST['email'] );
+
+        $product = $this->get_product_by_name( 'Data Bundle' );
+        if ( ! $product ) {
+            wp_send_json_error( array( 'message' => 'Data bundle product not found. Please contact support.' ) );
+            return;
+        }
 
         if ( ! is_user_logged_in() && ! is_email( $email ) ) {
             wp_send_json_error( array( 'message' => 'A valid email is required for guest checkout.' ) );
@@ -417,11 +599,9 @@ class Kaa_Mall_Public {
                 Kaa_Mall_Wallet::update_balance_and_log( $user_id, -$fee, 'fee', "Paystack service fee for {$bundle}" );
             }
 
-            $product = $this->get_product_by_name( 'Data Bundle' );
-            if ( $product ) {
-                $order = wc_create_order();
+            $order = wc_create_order();
 
-                if ( $user_id ) {
+            if ( $user_id ) {
                     $order->set_customer_id( $user_id );
                 } else {
                     $order->set_billing_email( $email );
@@ -655,102 +835,131 @@ class Kaa_Mall_Public {
         }
 
         ob_start();
-
-        echo Kaa_Mall_Portal_Header::render();
+        $current_user = wp_get_current_user();
+        $history_page_url = get_permalink( get_page_by_path( 'history' ) );
         ?>
-        <style>
-            :root {
-                --primary-color: #ffc107;
-                --secondary-color: #8a2be2;
-                --text-color: #ffffff;
-                --heading-color: #ffffff;
-                --border-color: rgba(255, 255, 255, 0.2);
-                --shadow-color: rgba(0, 0, 0, 0.5);
-            }
+        <div class="kaa-mall-portal-body">
+             <!-- Sidebar -->
+            <div class="kaa-mall-sidebar">
+                <div class="sidebar-header">
+                    <h2 class="brand-title">Kaadatahub</h2>
+                    <button class="close-sidebar-btn">&times;</button>
+                </div>
+                <ul class="sidebar-nav">
+                    <li class="nav-section-title">Services</li>
+                    <li><a href="https://kaadatahub.shop/users-portal-new/"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li><a href="#" class="nav-link" data-network="mtn"><i class="fas fa-mobile-alt"></i> MTN</a></li>
+                    <li><a href="#" class="nav-link" data-network="airteltigo"><i class="fas fa-mobile-alt"></i> Airteltigo</a></li>
+                    <li><a href="#" class="nav-link" data-network="vodafone"><i class="fas fa-mobile-alt"></i> Telecel</a></li>
+                    <li><a href="#" class="nav-link" data-afa="true"><i class="fas fa-user-plus"></i> AFA Registration</a></li>
 
+                    <li class="nav-section-title">Credits & Debits</li>
+                    <li><a href="#" class="nav-link" data-wallet="true"><i class="fas fa-wallet"></i> Wallet</a></li>
 
-            .kaa-mall-portal {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                color: var(--text-color);
-                padding: 100px 20px 20px;
-                padding-top: 80px;
-                width: 100%;
-                box-sizing: border-box;
-                position: relative;
-                z-index: 1;
-                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            }
-
-            .kaa-mall-card {
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 16px;
-                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                border: 1px solid var(--border-color);
-                padding: 20px;
-                margin-bottom: 20px;
-            }
-
-            .purchase-history, .wallet-transactions {
-                overflow-x: auto;
-            }
-
-            .purchase-history table, .wallet-transactions table {
-                width: 100%;
-                border-collapse: collapse;
-                min-width: 600px;
-            }
-
-            .purchase-history th, .purchase-history td,
-            .wallet-transactions th, .wallet-transactions td {
-                padding: 10px;
-                text-align: left;
-                border-bottom: 1px solid var(--border-color);
-            }
-
-            .purchase-history th, .wallet-transactions th {
-                font-weight: bold;
-            }
-        </style>
-        <div class="kaa-mall-portal">
-            <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="color: white;">History</h2>
-                <button id="download-history-btn" style="background-color: var(--primary-color); color: #121212; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">Download History</button>
+                    <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
+                    <li class="nav-section-title">Business</li>
+                    <li><a href="https://kaadatahub.shop/resellers-portal/"><i class="fas fa-store"></i> Reseller</a></li>
+                    <?php else: ?>
+                    <li class="nav-section-title">Business</li>
+                    <li><a href="https://kaadatahub.shop/apply-as-a-reseller/"><i class="fas fa-store"></i> Apply as a Reseller</a></li>
+                    <?php endif; ?>
+                </ul>
             </div>
-            <div id="history">
-                <div class="kaa-mall-card purchase-history">
+            <div class="sidebar-overlay"></div>
+
+            <div class="kaa-mall-main-content">
+                 <div class="main-header">
+                    <button class="open-sidebar-btn"><i class="fas fa-bars"></i></button>
+                    <div class="header-user-info">
+                        <span>Hello, <?php echo esc_html( $current_user->display_name ); ?></span>
+                    </div>
+                    <div class="header-icons">
+                        <div class="dark-mode-toggle">
+                            <i class="fas fa-sun"></i>
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <i class="fas fa-bell"></i>
+                        <i class="fas fa-user" id="profile-icon"></i>
+                    </div>
+                    <div class="profile-popup" style="display: none;">
+                        <div class="profile-header">
+                            <span class="profile-name"><?php echo esc_html( $current_user->display_name ); ?></span>
+                            <button class="close-popup-btn">&times;</button>
+                        </div>
+                        <ul class="profile-menu">
+                            <li><a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>"><i class="fas fa-user-circle"></i> My Profile</a></li>
+                            <li><a href="#"><i class="fas fa-question-circle"></i> Support</a></li>
+                            <li><a href="#"><i class="fas fa-cog"></i> Setting</a></li>
+                            <li><a href="<?php echo esc_url( wp_logout_url( get_permalink() ) ); ?>"><i class="fas fa-sign-out-alt"></i> Log Out</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>History</h2>
+                    <button id="download-history-btn" class="kaa-mall-btn" style="width: auto;">Download History</button>
+                </div>
+                 <div class="recent-transactions-card purchase-history">
                     <h3>Purchase History</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Date</th>
-                                <th>Bundle</th>
-                                <th>Phone</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Date</th>
+                                    <th>Bundle</th>
+                                    <th>Phone</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <div class="kaa-mall-card wallet-transactions">
+                <div class="recent-transactions-card wallet-transactions">
                     <h3>Wallet History</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Amount</th>
-                                <th>Details</th>
-                                <th>Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                     <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Details</th>
+                                    <th>Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
+            </div>
+             <!-- Bottom Navigation -->
+            <div class="bottom-nav">
+                <a href="https://kaadatahub.shop/users-portal-new/" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#" class="nav-item active">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </a>
+                <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
+                <a href="https://kaadatahub.shop/resellers-portal/" class="nav-item">
+                    <i class="fas fa-store"></i>
+                    <span>Reseller</span>
+                </a>
+                <?php else: ?>
+                <a href="https://kaadatahub.shop/apply-as-a-reseller/" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Apply as a Reseller</span>
+                </a>
+                <?php endif; ?>
+                <a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>" class="nav-item">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
             </div>
         </div>
         <?php
@@ -777,642 +986,168 @@ class Kaa_Mall_Public {
 
         ob_start();
 
-        if ( is_user_logged_in() ) {
-            echo Kaa_Mall_Portal_Header::render();
+        $current_user = wp_get_current_user();
+        $history_page_url = '';
+        $history_page = get_page_by_path( 'history' );
+        if ( $history_page ) {
+            $history_page_url = get_permalink( $history_page->ID );
         }
 
         ?>
-        <style>
-            :root {
-                --primary-color: #ffc107;
-                --secondary-color: #8a2be2;
-                --text-color: #ffffff;
-                --heading-color: #ffffff;
-                --border-color: rgba(255, 255, 255, 0.2);
-                --shadow-color: rgba(0, 0, 0, 0.5);
-            }
+        <div class="kaa-mall-portal-body">
+            <?php if ( is_user_logged_in() ): ?>
+            <!-- Sidebar -->
+            <div class="kaa-mall-sidebar">
+                <div class="sidebar-header">
+                    <h2 class="brand-title">Kaadatahub</h2>
+                    <button class="close-sidebar-btn">&times;</button>
+                </div>
+                <ul class="sidebar-nav">
+                    <li class="nav-section-title">Services</li>
+                    <li><a href="https://kaadatahub.shop/users-portal-new/"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li><a href="#" class="nav-link" data-network="mtn"><i class="fas fa-mobile-alt"></i> MTN</a></li>
+                    <li><a href="#" class="nav-link" data-network="airteltigo"><i class="fas fa-mobile-alt"></i> Airteltigo</a></li>
+                    <li><a href="#" class="nav-link" data-network="vodafone"><i class="fas fa-mobile-alt"></i> Telecel</a></li>
+                    <li><a href="#" class="nav-link" data-afa="true"><i class="fas fa-user-plus"></i> AFA Registration</a></li>
 
+                    <li class="nav-section-title">Credits & Debits</li>
+                    <li><a href="#" class="nav-link" data-wallet="true"><i class="fas fa-wallet"></i> Wallet</a></li>
 
-            .kaa-mall-portal {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                color: var(--text-color);
-                padding: 100px 20px 20px;
-                padding-top: 80px;
-                width: 100%;
-                position: relative;
-                z-index: 1;
-                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            }
-
-            .kaa-mall-header {
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 16px;
-                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                border: 1px solid var(--border-color);
-                color: white;
-                padding: 20px;
-                text-align: center;
-                margin-bottom: 20px;
-            }
-
-            .kaa-mall-header h1 {
-                margin: 0;
-                font-size: 1.8em;
-            }
-
-            .kaa-mall-header p {
-                margin: 5px 0 0;
-                font-size: 1em;
-            }
-
-            .kaa-mall-card {
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 16px;
-                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                border: 1px solid var(--border-color);
-                padding: 20px;
-                margin-bottom: 20px;
-            }
-
-            .wallet-balance {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .wallet-balance-details span {
-                display: block;
-                color: white;
-            }
-
-            .wallet-balance-details .balance-amount {
-                font-size: 2em;
-                font-weight: bold;
-            }
-
-            .top-up-wallet-btn {
-                background-color: rgba(255, 255, 255, 0.2);
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-
-            .top-up-wallet-btn:hover {
-                transform: scale(1.02);
-                opacity: 0.9;
-            }
-
-            .data-bundles .network-tabs {
-                display: flex;
-                justify-content: space-around;
-                margin-bottom: 20px;
-            }
-
-            .data-bundles .tab-link {
-                background: none;
-                border: none;
-                color: var(--text-color);
-                cursor: pointer;
-                padding: 10px;
-                font-size: 1em;
-                transition: all 0.3s ease;
-            }
-
-            .data-bundles .tab-link:hover {
-                color: var(--primary-color);
-                transform: translateY(-2px);
-            }
-
-            .data-bundles .tab-link.active {
-                border-bottom: 2px solid var(--primary-color);
-                color: var(--primary-color);
-            }
-
-            .network-tab-content {
-                display: none;
-            }
-
-            .network-tab-content.active {
-                display: block;
-            }
-
-            .bundle-form label {
-                display: block;
-                margin-bottom: 5px;
-            }
-
-            .bundle-form input,
-            .bundle-form select,
-            .bundle-form button {
-                width: 100%;
-                padding: 12px;
-                margin-bottom: 15px;
-                border: 1px solid var(--border-color);
-                border-radius: 8px;
-                background-color: rgba(0, 0, 0, 0.2);
-                color: var(--text-color);
-                font-size: 1em;
-                box-sizing: border-box;
-            }
-
-            .bundle-form button {
-                background-color: var(--primary-color);
-                color: #121212;
-                font-weight: bold;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-
-            .bundle-form button:hover {
-                transform: scale(1.02);
-                opacity: 0.9;
-            }
-
-            .payment-method-header {
-                display: flex;
-                align-items: center;
-                margin-bottom: 15px;
-            }
-            .payment-method-header img {
-                width: 24px;
-                height: 24px;
-                margin-right: 10px;
-            }
-            .payment-method-header span {
-                font-weight: bold;
-                color: var(--heading-color);
-            }
-            .payment-options {
-                display: flex;
-                flex-direction: column;
-                gap: 15px;
-            }
-            .payment-option {
-                display: flex;
-                align-items: center;
-                background-color: rgba(0, 0, 0, 0.2);
-                padding: 15px;
-                border-radius: 8px;
-                border: 1px solid var(--border-color);
-                cursor: pointer;
-                transition: border-color 0.2s ease;
-            }
-            .payment-option:hover {
-                border-color: var(--primary-color);
-            }
-            .payment-option input[type="radio"] {
-                display: none;
-            }
-            .payment-option .radio-custom {
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                border: 2px solid #555;
-                margin-right: 15px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                transition: border-color 0.2s ease;
-            }
-            .payment-option .radio-custom .radio-dot {
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                background-color: var(--primary-color);
-                transform: scale(0);
-                transition: transform 0.2s ease;
-            }
-            .payment-option input[type="radio"]:checked + .radio-custom {
-                border-color: var(--primary-color);
-            }
-            .payment-option input[type="radio"]:checked + .radio-custom .radio-dot {
-                transform: scale(1);
-            }
-            .payment-option label {
-                font-weight: 500;
-                color: var(--text-color);
-            }
-
-            .afa-registration {
-                /* The background is now handled by .kaa-mall-card */
-            }
-
-            .afa-registration h3,
-            .afa-registration p {
-                color: white;
-                text-align: center;
-            }
-
-            #kaa-mall-afa-form label {
-                display: block;
-                margin-bottom: 5px;
-                color: white;
-            }
-
-            #kaa-mall-afa-form input {
-                width: 100%;
-                padding: 12px;
-                margin-bottom: 15px;
-                border: none;
-                border-radius: 8px;
-                background-color: rgba(255, 255, 255, 0.2);
-                color: white;
-                font-size: 1em;
-                box-sizing: border-box;
-            }
-
-            #kaa-mall-afa-form button {
-                width: 100%;
-                padding: 12px;
-                border: none;
-                border-radius: 8px;
-                background-color: var(--primary-color);
-                color: #121212;
-                font-weight: bold;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-
-            #kaa-mall-afa-form button:hover {
-                transform: scale(1.02);
-                opacity: 0.9;
-            }
-
-            .registration-fee {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 15px;
-                color: white;
-            }
-
-            .purchase-history {
-                overflow-x: auto;
-            }
-
-            .purchase-history table {
-                width: 100%;
-                border-collapse: collapse;
-                min-width: 600px;
-            }
-
-            .purchase-history th,
-            .purchase-history td {
-                padding: 10px;
-                text-align: left;
-                border-bottom: 1px solid var(--border-color);
-            }
-
-            .purchase-history th {
-                font-weight: bold;
-            }
-
-            .recent-orders-list {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-            }
-            .recent-orders-list li {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 10px 0;
-                border-bottom: 1px solid var(--border-color);
-            }
-            .recent-orders-list li:last-child {
-                border-bottom: none;
-            }
-            .order-details {
-                flex-grow: 1;
-            }
-            .order-total {
-                margin: 0 15px;
-            }
-            .order-status {
-                padding: 3px 12px;
-                border-radius: 20px;
-                font-size: 0.8em;
-                font-weight: 500;
-                text-transform: capitalize;
-                min-width: 80px;
-                text-align: center;
-            }
-            .order-status.status-processing { background-color: #ffc107; color: #000; }
-            .order-status.status-completed { background-color: #28a745; color: #fff; }
-            .order-status.status-on-hold { background-color: #17a2b8; color: #fff; }
-            .order-status.status-failed { background-color: #dc3545; color: #fff; }
-            .order-status.status-cancelled { background-color: #6c757d; color: #fff; }
-            .order-status.status-refunded { background-color: #fd7e14; color: #fff; }
-            .order-status.status-pending { background-color: #6c757d; color: #fff; }
-
-            .need-help {
-                text-align: center;
-            }
-
-            .contact-admin-btn {
-                display: inline-block;
-                background-color: #25d366;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 8px;
-                text-decoration: none;
-                font-weight: bold;
-                transition: all 0.3s ease;
-            }
-
-            .contact-admin-btn:hover {
-                transform: scale(1.02);
-                opacity: 0.9;
-            }
-
-            @media screen and (max-width: 600px) {
-                .kaa-mall-portal {
-                    padding-left: 15px;
-                    padding-right: 15px;
-                }
-                .wallet-balance {
-                    flex-direction: column;
-                    gap: 15px;
-                    align-items: flex-start;
-                }
-                .data-bundles .network-tabs {
-                    gap: 10px;
-                }
-                .data-bundles .tab-link {
-                    padding: 8px;
-                    font-size: 0.9em;
-                }
-            }
-        </style>
-        <div class="kaa-mall-portal">
-            <div class="kaa-mall-header">
-                <h1>Data Bundle Store</h1>
-                <p>Instant Data Top-up for All Networks</p>
-            </div>
-
-            <div class="kaa-mall-card">
-                <h3>Broadcast Messages</h3>
-                <?php
-                $broadcasts = get_posts( array(
-                    'post_type' => 'kaa_mall_broadcast',
-                    'numberposts' => 5,
-                ) );
-                ?>
-                <ul>
-                    <?php if ( ! empty( $broadcasts ) ) : ?>
-                        <?php foreach ( $broadcasts as $broadcast ) : ?>
-                            <li>
-                                <strong><?php echo esc_html( $broadcast->post_title ); ?></strong> - <?php echo esc_html( $broadcast->post_content ); ?>
-                                <small>(<?php echo get_the_date( '', $broadcast ); ?>)</small>
-                            </li>
-                        <?php endforeach; ?>
-                    <?php else : ?>
-                        <li>No recent broadcasts.</li>
+                    <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
+                    <li class="nav-section-title">Business</li>
+                    <li><a href="https://kaadatahub.shop/resellers-portal/"><i class="fas fa-store"></i> Reseller</a></li>
+                    <?php else: ?>
+                    <li class="nav-section-title">Business</li>
+                    <li><a href="https://kaadatahub.shop/apply-as-a-reseller/"><i class="fas fa-store"></i> Apply as a Reseller</a></li>
                     <?php endif; ?>
                 </ul>
             </div>
-
-            <?php if ( is_user_logged_in() ) : ?>
-            <div class="kaa-mall-card wallet-balance">
-                <div class="wallet-balance-details">
-                    <span>Wallet Balance</span>
-                    <span class="balance-amount"></span>
-                </div>
-                <button class="top-up-wallet-btn">Top Up Wallet</button>
-            </div>
+            <div class="sidebar-overlay"></div>
             <?php endif; ?>
 
-            <div class="kaa-mall-card data-bundles">
-                <div class="network-tabs">
-                    <button class="tab-link active" data-network="mtn">MTN</button>
-                    <button class="tab-link" data-network="airteltigo">AirtelTigo</button>
-                    <button class="tab-link" data-network="vodafone">Vodafone</button>
-                </div>
-                <div id="mtn" class="network-tab-content active">
-                    <form class="bundle-form" data-network="mtn">
-                        <?php if ( ! is_user_logged_in() ) : ?>
-                            <label>Your Email</label>
-                            <input type="email" name="email" placeholder="Enter your email" required>
-                        <?php endif; ?>
-                        <label>MTN Phone Number</label>
-                        <input type="tel" name="phone_number" placeholder="0241234567" required>
-                        <label>Select Bundle</label>
-                        <select name="bundle" required></select>
-                        <div class="price-breakdown" style="padding: 10px 0;"></div>
-                        <?php if ( ! get_option( 'kaa_mall_disable_coupons' ) ) : ?>
-                        <label>Coupon Code</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" name="coupon_code" placeholder="Enter coupon code" style="margin-bottom: 0;">
-                            <button type="button" class="apply-coupon-btn" style="width: auto; padding: 10px 15px; margin-bottom: 0;">Apply</button>
-                        </div>
-                        <?php endif; ?>
-                        <div class="payment-method-header">
-                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
-                            <span>Payment Method</span>
-                        </div>
-                        <div class="payment-options">
-                            <?php if ( is_user_logged_in() ) : ?>
-                            <label class="payment-option">
-                                <input type="radio" name="payment_method" value="wallet" checked>
-                                <span class="radio-custom"><span class="radio-dot"></span></span>
-                                Wallet Balance
-                            </label>
-                            <?php endif; ?>
-                            <label class="payment-option">
-                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
-                                <span class="radio-custom"><span class="radio-dot"></span></span>
-                                Pay with MoMo
-                            </label>
-                        </div>
-                        <button type="submit">Buy MTN Bundle</button>
-                    </form>
-                </div>
-                <div id="airteltigo" class="network-tab-content">
-                    <form class="bundle-form" data-network="airteltigo">
-                        <?php if ( ! is_user_logged_in() ) : ?>
-                            <label>Your Email</label>
-                            <input type="email" name="email" placeholder="Enter your email" required>
-                        <?php endif; ?>
-                        <label>AirtelTigo Phone Number</label>
-                        <input type="tel" name="phone_number" placeholder="0241234567" required>
-                        <label>Select Bundle</label>
-                        <select name="bundle" required></select>
-                        <div class="price-breakdown" style="padding: 10px 0;"></div>
-                        <?php if ( ! get_option( 'kaa_mall_disable_coupons' ) ) : ?>
-                        <label>Coupon Code</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" name="coupon_code" placeholder="Enter coupon code" style="margin-bottom: 0;">
-                            <button type="button" class="apply-coupon-btn" style="width: auto; padding: 10px 15px; margin-bottom: 0;">Apply</button>
-                        </div>
-                        <?php endif; ?>
-                        <div class="payment-method-header">
-                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
-                            <span>Payment Method</span>
-                        </div>
-                        <div class="payment-options">
-                            <?php if ( is_user_logged_in() ) : ?>
-                            <label class="payment-option">
-                                <input type="radio" name="payment_method" value="wallet" checked>
-                                <span class="radio-custom"><span class="radio-dot"></span></span>
-                                Wallet Balance
-                            </label>
-                            <?php endif; ?>
-                            <label class="payment-option">
-                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
-                                <span class="radio-custom"><span class="radio-dot"></span></span>
-                                Pay with MoMo
-                            </label>
-                        </div>
-                        <button type="submit">Buy AirtelTigo Bundle</button>
-                    </form>
-                </div>
-                <div id="vodafone" class="network-tab-content">
-                    <form class="bundle-form" data-network="vodafone">
-                        <?php if ( ! is_user_logged_in() ) : ?>
-                            <label>Your Email</label>
-                            <input type="email" name="email" placeholder="Enter your email" required>
-                        <?php endif; ?>
-                        <label>Vodafone Phone Number</label>
-                        <input type="tel" name="phone_number" placeholder="0241234567" required>
-                        <label>Select Bundle</label>
-                        <select name="bundle" required></select>
-                        <div class="price-breakdown" style="padding: 10px 0;"></div>
-                        <?php if ( ! get_option( 'kaa_mall_disable_coupons' ) ) : ?>
-                        <label>Coupon Code</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" name="coupon_code" placeholder="Enter coupon code" style="margin-bottom: 0;">
-                            <button type="button" class="apply-coupon-btn" style="width: auto; padding: 10px 15px; margin-bottom: 0;">Apply</button>
-                        </div>
-                        <?php endif; ?>
-                        <div class="payment-method-header">
-                            <img src="<?php echo plugin_dir_url( __FILE__ ) . 'assets/credit-card.svg'; ?>" alt="">
-                            <span>Payment Method</span>
-                        </div>
-                        <div class="payment-options">
-                            <?php if ( is_user_logged_in() ) : ?>
-                            <label class="payment-option">
-                                <input type="radio" name="payment_method" value="wallet" checked>
-                                <span class="radio-custom"><span class="radio-dot"></span></span>
-                                Wallet Balance
-                            </label>
-                            <?php endif; ?>
-                            <label class="payment-option">
-                                <input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>>
-                                <span class="radio-custom"><span class="radio-dot"></span></span>
-                                Pay with MoMo
-                            </label>
-                        </div>
-                        <button type="submit">Buy Vodafone Bundle</button>
-                    </form>
-                </div>
-            </div>
-
-            <?php if ( (is_user_logged_in() || WC()->session->get( 'kaa_mall_reseller_id' )) && ! get_option( 'kaa_mall_afa_out_of_stock' ) ) : ?>
-            <div class="kaa-mall-card afa-registration">
-                <h3>AFA Bundle Registration</h3>
-                <p>Register for AFA bundles and get amazing benefits!</p>
-                <form id="kaa-mall-afa-form">
-                    <label>Full Name</label>
-                    <input type="text" name="full_name" placeholder="Enter your full name" required>
-                    <label>Phone Number</label>
-                    <input type="tel" name="phone_number" placeholder="Enter your phone number" required>
-                    <label>Location</label>
-                    <input type="text" name="location" placeholder="Enter your location" required>
-                    <label>ID Ghana Card Number</label>
-                    <input type="text" name="ghana_card" placeholder="GHA-XXXXXXXXX-X" required>
-                    <?php
-                    $afa_fee = floatval( get_option( 'kaa_mall_afa_registration_fee', '13' ) );
-                    $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-                    if ( $reseller_id ) {
-                        $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_afa', true );
-                        if ( ! empty( $reseller_prices ) && isset( $reseller_prices['registration'] ) ) {
-                            $afa_fee = $reseller_prices['registration'];
-                        }
-                    }
-                    ?>
-                    <div class="registration-fee">
-                        <span>Registration Fee</span>
-                        <span><?php echo wc_price( $afa_fee ); ?></span>
+            <!-- Main Content -->
+            <div class="kaa-mall-main-content">
+                 <div class="main-header">
+                    <?php if ( is_user_logged_in() ): ?>
+                    <button class="open-sidebar-btn"><i class="fas fa-bars"></i></button>
+                    <div class="header-user-info">
+                        <span>Hello, <?php echo esc_html( $current_user->display_name ); ?></span>
                     </div>
-                    <button type="submit">Register Now - <?php echo wc_price( $afa_fee ); ?></button>
-                </form>
+                    <div class="header-icons">
+                        <div class="dark-mode-toggle">
+                            <i class="fas fa-sun"></i>
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <i class="fas fa-bell"></i>
+                        <i class="fas fa-user" id="profile-icon"></i>
+                    </div>
+                    <div class="profile-popup" style="display: none;">
+                        <div class="profile-header">
+                            <span class="profile-name"><?php echo esc_html( $current_user->display_name ); ?></span>
+                            <button class="close-popup-btn">&times;</button>
+                        </div>
+                        <ul class="profile-menu">
+                            <li><a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>"><i class="fas fa-user-circle"></i> My Profile</a></li>
+                            <li><a href="#"><i class="fas fa-question-circle"></i> Support</a></li>
+                            <li><a href="#"><i class="fas fa-cog"></i> Setting</a></li>
+                            <li><a href="<?php echo esc_url( wp_logout_url( get_permalink() ) ); ?>"><i class="fas fa-sign-out-alt"></i> Log Out</a></li>
+                        </ul>
+                    </div>
+                    <?php else: ?>
+                        <h2 class="brand-title">Kaadatahub</h2>
+                    <?php endif; ?>
+                </div>
+
+                <div id="kaa-mall-main-view">
+                <?php if ( is_user_logged_in() ): ?>
+                    <div class="balance-card">
+                        <div class="balance-info">
+                            <p>My Balance</p>
+                            <h2 class="balance-amount">GH₵ 0.00</h2>
+                        </div>
+                        <div class="balance-actions">
+                            <button class="hide-balance-btn">Hide</button>
+                            <button class="top-up-btn">Top Up</button>
+                        </div>
+                    </div>
+
+                    <div class="action-icons">
+                         <div class="action-icon" data-action="buy-data">
+                            <div class="icon-wrapper" style="background-color: #e6f7ff;">
+                                <i class="fas fa-shopping-cart" style="color: #1890ff;"></i>
+                            </div>
+                            <span>Buy Data</span>
+                        </div>
+                        <div class="action-icon" data-action="topup">
+                            <div class="icon-wrapper" style="background-color: #f9f0ff;">
+                                <i class="fas fa-wallet" style="color: #722ed1;"></i>
+                            </div>
+                            <span>Topup</span>
+                        </div>
+                        <div class="action-icon" data-action="history">
+                             <div class="icon-wrapper" style="background-color: #fff1f0;">
+                                <i class="fas fa-history" style="color: #cf1322;"></i>
+                            </div>
+                            <span>History</span>
+                        </div>
+                        <div class="action-icon" data-action="refer">
+                            <div class="icon-wrapper" style="background-color: #fffbe6;">
+                                <i class="fas fa-users" style="color: #d48806;"></i>
+                            </div>
+                            <span>Refer</span>
+                        </div>
+                    </div>
+
+                    <div class="sales-performance-card">
+                        <h3>Sales Performance</h3>
+                        <canvas id="sales-chart"></canvas>
+                    </div>
+
+                    <div class="recent-transactions-card">
+                        <h3>Recent Transactions</h3>
+                        <ul class="transactions-list">
+                            <!-- Transactions will be loaded here by JS -->
+                        </ul>
+                    </div>
+                <?php else:
+                        // Render a default view for guests, e.g., the MTN form
+                        echo $this->render_data_bundle_form('mtn');
+                endif; ?>
+                </div>
+
             </div>
 
-            <?php endif; ?>
-
-            <?php if ( is_user_logged_in() ) : ?>
-            <div class="kaa-mall-card">
-                <h3>Recent Orders</h3>
-                <?php
-                $orders = wc_get_orders( array(
-                    'customer_id' => get_current_user_id(),
-                    'limit' => 3,
-                    'orderby' => 'date',
-                    'order' => 'DESC',
-                ) );
-                if ( ! empty( $orders ) ) :
-                ?>
-                <ul class="recent-orders-list">
-                    <?php foreach ( $orders as $order ) : ?>
-                    <li>
-                        <div class="order-details">
-                            <strong>Order #<?php echo $order->get_id(); ?></strong>
-                            <br>
-                            <small><?php echo $order->get_date_created()->date_i18n( 'F j, Y' ); ?></small>
-                        </div>
-                        <div class="order-total">
-                            <?php echo $order->get_formatted_order_total(); ?>
-                        </div>
-                        <div class="order-status status-<?php echo $order->get_status(); ?>">
-                            <?php echo wc_get_order_status_name( $order->get_status() ); ?>
-                        </div>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-                <?php else : ?>
-                <p>You have no recent orders.</p>
+            <!-- Bottom Navigation -->
+            <?php if ( is_user_logged_in() ): ?>
+            <div class="bottom-nav">
+                <a href="https://kaadatahub.shop/users-portal-new/" class="nav-item active">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="<?php echo esc_url($history_page_url); ?>" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </a>
+                <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
+                <a href="https://kaadatahub.shop/resellers-portal/" class="nav-item">
+                    <i class="fas fa-store"></i>
+                    <span>Reseller</span>
+                </a>
+                <?php else: ?>
+                <a href="https://kaadatahub.shop/apply-as-a-reseller/" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Apply as a Reseller</span>
+                </a>
                 <?php endif; ?>
+                <a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>" class="nav-item">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
             </div>
             <?php endif; ?>
-
-            <div class="kaa-mall-card">
-                <h3>Join Our Community</h3>
-                <p>Stay updated with the latest news and offers by joining our WhatsApp community.</p>
-                <?php
-                $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-                $whatsapp_group_link = 'https://chat.whatsapp.com/JZEJZlNO3DV8VCyeTwzYgt'; // Default link
-                if ( $reseller_id ) {
-                    $reseller_whatsapp_group_link = get_user_meta( $reseller_id, '_kaa_mall_whatsapp_group_link', true );
-                    if ( ! empty( $reseller_whatsapp_group_link ) ) {
-                        $whatsapp_group_link = $reseller_whatsapp_group_link;
-                    }
-                }
-                ?>
-                <a href="<?php echo esc_url( $whatsapp_group_link ); ?>" class="contact-admin-btn" style="background-color: #25D366; text-align: center; display: block;">Join Now</a>
-            </div>
-
-            <div class="kaa-mall-card need-help">
-                <h3>Need Help?</h3>
-                <p>Our support team is here to help you 24/7</p>
-                <?php
-                $whatsapp_number = get_option( 'kaa_mall_whatsapp_number', '233201858375' );
-                $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-                if ( $reseller_id ) {
-                    $reseller_whatsapp = get_user_meta( $reseller_id, '_kaa_mall_whatsapp_number', true );
-                    if ( ! empty( $reseller_whatsapp ) ) {
-                        $whatsapp_number = $reseller_whatsapp;
-                    }
-                }
-                ?>
-                <a href="https://wa.me/<?php echo esc_attr( $whatsapp_number ); ?>" class="contact-admin-btn">Contact Support</a>
-            </div>
         </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <?php
         return ob_get_clean();
     }

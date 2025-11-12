@@ -1,0 +1,614 @@
+/* Kaa Mall Portal Redesign CSS */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background-color: #f0f2f5;
+}
+
+.kaa-mall-portal-body {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.kaa-mall-sidebar {
+    width: 250px;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.brand-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #8a2be2;
+}
+
+.close-sidebar-btn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.sidebar-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav-section-title {
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+    margin: 20px 0 10px;
+    font-weight: 600;
+}
+
+.sidebar-nav li a {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-radius: 8px;
+    color: #555;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.sidebar-nav li a:hover,
+.sidebar-nav li a.active {
+    background-color: #8a2be2;
+    color: #ffffff;
+}
+
+.sidebar-nav li a i {
+    margin-right: 15px;
+    width: 20px;
+    text-align: center;
+}
+
+.kaa-mall-main-content {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background-color: #f7f8fc;
+}
+
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.open-sidebar-btn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #555;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #eaf1fb;
+    border-radius: 50%;
+}
+
+.header-user-info {
+    font-weight: 600;
+    color: #333;
+}
+
+.header-icons {
+    display: flex;
+    align-items: center;
+}
+
+.header-icons i,
+.dark-mode-toggle {
+    font-size: 20px;
+    color: #555;
+    margin-left: 10px;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #eaf1fb;
+    border-radius: 50%;
+}
+
+.balance-card {
+    background-color: #8a2be2;
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.balance-info p {
+    margin: 0 0 5px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.balance-info h2 {
+    margin: 0;
+    font-size: 32px;
+}
+
+.balance-actions button {
+    background-color: rgba(255,255,255,0.2);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-left: 10px;
+}
+
+.action-icons {
+    display: flex;
+    justify-content: space-around;
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.action-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.action-icon .icon-wrapper {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.action-icon i {
+    font-size: 22px;
+}
+
+.action-icon span {
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+}
+
+.sales-performance-card,
+.recent-transactions-card {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.sales-performance-card h3,
+.recent-transactions-card h3 {
+    margin-top: 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.transactions-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.bottom-nav {
+    display: none;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+
+@media (max-width: 768px) {
+    .kaa-mall-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        transform: translateX(-100%);
+    }
+
+    .kaa-mall-sidebar.open {
+        transform: translateX(0);
+    }
+
+    .close-sidebar-btn,
+    .open-sidebar-btn {
+        display: block;
+    }
+
+    .main-header {
+        justify-content: space-between;
+    }
+
+    .header-user-info {
+        display: none;
+    }
+
+    .sidebar-overlay.open {
+        display: block;
+    }
+
+    .kaa-mall-portal-body {
+        flex-direction: column;
+    }
+
+    .kaa-mall-main-content {
+        padding-bottom: 80px; /* Space for bottom nav */
+    }
+
+    .bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: #ffffff;
+        box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        padding: 10px 0;
+        z-index: 1000;
+    }
+
+    .bottom-nav .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: #999;
+        text-decoration: none;
+    }
+
+    .bottom-nav .nav-item.active {
+        color: #8a2be2;
+    }
+
+    .bottom-nav .nav-item i {
+        font-size: 20px;
+        margin-bottom: 4px;
+    }
+
+    .bottom-nav .nav-item span {
+        font-size: 12px;
+    }
+}
+
+/* Styles for Dynamically Loaded Content */
+.kaa-mall-dynamic-content-wrapper {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.kaa-mall-dynamic-content-wrapper h3 {
+    margin-top: 0;
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.kaa-mall-form .form-group {
+    margin-bottom: 15px;
+}
+
+.kaa-mall-form label {
+    display: block;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.kaa-mall-form input[type="text"],
+.kaa-mall-form input[type="tel"],
+.kaa-mall-form select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+}
+
+.kaa-mall-form input[type="text"]:focus,
+.kaa-mall-form input[type="tel"]:focus,
+.kaa-mall-form select:focus {
+    outline: none;
+    border-color: #8a2be2;
+    box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.2);
+}
+
+.kaa-mall-btn {
+    background-color: #8a2be2;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    width: 100%;
+}
+
+/* Loader Style */
+.kaa-mall-loader {
+    border: 4px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 4px solid #8a2be2;
+    width: 40px;
+    height: 40px;
+    -webkit-animation: spin 2s linear infinite; /* Safari */
+    animation: spin 2s linear infinite;
+    margin: 50px auto;
+}
+
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Wallet View Specifics */
+#wallet-transactions-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+#wallet-transactions-list li:last-child {
+    border-bottom: none;
+}
+
+#wallet-transactions-list .transaction-details strong {
+    display: block;
+    color: #333;
+}
+
+#wallet-transactions-list .transaction-details span {
+    font-size: 12px;
+    color: #999;
+}
+#wallet-transactions-list .transaction-amount.positive {
+    color: #28a745;
+    font-weight: 600;
+}
+
+#wallet-transactions-list .transaction-amount.negative {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+/* Payment Method Selection */
+.payment-method-options {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.payment-method-options label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+/* Price Breakdown */
+.price-breakdown {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f7f8fc;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+/* History Page Table Styles */
+.purchase-history table, .wallet-transactions table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.purchase-history th, .purchase-history td,
+.wallet-transactions th, .wallet-transactions td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.purchase-history th, .wallet-transactions th {
+    background-color: #f7f8fc;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* Profile Popup */
+.profile-popup {
+    display: none;
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    width: 280px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+    z-index: 1001;
+    overflow: hidden;
+}
+
+.profile-popup.open {
+    display: block;
+}
+
+.profile-header {
+    background-color: #f0f2f5;
+    padding: 15px;
+    position: relative;
+}
+
+.profile-header .profile-name {
+    display: block;
+    font-weight: 600;
+    color: #333;
+}
+
+.profile-header .profile-role {
+    font-size: 14px;
+    color: #888;
+}
+
+.profile-header .close-popup-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.profile-menu {
+    list-style: none;
+    padding: 10px;
+    margin: 0;
+}
+
+.profile-menu li a {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-radius: 8px;
+    color: #555;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.profile-menu li a:hover {
+    background-color: #f0f2f5;
+}
+
+.profile-menu li a i {
+    margin-right: 15px;
+}
+
+/* Dark Mode Toggle */
+.dark-mode-toggle .fa-moon {
+    display: none;
+}
+
+.dark-mode .dark-mode-toggle .fa-sun {
+    display: none;
+}
+
+.dark-mode .dark-mode-toggle .fa-moon {
+    display: inline-block;
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+.dark-mode .kaa-mall-sidebar,
+.dark-mode .kaa-mall-main-content,
+.dark-mode .sales-performance-card,
+.dark-mode .recent-transactions-card,
+.dark-mode .kaa-mall-dynamic-content-wrapper,
+.dark-mode .profile-popup {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+.dark-mode .brand-title,
+.dark-mode .sidebar-nav li a,
+.dark-mode .header-user-info,
+.dark-mode .header-icons i,
+.dark-mode .sales-performance-card h3,
+.dark-mode .recent-transactions-card h3,
+.dark-mode .kaa-mall-dynamic-content-wrapper h3,
+.dark-mode .profile-header .profile-name,
+.dark-mode .profile-menu li a {
+    color: #e0e0e0;
+}
+
+.dark-mode .sidebar-nav li a:hover,
+.dark-mode .sidebar-nav li a.active {
+    background-color: #8a2be2;
+    color: #ffffff;
+}
+
+.dark-mode .balance-card {
+    background-color: #2a0a4a;
+}
+
+.dark-mode .action-icons {
+    background-color: #1e1e1e;
+}
+
+.dark-mode .dark-mode-toggle {
+    background-color: #2a0a4a;
+}
+
+.dark-mode .dark-mode-toggle .fa-sun {
+    background-color: transparent;
+    color: #fff;
+}
+
+.dark-mode .dark-mode-toggle .fa-moon {
+    background-color: #fff;
+    color: #8a2be2;
+}
