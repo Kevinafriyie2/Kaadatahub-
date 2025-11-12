@@ -22,12 +22,21 @@ class Kaa_Mall_Public {
     }
 
     public function enqueue_scripts() {
+        global $post;
+        if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'kaa_user_portal' ) ) {
+            $css_file_path = plugin_dir_path( __FILE__ ) . 'css/kaa-mall-portal-redesign.css';
+            $css_file_url = plugin_dir_url( __FILE__ ) . 'css/kaa-mall-portal-redesign.css';
+            $css_version = filemtime( $css_file_path );
+            wp_enqueue_style( 'kaa-mall-portal-redesign', $css_file_url, array(), $css_version );
+        }
+
         $js_file_path = plugin_dir_path( __FILE__ ) . 'js/kaa-mall-public.js';
         $js_file_url = plugin_dir_url( __FILE__ ) . 'js/kaa-mall-public.js';
         $js_version = filemtime( $js_file_path );
 
         wp_enqueue_script( 'paystack-inline', 'https://js.paystack.co/v1/inline.js', array(), $this->version, false );
-        wp_enqueue_script( 'kaa-mall-public', $js_file_url, array( 'jquery', 'paystack-inline' ), $js_version, false );
+        wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '3.7.0', false );
+        wp_enqueue_script( 'kaa-mall-public', $js_file_url, array( 'jquery', 'paystack-inline', 'chart-js' ), $js_version, false );
 
         $user = wp_get_current_user();
         wp_localize_script( 'kaa-mall-public', 'kaa_mall_params', array(
@@ -414,40 +423,6 @@ class Kaa_Mall_Public {
         if ( ! is_user_logged_in() && ! WC()->session->get( 'kaa_mall_reseller_id' ) ) {
             ob_start();
             ?>
-            <style>
-                #loginform label {
-                    color: #e0e0e0;
-                }
-                #loginform input[type="text"],
-                #loginform input[type="password"] {
-                    background-color: #2c2c2c;
-                    border: 1px solid #333;
-                    color: #e0e0e0;
-                    width: 100%;
-                    padding: 10px;
-                    border-radius: 8px;
-                    margin-bottom: 15px;
-                }
-                #loginform input[type="submit"] {
-                    background-color: #ffc107;
-                    color: #121212;
-                    border: none;
-                    font-weight: bold;
-                    width: 100%;
-                    padding: 12px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                }
-                #loginform .forgetmenot label {
-                    color: #e0e0e0;
-                }
-                #loginform a {
-                    color: #ffc107;
-                }
-                .login-remember {
-                    margin-bottom: 15px;
-                }
-            </style>
             <div class="kaa-mall-portal" style="max-width: 400px; margin: 40px auto; padding: 20px; background-color: #1e1e1e; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
                 <h3 style="text-align: center; color: #ffffff; margin-bottom: 20px;">Please log in to access the portal.</h3>
                 <?php wp_login_form( array('redirect' => get_permalink()) ); ?>
@@ -457,350 +432,240 @@ class Kaa_Mall_Public {
         }
 
         ob_start();
-
-        echo Kaa_Mall_Portal_Header::render();
-
         ?>
-        <style>
-            :root {
-                --primary-color: #ffc107;
-                --secondary-color: #8a2be2;
-                --background-color: #121212;
-                --card-background-color: #1e1e1e;
-                --text-color: #e0e0e0;
-                --heading-color: #ffffff;
-                --border-color: #333333;
-                --shadow-color: rgba(0, 0, 0, 0.5);
-            }
-
-            .kaa-mall-portal {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                background-color: var(--background-color);
-                color: var(--text-color);
-                padding: 20px;
-                max-width: 500px;
-                margin: 0 auto;
-            }
-
-            .kaa-mall-header {
-                background: linear-gradient(135deg, #ff8c00, #ffc107);
-                color: white;
-                padding: 20px;
-                text-align: center;
-                border-radius: 12px;
-                margin-bottom: 20px;
-            }
-
-            .kaa-mall-header h1 {
-                margin: 0;
-                font-size: 1.8em;
-            }
-
-            .kaa-mall-header p {
-                margin: 5px 0 0;
-                font-size: 1em;
-            }
-
-            .kaa-mall-card {
-                background: var(--card-background-color);
-                border-radius: 12px;
-                box-shadow: 0 5px 15px var(--shadow-color);
-                padding: 20px;
-                margin-bottom: 20px;
-            }
-
-            .wallet-balance {
-                background: linear-gradient(135deg, #8a2be2, #4a00e0);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .wallet-balance-details span {
-                display: block;
-                color: white;
-            }
-
-            .wallet-balance-details .balance-amount {
-                font-size: 2em;
-                font-weight: bold;
-            }
-
-            .top-up-wallet-btn {
-                background-color: rgba(255, 255, 255, 0.2);
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 8px;
-                cursor: pointer;
-            }
-
-            .data-bundles .network-tabs {
-                display: flex;
-                justify-content: space-around;
-                margin-bottom: 20px;
-            }
-
-            .data-bundles .tab-link {
-                background: none;
-                border: none;
-                color: var(--text-color);
-                cursor: pointer;
-                padding: 10px;
-                font-size: 1em;
-            }
-
-            .data-bundles .tab-link.active {
-                border-bottom: 2px solid var(--primary-color);
-                color: var(--primary-color);
-            }
-
-            .network-tab-content {
-                display: none;
-            }
-
-            .network-tab-content.active {
-                display: block;
-            }
-
-            .bundle-form label {
-                display: block;
-                margin-bottom: 5px;
-            }
-
-            .bundle-form input,
-            .bundle-form select,
-            .bundle-form button {
-                width: 100%;
-                padding: 12px;
-                margin-bottom: 15px;
-                border: 1px solid var(--border-color);
-                border-radius: 8px;
-                background-color: #2c2c2c;
-                color: var(--text-color);
-                font-size: 1em;
-                box-sizing: border-box;
-            }
-
-            .bundle-form button {
-                background-color: var(--primary-color);
-                color: #121212;
-                font-weight: bold;
-                cursor: pointer;
-            }
-
-            .payment-method label {
-                display: inline-block;
-                margin-right: 20px;
-            }
-
-            .afa-registration {
-                background: linear-gradient(135deg, #9b59b6, #8e44ad);
-            }
-
-            .afa-registration h3,
-            .afa-registration p {
-                color: white;
-                text-align: center;
-            }
-
-            #kaa-mall-afa-form label {
-                display: block;
-                margin-bottom: 5px;
-                color: white;
-            }
-
-            #kaa-mall-afa-form input {
-                width: 100%;
-                padding: 12px;
-                margin-bottom: 15px;
-                border: none;
-                border-radius: 8px;
-                background-color: rgba(255, 255, 255, 0.2);
-                color: white;
-                font-size: 1em;
-                box-sizing: border-box;
-            }
-
-            #kaa-mall-afa-form button {
-                width: 100%;
-                padding: 12px;
-                border: none;
-                border-radius: 8px;
-                background-color: var(--primary-color);
-                color: #121212;
-                font-weight: bold;
-                cursor: pointer;
-            }
-
-            .registration-fee {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 15px;
-                color: white;
-            }
-
-            .purchase-history {
-                overflow-x: auto;
-            }
-
-            .purchase-history table {
-                width: 100%;
-                border-collapse: collapse;
-                min-width: 600px;
-            }
-
-            .purchase-history th,
-            .purchase-history td {
-                padding: 10px;
-                text-align: left;
-                border-bottom: 1px solid var(--border-color);
-            }
-
-            .purchase-history th {
-                font-weight: bold;
-            }
-
-            .need-help {
-                text-align: center;
-            }
-
-            .contact-admin-btn {
-                display: inline-block;
-                background-color: #25d366;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 8px;
-                text-decoration: none;
-                font-weight: bold;
-            }
-        </style>
-        <div class="kaa-mall-portal">
-            <div class="kaa-mall-header">
-                <h1>Data Bundle Store</h1>
-                <p>Instant Data Top-up for All Networks</p>
+        <div class="kaa-mall-portal-body">
+            <!-- Sidebar -->
+            <div class="kaa-mall-sidebar">
+                <div class="sidebar-header">
+                    <h2>Kaadatahub</h2>
+                    <button class="close-sidebar-btn">&times;</button>
+                </div>
+                <nav class="sidebar-nav">
+                    <p class="nav-section-title">SERVICES</p>
+                    <ul>
+                        <li><a href="#" class="nav-link active" data-target="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                        <li><a href="#" class="nav-link" data-target="buy-data-mtn"><i class="fas fa-mobile-alt"></i> MTN</a></li>
+                        <li><a href="#" class="nav-link" data-target="buy-data-airteltigo"><i class="fas fa-mobile-alt"></i> Airteltigo</a></li>
+                        <li><a href="#" class="nav-link" data-target="buy-data-telecel"><i class="fas fa-mobile-alt"></i> Telecel</a></li>
+                        <li><a href="#" class="nav-link" data-target="afa-registration"><i class="fas fa-user-plus"></i> AFA Registration</a></li>
+                    </ul>
+                    <p class="nav-section-title">CREDITS & DEBITS</p>
+                    <ul>
+                        <li><a href="#" class="nav-link" data-target="wallet"><i class="fas fa-wallet"></i> Wallet</a></li>
+                    </ul>
+                    <?php
+                    $user = wp_get_current_user();
+                    if ( in_array( 'reseller', (array) $user->roles ) ) :
+                    ?>
+                    <p class="nav-section-title">RESELLER</p>
+                    <ul>
+                        <li><a href="/reseller-portal" class="nav-link"><i class="fas fa-user-tie"></i> Reseller Dashboard</a></li>
+                    </ul>
+                    <?php endif; ?>
+                </nav>
             </div>
 
-            <?php if ( is_user_logged_in() ) : ?>
-            <div class="kaa-mall-card wallet-balance">
-                <div class="wallet-balance-details">
-                    <span>Wallet Balance</span>
-                    <span class="balance-amount"></span>
-                </div>
-                <button class="top-up-wallet-btn">Top Up Wallet</button>
-            </div>
-            <?php endif; ?>
-
-            <div class="kaa-mall-card data-bundles">
-                <div class="network-tabs">
-                    <button class="tab-link active" data-network="mtn">MTN</button>
-                    <button class="tab-link" data-network="airteltigo">AirtelTigo</button>
-                    <button class="tab-link" data-network="vodafone">Vodafone</button>
-                </div>
-                <div id="mtn" class="network-tab-content active">
-                    <form class="bundle-form" data-network="mtn">
-                        <?php if ( ! is_user_logged_in() ) : ?>
-                            <label>Your Email</label>
-                            <input type="email" name="email" placeholder="Enter your email" required>
-                        <?php endif; ?>
-                        <label>MTN Phone Number</label>
-                        <input type="tel" name="phone_number" placeholder="0241234567" required>
-                        <label>Select Bundle</label>
-                        <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <div class="payment-method">
-                            <?php if ( is_user_logged_in() ) : ?>
-                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                            <?php endif; ?>
-                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
-                        </div>
-                        <button type="submit">Buy MTN Bundle</button>
-                    </form>
-                </div>
-                <div id="airteltigo" class="network-tab-content">
-                    <form class="bundle-form" data-network="airteltigo">
-                        <?php if ( ! is_user_logged_in() ) : ?>
-                            <label>Your Email</label>
-                            <input type="email" name="email" placeholder="Enter your email" required>
-                        <?php endif; ?>
-                        <label>AirtelTigo Phone Number</label>
-                        <input type="tel" name="phone_number" placeholder="0241234567" required>
-                        <label>Select Bundle</label>
-                        <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <div class="payment-method">
-                            <?php if ( is_user_logged_in() ) : ?>
-                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                            <?php endif; ?>
-                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
-                        </div>
-                        <button type="submit">Buy AirtelTigo Bundle</button>
-                    </form>
-                </div>
-                <div id="vodafone" class="network-tab-content">
-                    <form class="bundle-form" data-network="vodafone">
-                        <?php if ( ! is_user_logged_in() ) : ?>
-                            <label>Your Email</label>
-                            <input type="email" name="email" placeholder="Enter your email" required>
-                        <?php endif; ?>
-                        <label>Vodafone Phone Number</label>
-                        <input type="tel" name="phone_number" placeholder="0241234567" required>
-                        <label>Select Bundle</label>
-                        <select name="bundle" required></select>
-                        <label>Payment Method</label>
-                        <div class="payment-method">
-                            <?php if ( is_user_logged_in() ) : ?>
-                            <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                            <?php endif; ?>
-                            <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
-                        </div>
-                        <button type="submit">Buy Vodafone Bundle</button>
-                    </form>
-                </div>
-            </div>
-
-            <?php if ( is_user_logged_in() ) : ?>
-            <div class="kaa-mall-card afa-registration">
-                <h3>AFA Bundle Registration</h3>
-                <p>Register for AFA bundles and get amazing benefits!</p>
-                <form id="kaa-mall-afa-form">
-                    <label>Full Name</label>
-                    <input type="text" name="full_name" placeholder="Enter your full name" required>
-                    <label>Location</label>
-                    <input type="text" name="location" placeholder="Enter your location" required>
-                    <label>ID Ghana Card Number</label>
-                    <input type="text" name="ghana_card" placeholder="GHA-XXXXXXXXX-X" required>
-                    <div class="registration-fee">
-                        <span>Registration Fee</span>
-                        <span>GH₵13.00</span>
+            <!-- Main Content -->
+            <div class="kaa-mall-main-content">
+                <!-- Header -->
+                <header class="kaa-mall-portal-header">
+                    <button class="hamburger-menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="header-icons">
+                        <i class="fas fa-bell"></i>
+                        <i class="fas fa-user-circle"></i>
                     </div>
-                    <button type="submit">Register Now - GH₵13</button>
-                </form>
+                </header>
+
+                <main class="portal-main">
+                    <!-- Balance Card -->
+                    <div class="kaa-mall-card balance-card">
+                        <div class="balance-info">
+                            <p>My Balance</p>
+                            <h2 class="balance-amount">GH₵ 0.00</h2>
+                        </div>
+                        <div class="balance-actions">
+                            <button class="hide-balance-btn">Hide</button>
+                            <button class="top-up-btn">Top Up</button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="kaa-mall-card quick-actions">
+                        <a href="#" class="action-item" data-target="buy-data">
+                            <div class="icon-wrapper" style="background-color: #E6F3FF;">
+                                <i class="fas fa-shopping-cart" style="color: #007BFF;"></i>
+                            </div>
+                            <span>Buy Data</span>
+                        </a>
+                        <a href="#" class="action-item" data-target="topup">
+                            <div class="icon-wrapper" style="background-color: #E4F8F0;">
+                                <i class="fas fa-wallet" style="color: #28A745;"></i>
+                            </div>
+                            <span>Topup</span>
+                        </a>
+                        <a href="#" class="action-item" data-target="history">
+                            <div class="icon-wrapper" style="background-color: #FFF2E6;">
+                                <i class="fas fa-history" style="color: #FD7E14;"></i>
+                            </div>
+                            <span>History</span>
+                        </a>
+                        <a href="#" class="action-item" data-target="refer">
+                             <div class="icon-wrapper" style="background-color: #F0E6FF;">
+                                <i class="fas fa-users" style="color: #6F42C1;"></i>
+                            </div>
+                            <span>Refer</span>
+                        </a>
+                    </div>
+
+                    <!-- Sales Performance -->
+                    <div class="kaa-mall-card sales-performance">
+                        <h3>Sales Performance</h3>
+                        <canvas id="salesChart"></canvas>
+                    </div>
+
+                    <!-- Recent Transactions -->
+                    <div class="kaa-mall-card recent-transactions">
+                        <h3>Recent Transactions</h3>
+                        <div class="transactions-list">
+                            <p>No recent transactions found.</p>
+                        </div>
+                    </div>
+
+                    <!-- Hidden Data Purchase Forms -->
+                    <div id="buy-data-forms" class="kaa-mall-card data-bundles" style="display: none;">
+                        <div class="network-tabs">
+                            <button class="tab-link active" data-network="mtn">MTN</button>
+                            <button class="tab-link" data-network="airteltigo">AirtelTigo</button>
+                            <button class="tab-link" data-network="vodafone">Vodafone</button>
+                            <button class="tab-link" data-network="telecel">Telecel</button>
+                        </div>
+                        <div id="mtn" class="network-tab-content active">
+                            <form class="bundle-form" data-network="mtn">
+                                <?php if ( ! is_user_logged_in() ) : ?>
+                                    <label>Your Email</label>
+                                    <input type="email" name="email" placeholder="Enter your email" required>
+                                <?php endif; ?>
+                                <label>MTN Phone Number</label>
+                                <input type="tel" name="phone_number" placeholder="0241234567" required>
+                                <label>Select Bundle</label>
+                                <select name="bundle" required></select>
+                                <label>Payment Method</label>
+                                <div class="payment-method">
+                                    <?php if ( is_user_logged_in() ) : ?>
+                                    <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                                    <?php endif; ?>
+                                    <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                                </div>
+                                <button type="submit">Buy MTN Bundle</button>
+                            </form>
+                        </div>
+                        <div id="airteltigo" class="network-tab-content">
+                             <form class="bundle-form" data-network="airteltigo">
+                                <?php if ( ! is_user_logged_in() ) : ?>
+                                    <label>Your Email</label>
+                                    <input type="email" name="email" placeholder="Enter your email" required>
+                                <?php endif; ?>
+                                <label>AirtelTigo Phone Number</label>
+                                <input type="tel" name="phone_number" placeholder="0241234567" required>
+                                <label>Select Bundle</label>
+                                <select name="bundle" required></select>
+                                <label>Payment Method</label>
+                                <div class="payment-method">
+                                    <?php if ( is_user_logged_in() ) : ?>
+                                    <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                                    <?php endif; ?>
+                                    <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                                </div>
+                                <button type="submit">Buy AirtelTigo Bundle</button>
+                            </form>
+                        </div>
+                        <div id="vodafone" class="network-tab-content">
+                            <form class="bundle-form" data-network="vodafone">
+                                <?php if ( ! is_user_logged_in() ) : ?>
+                                    <label>Your Email</label>
+                                    <input type="email" name="email" placeholder="Enter your email" required>
+                                <?php endif; ?>
+                                <label>Vodafone Phone Number</label>
+                                <input type="tel" name="phone_number" placeholder="0241234567" required>
+                                <label>Select Bundle</label>
+                                <select name="bundle" required></select>
+                                <label>Payment Method</label>
+                                <div class="payment-method">
+                                    <?php if ( is_user_logged_in() ) : ?>
+                                    <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                                    <?php endif; ?>
+                                    <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                                </div>
+                                <button type="submit">Buy Vodafone Bundle</button>
+                            </form>
+                        </div>
+                        <div id="telecel" class="network-tab-content">
+                             <form class="bundle-form" data-network="telecel">
+                                <?php if ( ! is_user_logged_in() ) : ?>
+                                    <label>Your Email</label>
+                                    <input type="email" name="email" placeholder="Enter your email" required>
+                                <?php endif; ?>
+                                <label>Telecel Phone Number</label>
+                                <input type="tel" name="phone_number" placeholder="0241234567" required>
+                                <label>Select Bundle</label>
+                                <select name="bundle" required></select>
+                                <label>Payment Method</label>
+                                <div class="payment-method">
+                                    <?php if ( is_user_logged_in() ) : ?>
+                                    <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
+                                    <?php endif; ?>
+                                    <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                                </div>
+                                <button type="submit">Buy Telecel Bundle</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Hidden AFA Form -->
+                     <?php if ( is_user_logged_in() ) : ?>
+                    <div id="afa-registration-form" class="kaa-mall-card afa-registration" style="display: none;">
+                        <h3>AFA Bundle Registration</h3>
+                        <p>Register for AFA bundles and get amazing benefits!</p>
+                        <form id="kaa-mall-afa-form">
+                            <label>Full Name</label>
+                            <input type="text" name="full_name" placeholder="Enter your full name" required>
+                            <label>Location</label>
+                            <input type="text" name="location" placeholder="Enter your location" required>
+                            <label>ID Ghana Card Number</label>
+                            <input type="text" name="ghana_card" placeholder="GHA-XXXXXXXXX-X" required>
+                            <div class="registration-fee">
+                                <span>Registration Fee</span>
+                                <span>GH₵13.00</span>
+                            </div>
+                            <button type="submit">Register Now - GH₵13</button>
+                        </form>
+                    </div>
+                    <?php endif; ?>
+
+                </main>
             </div>
 
-            <div class="kaa-mall-card purchase-history">
-                <h3>Purchase History</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Date</th>
-                            <th>Bundle</th>
-                            <th>Phone</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <?php endif; ?>
-
-            <div class="kaa-mall-card need-help">
-                <h3>Need Help?</h3>
-                <p>Our support team is here to help you 24/7</p>
-                <a href="#" class="contact-admin-btn">Contact the Admin</a>
-            </div>
+            <!-- Bottom Navigation -->
+            <nav class="kaa-mall-bottom-nav">
+                <a href="#" class="nav-item active" data-target="home">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#" class="nav-item" data-target="history">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </a>
+                 <a href="#" class="nav-item" data-target="services">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Services</span>
+                </a>
+                <a href="#" class="nav-item" data-target="profile">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </nav>
         </div>
         <?php
         return ob_get_clean();
