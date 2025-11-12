@@ -99,9 +99,16 @@ body {
     display: none;
     background: none;
     border: none;
-    font-size: 24px;
+    font-size: 20px;
     cursor: pointer;
-    color: #333;
+    color: #555;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #eaf1fb;
+    border-radius: 50%;
 }
 
 .header-user-info {
@@ -109,11 +116,24 @@ body {
     color: #333;
 }
 
-.header-icons i {
+.header-icons {
+    display: flex;
+    align-items: center;
+}
+
+.header-icons i,
+.dark-mode-toggle {
     font-size: 20px;
     color: #555;
-    margin-left: 20px;
+    margin-left: 10px;
     cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #eaf1fb;
+    border-radius: 50%;
 }
 
 .balance-card {
@@ -525,30 +545,16 @@ body {
 }
 
 /* Dark Mode Toggle */
-.dark-mode-toggle {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    background-color: #f0f2f5;
-    border-radius: 20px;
-    padding: 5px;
-    margin-right: 15px;
-}
-
-.dark-mode-toggle i {
-    font-size: 14px;
-    padding: 5px;
-    border-radius: 50%;
-    transition: all 0.3s ease;
-}
-
-.dark-mode-toggle .fa-sun {
-    background-color: #fff;
-    color: #8a2be2;
-}
-
 .dark-mode-toggle .fa-moon {
-    color: #555;
+    display: none;
+}
+
+.dark-mode .dark-mode-toggle .fa-sun {
+    display: none;
+}
+
+.dark-mode .dark-mode-toggle .fa-moon {
+    display: inline-block;
 }
 
 /* Dark Mode Styles */

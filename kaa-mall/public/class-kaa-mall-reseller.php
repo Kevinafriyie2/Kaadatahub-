@@ -604,7 +604,6 @@ class Kaa_Mall_Reseller {
                      <div class="profile-popup">
                         <div class="profile-header">
                             <span class="profile-name"><?php echo esc_html( $current_user->display_name ); ?></span>
-                            <span class="profile-role">Reseller</span>
                             <button class="close-popup-btn">&times;</button>
                         </div>
                         <ul class="profile-menu">

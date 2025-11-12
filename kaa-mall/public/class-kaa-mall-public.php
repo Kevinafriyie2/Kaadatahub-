@@ -870,7 +870,6 @@ class Kaa_Mall_Public {
                     <div class="profile-popup">
                         <div class="profile-header">
                             <span class="profile-name"><?php echo esc_html( $current_user->display_name ); ?></span>
-                            <span class="profile-role">Basic</span>
                             <button class="close-popup-btn">&times;</button>
                         </div>
                         <ul class="profile-menu">
@@ -1031,7 +1030,6 @@ class Kaa_Mall_Public {
                     <div class="profile-popup">
                         <div class="profile-header">
                             <span class="profile-name"><?php echo esc_html( $current_user->display_name ); ?></span>
-                            <span class="profile-role">Basic</span>
                             <button class="close-popup-btn">&times;</button>
                         </div>
                         <ul class="profile-menu">
