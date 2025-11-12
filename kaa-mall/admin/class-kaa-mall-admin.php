@@ -15,84 +15,6 @@ class Kaa_Mall_Admin {
         add_action( 'admin_post_kaa_mall_top_up_wallet', array( $this, 'handle_top_up_wallet' ) );
         add_action( 'admin_post_kaa_mall_bulk_update_order_status', array( $this, 'handle_bulk_update_order_status' ) );
         add_action( 'admin_post_kaa_mall_mark_withdrawal_paid', array( $this, 'handle_mark_withdrawal_paid' ) );
-        add_action( 'admin_post_kaa_mall_approve_reseller', array( $this, 'handle_approve_reseller' ) );
-        add_action( 'admin_post_kaa_mall_deny_reseller', array( $this, 'handle_deny_reseller' ) );
-    }
-
-    public function handle_approve_reseller() {
-        if ( ! current_user_can( 'manage_options' ) ) {
-            wp_die( 'You do not have permission to perform this action.' );
-        }
-
-        $application_id = intval( $_GET['application_id'] );
-        $user_id = get_post_field( 'post_author', $application_id );
-
-        $user = new WP_User( $user_id );
-        $user->add_role( 'reseller' );
-
-        wp_update_post( array(
-            'ID' => $application_id,
-            'post_status' => 'publish',
-        ) );
-
-        wp_redirect( admin_url( 'admin.php?page=kaa_mall_reseller_applications' ) );
-        exit;
-    }
-
-    public function handle_deny_reseller() {
-        if ( ! current_user_can( 'manage_options' ) ) {
-            wp_die( 'You do not have permission to perform this action.' );
-        }
-
-        $application_id = intval( $_GET['application_id'] );
-        wp_update_post( array(
-            'ID' => $application_id,
-            'post_status' => 'trash',
-        ) );
-
-        wp_redirect( admin_url( 'admin.php?page=kaa_mall_reseller_applications' ) );
-        exit;
-    }
-
-    public function render_reseller_applications_page() {
-        $args = array(
-            'post_type' => 'reseller_application',
-            'post_status' => 'pending',
-            'posts_per_page' => -1,
-        );
-        $applications = get_posts( $args );
-        ?>
-        <div class="wrap">
-            <h2>Reseller Applications</h2>
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th>Applicant</th>
-                        <th>Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ( ! empty( $applications ) ) : ?>
-                        <?php foreach ( $applications as $application ) : ?>
-                            <tr>
-                                <td><?php echo get_the_author_meta( 'display_name', $application->post_author ); ?></td>
-                                <td><?php echo get_the_date( '', $application ); ?></td>
-                                <td>
-                                    <a href="<?php echo esc_url( add_query_arg( array( 'action' => 'kaa_mall_approve_reseller', 'application_id' => $application->ID ), admin_url( 'admin-post.php' ) ) ); ?>" class="button button-primary">Approve</a>
-                                    <a href="<?php echo esc_url( add_query_arg( array( 'action' => 'kaa_mall_deny_reseller', 'application_id' => $application->ID ), admin_url( 'admin-post.php' ) ) ); ?>" class="button">Deny</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else : ?>
-                        <tr>
-                            <td colspan="3">No pending applications.</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php
     }
 
     public function handle_mark_withdrawal_paid() {
@@ -155,46 +77,17 @@ class Kaa_Mall_Admin {
             array( $this, 'render_settings_page' ),
             'dashicons-store'
         );
-        add_submenu_page(
-            'kaa_mall',
-            'Reseller Applications',
-            'Reseller Applications',
-            'manage_options',
-            'kaa_mall_reseller_applications',
-            array( $this, 'render_reseller_applications_page' )
-        );
     }
 
     public function register_settings() {
-        $price_sanitize_args = array( 'sanitize_callback' => array( $this, 'sanitize_prices_callback' ) );
-        register_setting( 'kaa_mall_options', 'kaa_mall_mtn_prices', $price_sanitize_args );
-        register_setting( 'kaa_mall_options', 'kaa_mall_airteltigo_prices', $price_sanitize_args );
-        register_setting( 'kaa_mall_options', 'kaa_mall_vodafone_prices', $price_sanitize_args );
-        register_setting( 'kaa_mall_options', 'kaa_mall_telecel_prices', $price_sanitize_args );
-
+        register_setting( 'kaa_mall_options', 'kaa_mall_mtn_prices' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_airteltigo_prices' );
+        register_setting( 'kaa_mall_options', 'kaa_mall_vodafone_prices' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_public_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_secret_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_business_email' );
         register_setting( 'kaa_mall_options', 'kaa_mall_user_portal_url' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_portal_url' );
-        register_setting( 'kaa_mall_options', 'kaa_mall_reseller_application_fee' );
-    }
-
-    public function sanitize_prices_callback( $input ) {
-        $prices_arr = json_decode( stripslashes( $input ), true );
-        $sanitized_prices = array();
-
-        if ( is_array( $prices_arr ) ) {
-            foreach ( $prices_arr as $item ) {
-                if ( ! empty( $item['name'] ) && isset( $item['price'] ) && is_numeric( $item['price'] ) ) {
-                    $sanitized_prices[] = array(
-                        'name'  => sanitize_text_field( trim($item['name']) ),
-                        'price' => floatval( $item['price'] ),
-                    );
-                }
-            }
-        }
-        return $sanitized_prices;
     }
 
     public function render_settings_page() {
@@ -235,93 +128,16 @@ class Kaa_Mall_Admin {
                         <td><input type="text" name="kaa_mall_reseller_portal_url" value="<?php echo esc_attr( get_option('kaa_mall_reseller_portal_url') ); ?>" size="50" /></td>
                     </tr>
                 </table>
-                <h3>Reseller Settings</h3>
-                <table class="form-table">
-                    <tr valign="top">
-                        <th scope="row">Reseller Application Fee</th>
-                        <td><input type="number" name="kaa_mall_reseller_application_fee" value="<?php echo esc_attr( get_option('kaa_mall_reseller_application_fee', '50') ); ?>" /></td>
-                    </tr>
-                </table>
 
-                <h3>Network Prices</h3>
-                <div id="kaa-mall-price-manager">
-                    <?php
-                    $networks = ['mtn', 'airteltigo', 'vodafone', 'telecel'];
-                    foreach ($networks as $network) {
-                        ?>
-                        <div class="network-prices" id="prices-<?php echo $network; ?>" style="margin-bottom: 20px;">
-                            <h4><?php echo ucfirst($network); ?> Bundles</h4>
-                            <table class="wp-list-table widefat fixed striped">
-                                <thead>
-                                    <tr>
-                                        <th>Bundle Name</th>
-                                        <th>Price (GH₵)</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php
-                                    $prices_arr = get_option('kaa_mall_' . $network . '_prices');
-                                    if (is_array($prices_arr)) {
-                                        foreach ($prices_arr as $item) {
-                                            $name = $item['name'];
-                                            $price = $item['price'];
-                                            ?>
-                                            <tr>
-                                                <td><input type="text" value="<?php echo esc_attr($name); ?>" class="bundle-name"></td>
-                                                <td><input type="number" step="0.01" value="<?php echo esc_attr($price); ?>" class="bundle-price"></td>
-                                                <td><button type="button" class="button remove-price-row">Remove</button></td>
-                                            </tr>
-                                            <?php
-                                        }
-                                    }
-                                    ?>
-                                </tbody>
-                            </table>
-                            <button type="button" class="button add-price-row" data-network="<?php echo $network; ?>" style="margin-top: 10px;">Add Row</button>
-                        </div>
-                        <input type="hidden" name="kaa_mall_<?php echo $network; ?>_prices" id="hidden-prices-<?php echo $network; ?>">
-                        <?php
-                    }
-                    ?>
-                </div>
+                <h3>MTN Prices</h3>
+                <textarea name="kaa_mall_mtn_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_mtn_prices') ); ?></textarea>
+                <h3>AirtelTigo Prices</h3>
+                <textarea name="kaa_mall_airteltigo_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_airteltigo_prices') ); ?></textarea>
+                <h3>Vodafone Prices</h3>
+                <textarea name="kaa_mall_vodafone_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_vodafone_prices') ); ?></textarea>
                 <?php submit_button(); ?>
             </form>
         </div>
-        <script>
-            jQuery(document).ready(function($) {
-                $('#kaa-mall-price-manager').on('click', '.add-price-row', function() {
-                    var network = $(this).data('network');
-                    var table_body = $('#prices-' + network).find('tbody');
-                    var new_row = '<tr>' +
-                        '<td><input type="text" class="bundle-name" placeholder="e.g., 500MB"></td>' +
-                        '<td><input type="number" step="0.01" class="bundle-price" placeholder="e.g., 5.00"></td>' +
-                        '<td><button type="button" class="button remove-price-row">Remove</button></td>' +
-                        '</tr>';
-                    table_body.append(new_row);
-                });
-
-                $('#kaa-mall-price-manager').on('click', '.remove-price-row', function() {
-                    $(this).closest('tr').remove();
-                });
-
-                $('form').on('submit', function() {
-                    var networks = ['mtn', 'airteltigo', 'vodafone', 'telecel'];
-                    networks.forEach(function(network) {
-                        var prices_arr = [];
-                        var table_rows = $('#prices-' + network).find('tbody tr');
-                        table_rows.each(function() {
-                            var name = $(this).find('.bundle-name').val().trim();
-                            var price = $(this).find('.bundle-price').val().trim();
-                            if (name && price) {
-                                prices_arr.push({ name: name, price: price });
-                            }
-                        });
-                        $('#hidden-prices-' + network).val(JSON.stringify(prices_arr));
-                    });
-                });
-            });
-        </script>
         <?php
     }
 

@@ -21,31 +21,18 @@ class Kaa_Mall_Activator {
     }
 
     private static function create_virtual_product( $product_name ) {
-        $option_name = 'kaa_mall_' . str_replace( '-', '_', sanitize_title( $product_name ) ) . '_product_id';
-
-        // Check if we have a valid product ID stored.
-        $product_id = get_option( $option_name );
-        if ( $product_id && get_post_type( $product_id ) === 'product' ) {
-            return;
+        if ( ! self::product_exists( $product_name ) ) {
+            $product = new WC_Product_Simple();
+            $product->set_name( $product_name );
+            $product->set_slug( sanitize_title( $product_name ) );
+            $product->set_virtual( true );
+            $product->set_status( 'publish' );
+            $product->save();
         }
+    }
 
-        // If no valid ID is stored, try to find the product by its title.
+    private static function product_exists( $product_name ) {
         $product = get_page_by_title( $product_name, OBJECT, 'product' );
-        if ( $product ) {
-            // Product exists, store its ID.
-            update_option( $option_name, $product->ID );
-        } else {
-            // Product doesn't exist, create it.
-            $new_product = new WC_Product_Simple();
-            $new_product->set_name( $product_name );
-            $new_product->set_slug( sanitize_title( $product_name ) );
-            $new_product->set_virtual( true );
-            $new_product->set_status( 'publish' );
-            $new_product_id = $new_product->save();
-
-            if ( $new_product_id ) {
-                update_option( $option_name, $new_product_id );
-            }
-        }
+        return ( $product !== null );
     }
 }

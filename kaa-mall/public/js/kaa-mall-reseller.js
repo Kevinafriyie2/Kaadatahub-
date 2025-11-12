@@ -59,34 +59,6 @@
                 }
             });
         });
-
-        $('#kaa-mall-apply-btn').on('click', function() {
-            var fee = $(this).data('fee');
-            var handler = PaystackPop.setup({
-                key: kaa_mall_reseller_params.paystack_public_key,
-                email: kaa_mall_reseller_params.user_email,
-                amount: fee * 100,
-                currency: 'GHS',
-                ref: '' + Math.floor((Math.random() * 1000000000) + 1),
-                callback: function(response) {
-                    $.post(kaa_mall_reseller_params.ajax_url, {
-                        action: 'kaa_mall_handle_reseller_application',
-                        nonce: kaa_mall_reseller_params.nonce
-                    }, function(response) {
-                        if (response.success) {
-                            alert(response.data.message);
-                            window.location.reload();
-                        } else {
-                            alert('An error occurred: ' + response.data.message);
-                        }
-                    });
-                },
-                onClose: function() {
-                    alert('Transaction was not completed.');
-                },
-            });
-            handler.openIframe();
-        });
     });
 
 })(jQuery);

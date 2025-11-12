@@ -7,13 +7,84 @@ class Kaa_Mall {
     protected $version;
 
     public function __construct() {
+        if ( defined( 'KAA_MALL_VERSION' ) ) {
+            $this->version = KAA_MALL_VERSION;
+        } else {
+            $this->version = '1.1.0';
+        }
         $this->plugin_name = 'kaa-mall';
-        $this->version = '1.0.0';
+
         $this->load_dependencies();
         $this->define_admin_hooks();
         $this->define_public_hooks();
         add_action( 'init', array( $this, 'add_rewrite_rules' ) );
         add_action( 'init', array( $this, 'register_post_types' ) );
+        add_action( 'plugins_loaded', array( $this, 'check_for_updates' ) );
+    }
+
+    public function check_for_updates() {
+        $db_version = get_option( 'kaa_mall_version' );
+        if ( version_compare( $db_version, $this->version, '<' ) ) {
+            // Run updates for this version
+            if ( version_compare( $db_version, '1.1.0', '<' ) ) {
+                $this->update_to_1_1_0();
+            }
+            update_option( 'kaa_mall_version', $this->version );
+        }
+    }
+
+    private function update_to_1_1_0() {
+        $airteltigo_prices = array(
+            array('name' => '1GB', 'price' => 5.00),
+            array('name' => '2GB', 'price' => 10.00),
+            array('name' => '3GB', 'price' => 14.00),
+            array('name' => '4GB', 'price' => 18.00),
+            array('name' => '5GB', 'price' => 24.00),
+            array('name' => '6GB', 'price' => 28.00),
+            array('name' => '8GB', 'price' => 34.00),
+            array('name' => '10GB', 'price' => 44.00),
+            array('name' => '15GB', 'price' => 64.00),
+            array('name' => '20GB', 'price' => 84.00),
+            array('name' => '25GB', 'price' => 106.00),
+            array('name' => '30GB', 'price' => 127.00),
+            array('name' => '40GB', 'price' => 166.00),
+            array('name' => '50GB', 'price' => 206.00),
+        );
+
+        $telecel_prices = array(
+            array('name' => '5GB', 'price' => 24.00),
+            array('name' => '10GB', 'price' => 42.00),
+            array('name' => '20GB', 'price' => 82.00),
+            array('name' => '25GB', 'price' => 106.00),
+            array('name' => '30GB', 'price' => 128.00),
+            array('name' => '40GB', 'price' => 167.00),
+            array('name' => '50GB', 'price' => 190.00),
+            array('name' => '90GB', 'price' => 255.00),
+            array('name' => '190GB', 'price' => 356.00),
+            array('name' => '280GB', 'price' => 537.00),
+            array('name' => '380GB', 'price' => 658.00),
+        );
+
+        $mtn_prices = array(
+            array('name' => '1GB', 'price' => 5.2),
+            array('name' => '2GB', 'price' => 10.2),
+            array('name' => '3GB', 'price' => 15),
+            array('name' => '4GB', 'price' => 20),
+            array('name' => '5GB', 'price' => 25),
+            array('name' => '6GB', 'price' => 30.5),
+            array('name' => '8GB', 'price' => 35),
+            array('name' => '10GB', 'price' => 45),
+            array('name' => '15GB', 'price' => 65),
+            array('name' => '20GB', 'price' => 86),
+            array('name' => '25GB', 'price' => 104.2),
+            array('name' => '30GB', 'price' => 125),
+            array('name' => '40GB', 'price' => 167),
+            array('name' => '50GB', 'price' => 206),
+        );
+
+        update_option( 'kaa_mall_airteltigo_prices', $airteltigo_prices );
+        update_option( 'kaa_mall_telecel_prices', $telecel_prices );
+        update_option( 'kaa_mall_mtn_prices', $mtn_prices );
     }
 
     public function register_post_types() {
@@ -76,11 +147,11 @@ class Kaa_Mall {
     }
 
     private function load_dependencies() {
-        require_once plugin_dir_path( __FILE__ ) . '../admin/class-kaa-mall-admin.php';
-        require_once plugin_dir_path( __FILE__ ) . '../public/class-kaa-mall-public.php';
-        require_once plugin_dir_path( __FILE__ ) . '../public/class-kaa-mall-reseller.php';
-        require_once plugin_dir_path( __FILE__ ) . '../public/class-kaa-mall-auth.php';
-        require_once plugin_dir_path( __FILE__ ) . '../public/class-kaa-mall-portal-header.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-kaa-mall-admin.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-public.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-reseller.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-auth.php';
+        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-portal-header.php';
     }
 
     private function define_admin_hooks() {
