@@ -15,10 +15,57 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_kaa_mall_purchase_bundle', array( $this, 'purchase_bundle' ) );
         add_action( 'wp_ajax_kaa_mall_purchase_bundle_paystack', array( $this, 'purchase_bundle_paystack' ) );
         add_action( 'wp_ajax_nopriv_kaa_mall_purchase_bundle_paystack', array( $this, 'purchase_bundle_paystack' ) );
+        add_action( 'wp_ajax_kaa_mall_validate_purchase', array( $this, 'validate_purchase' ) );
+        add_action( 'wp_ajax_nopriv_kaa_mall_validate_purchase', array( $this, 'validate_purchase' ) );
         add_action( 'wp_ajax_kaa_mall_get_bundle_prices', array( $this, 'get_bundle_prices' ) );
         add_action( 'wp_ajax_kaa_mall_afa_registration', array( $this, 'afa_registration' ) );
         add_action( 'wp_ajax_kaa_mall_get_recent_orders', array( $this, 'get_recent_orders' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_balance', array( $this, 'ajax_get_wallet_balance' ) );
+        add_action( 'woocommerce_order_status_changed', array( $this, 'process_bundle_purchase' ), 10, 4 );
+    }
+
+    private function log_api_error( $message ) {
+        $log_file = plugin_dir_path( __FILE__ ) . 'api_errors.log';
+        $timestamp = date( 'Y-m-d H:i:s' );
+        file_put_contents( $log_file, "[$timestamp] $message\n", FILE_APPEND );
+    }
+
+    public function process_bundle_purchase( $order_id, $old_status, $new_status, $order ) {
+        // We are only interested in orders that are newly marked as processing or completed
+        if ( ! in_array( $new_status, array( 'processing', 'completed' ) ) || $old_status === $new_status ) {
+            return;
+        }
+
+        $network = $order->get_meta( 'Network' );
+        $bundle = $order->get_meta( 'Bundle' );
+
+        // Only proceed if this is a data bundle order
+        if ( empty( $network ) || empty( $bundle ) ) {
+            return;
+        }
+
+        // --- API Call Simulation ---
+        // In a real-world scenario, you would replace this with your actual API call.
+        // For this example, we will simulate a potential failure.
+        $api_call_successful = true; // Set to false to simulate a failure
+        if ( ! $api_call_successful ) {
+            $error_message = sprintf(
+                'API Call Failed for Order #%d. Network: %s, Bundle: %s, Phone: %s',
+                $order_id,
+                $network,
+                $bundle,
+                $order->get_meta( 'Phone Number' )
+            );
+            $this->log_api_error( $error_message );
+            $order->add_order_note( 'Automated API call for data bundle failed. Please process manually.' );
+            $order->update_status( 'failed' );
+        } else {
+            $order->add_order_note( 'Data bundle provisioned successfully via API.' );
+            // If the order was just 'processing', you might want to mark it as 'completed' now.
+            if ($new_status === 'processing') {
+                 $order->update_status( 'completed' );
+            }
+        }
     }
 
     public function enqueue_scripts() {
@@ -73,33 +120,60 @@ class Kaa_Mall_Public {
         check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $network = sanitize_text_field( $_POST['network'] );
 
-        $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
-        $admin_prices = array();
-        if ( ! empty( $admin_prices_str ) ) {
-            $lines = explode( "\n", $admin_prices_str );
-            foreach ( $lines as $line ) {
-                $parts = explode( '=', $line );
-                if ( count( $parts ) == 2 ) {
-                    $admin_prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
+        $admin_prices = get_option( 'kaa_mall_' . $network . '_prices' );
+        if ( ! is_array( $admin_prices ) ) {
+            $admin_prices = array();
+        }
+
+        // For this function, we need to format it as name => price for the frontend dropdown
+        $formatted_prices = array();
+        foreach ( $admin_prices as $item ) {
+            $formatted_prices[ $item['name'] ] = $item['price'];
+        }
+
+        $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
+        if ( $reseller_id ) {
+            $reseller_prices_raw = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
+            if ( is_array($reseller_prices_raw) ) {
+                 foreach ( $reseller_prices_raw as $item ) {
+                    $formatted_prices[ $item['name'] ] = $item['price'];
                 }
             }
         }
 
-        // Trim the selected bundle to avoid validation issues
-        $bundle = trim( $bundle );
+        wp_send_json_success( $formatted_prices );
+    }
 
-        $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-        if ( $reseller_id ) {
-            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
-            if ( ! empty( $reseller_prices ) ) {
-                // Merge reseller prices with admin prices, ensuring all bundles are available
-                $final_prices = array_merge( $admin_prices, $reseller_prices );
-                wp_send_json_success( $final_prices );
-                return;
+    public function validate_purchase() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+
+        $network = sanitize_text_field( $_POST['network'] );
+        $bundle = trim( sanitize_text_field( $_POST['bundle'] ) );
+        $phone_number = sanitize_text_field( $_POST['phone_number'] );
+
+        // Basic phone number validation (you can make this more robust)
+        if ( ! preg_match( '/^0\d{9}$/', $phone_number ) ) {
+            wp_send_json_error( array( 'message' => 'Invalid phone number format. Please use a 10-digit number starting with 0.' ) );
+        }
+
+        $admin_prices = get_option( 'kaa_mall_' . $network . '_prices' );
+        if ( ! is_array( $admin_prices ) ) {
+            $admin_prices = array();
+        }
+
+        $bundle_found = false;
+        foreach ($admin_prices as $item) {
+            if ( $item['name'] === $bundle ) {
+                $bundle_found = true;
+                break;
             }
         }
 
-        wp_send_json_success( $admin_prices );
+        if ( ! $bundle_found ) {
+            wp_send_json_error( array( 'message' => 'Invalid bundle selected. Please refresh and try again.' ) );
+        }
+
+        wp_send_json_success();
     }
 
     public function verify_paystack_transaction() {
@@ -163,32 +237,40 @@ class Kaa_Mall_Public {
         $bundle = sanitize_text_field( $_POST['bundle'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
 
-        // Trim the selected bundle to avoid validation issues
         $bundle = trim( $bundle );
 
-        $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
-        $admin_prices = array();
-        if ( ! empty( $admin_prices_str ) ) {
-            $lines = explode( "\n", $admin_prices_str );
-            foreach ( $lines as $line ) {
-                $parts = explode( '=', $line );
-                if ( count( $parts ) == 2 ) {
-                    $admin_prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
-                }
+        $admin_prices = get_option( 'kaa_mall_' . $network . '_prices' );
+        if ( ! is_array( $admin_prices ) ) {
+            $admin_prices = array();
+        }
+
+        $bundle_found = false;
+        $admin_price_for_bundle = null;
+
+        foreach ($admin_prices as $item) {
+            if ( $item['name'] === $bundle ) {
+                $bundle_found = true;
+                $admin_price_for_bundle = $item['price'];
+                break;
             }
         }
 
-        if ( ! isset( $admin_prices[ $bundle ] ) ) {
+        if ( ! $bundle_found ) {
             wp_send_json_error( array( 'message' => 'Invalid bundle selected.' ) );
         }
 
         $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-        $final_price = $admin_prices[ $bundle ];
+        $final_price = $admin_price_for_bundle;
 
         if ( $reseller_id ) {
             $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
-            if ( ! empty( $reseller_prices ) && isset( $reseller_prices[ $bundle ] ) ) {
-                $final_price = $reseller_prices[ $bundle ];
+             if ( is_array( $reseller_prices ) ) {
+                foreach ($reseller_prices as $item) {
+                    if ( $item['name'] === $bundle ) {
+                        $final_price = $item['price'];
+                        break;
+                    }
+                }
             }
         }
 
@@ -239,7 +321,6 @@ class Kaa_Mall_Public {
         $reference = sanitize_text_field( $_POST['reference'] );
         $email = is_user_logged_in() ? wp_get_current_user()->user_email : sanitize_email( $_POST['email'] );
 
-        // Trim the selected bundle to avoid validation issues
         $bundle = trim( $bundle );
 
         if ( ! is_user_logged_in() && ! is_email( $email ) ) {
@@ -247,29 +328,38 @@ class Kaa_Mall_Public {
             return;
         }
 
-        $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
-        $admin_prices = array();
-        if ( ! empty( $admin_prices_str ) ) {
-            $lines = explode( "\n", $admin_prices_str );
-            foreach ( $lines as $line ) {
-                $parts = explode( '=', $line );
-                if ( count( $parts ) == 2 ) {
-                    $admin_prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
-                }
+        $admin_prices = get_option( 'kaa_mall_' . $network . '_prices' );
+        if ( ! is_array( $admin_prices ) ) {
+            $admin_prices = array();
+        }
+
+        $bundle_found = false;
+        $admin_price_for_bundle = null;
+
+        foreach ($admin_prices as $item) {
+            if ( $item['name'] === $bundle ) {
+                $bundle_found = true;
+                $admin_price_for_bundle = $item['price'];
+                break;
             }
         }
 
-        if ( ! isset( $admin_prices[ $bundle ] ) ) {
+        if ( ! $bundle_found ) {
             wp_send_json_error( array( 'message' => 'Invalid bundle selected.' ) );
         }
 
         $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-        $final_price = $admin_prices[ $bundle ];
+        $final_price = $admin_price_for_bundle;
 
         if ( $reseller_id ) {
             $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
-            if ( ! empty( $reseller_prices ) && isset( $reseller_prices[ $bundle ] ) ) {
-                $final_price = $reseller_prices[ $bundle ];
+            if ( is_array( $reseller_prices ) ) {
+                foreach ($reseller_prices as $item) {
+                    if ( $item['name'] === $bundle ) {
+                        $final_price = $item['price'];
+                        break;
+                    }
+                }
             }
         }
 

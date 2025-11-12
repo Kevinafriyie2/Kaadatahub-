@@ -234,15 +234,40 @@
         $('.bundle-form').on('submit', function(e) {
             e.preventDefault();
             var form = $(this);
+            var submit_button = form.find('button[type="submit"]');
+            var original_button_text = submit_button.text();
+            submit_button.text('Validating...').prop('disabled', true);
+
+            // Pre-payment validation
+            $.ajax({
+                url: kaa_mall_params.ajax_url,
+                type: 'POST',
+                data: form.serialize() + '&action=kaa_mall_validate_purchase&nonce=' + kaa_mall_params.nonce,
+                success: function(validation_response) {
+                    if (validation_response.success) {
+                        // Proceed with payment
+                        proceed_with_payment(form);
+                    } else {
+                        show_notification('Error: ' + validation_response.data.message, 'error');
+                        submit_button.text(original_button_text).prop('disabled', false);
+                    }
+                },
+                error: function() {
+                     show_notification('An unexpected error occurred. Please try again.', 'error');
+                     submit_button.text(original_button_text).prop('disabled', false);
+                }
+            });
+        });
+
+        function proceed_with_payment(form) {
+            var submit_button = form.find('button[type="submit"]');
+            var original_button_text = submit_button.text();
+            submit_button.text('Processing...');
+
             var payment_method = form.find('input[name="payment_method"]:checked').val();
             var bundle_select = form.find('select[name="bundle"] option:selected');
             var bundle_text = bundle_select.text();
             var bundle_price_match = bundle_text.match(/(\d+\.\d+)/);
-
-            if (!bundle_price_match) {
-                show_notification('Please select a valid bundle.', 'error');
-                return;
-            }
             var bundle_price = parseFloat(bundle_price_match[0]);
 
             if (payment_method === 'wallet') {
@@ -257,6 +282,9 @@
                         } else {
                             show_notification('Error: ' + response.data.message, 'error');
                         }
+                    },
+                    complete: function() {
+                        submit_button.text(original_button_text).prop('disabled', false);
                     }
                 });
             } else { // Paystack
@@ -278,14 +306,20 @@
                                 } else {
                                     show_notification('Error: ' + response.data.message, 'error');
                                 }
+                            },
+                            complete: function() {
+                                submit_button.text(original_button_text).prop('disabled', false);
                             }
                         });
                     },
-                    onClose: function() { show_notification('Transaction was not completed.', 'error'); },
+                    onClose: function() {
+                        show_notification('Transaction was not completed.', 'error');
+                        submit_button.text(original_button_text).prop('disabled', false);
+                    },
                 });
                 handler.openIframe();
             }
-        });
+        }
 
         $('#kaa-mall-afa-form').on('submit', function(e) {
             e.preventDefault();

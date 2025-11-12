@@ -166,15 +166,35 @@ class Kaa_Mall_Admin {
     }
 
     public function register_settings() {
-        register_setting( 'kaa_mall_options', 'kaa_mall_mtn_prices' );
-        register_setting( 'kaa_mall_options', 'kaa_mall_airteltigo_prices' );
-        register_setting( 'kaa_mall_options', 'kaa_mall_vodafone_prices' );
+        $price_sanitize_args = array( 'sanitize_callback' => array( $this, 'sanitize_prices_callback' ) );
+        register_setting( 'kaa_mall_options', 'kaa_mall_mtn_prices', $price_sanitize_args );
+        register_setting( 'kaa_mall_options', 'kaa_mall_airteltigo_prices', $price_sanitize_args );
+        register_setting( 'kaa_mall_options', 'kaa_mall_vodafone_prices', $price_sanitize_args );
+        register_setting( 'kaa_mall_options', 'kaa_mall_telecel_prices', $price_sanitize_args );
+
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_public_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_paystack_secret_key' );
         register_setting( 'kaa_mall_options', 'kaa_mall_business_email' );
         register_setting( 'kaa_mall_options', 'kaa_mall_user_portal_url' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_portal_url' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_application_fee' );
+    }
+
+    public function sanitize_prices_callback( $input ) {
+        $prices_arr = json_decode( stripslashes( $input ), true );
+        $sanitized_prices = array();
+
+        if ( is_array( $prices_arr ) ) {
+            foreach ( $prices_arr as $item ) {
+                if ( ! empty( $item['name'] ) && isset( $item['price'] ) && is_numeric( $item['price'] ) ) {
+                    $sanitized_prices[] = array(
+                        'name'  => sanitize_text_field( trim($item['name']) ),
+                        'price' => floatval( $item['price'] ),
+                    );
+                }
+            }
+        }
+        return $sanitized_prices;
     }
 
     public function render_settings_page() {
@@ -229,7 +249,7 @@ class Kaa_Mall_Admin {
                     $networks = ['mtn', 'airteltigo', 'vodafone', 'telecel'];
                     foreach ($networks as $network) {
                         ?>
-                        <div class="network-prices" id="prices-<?php echo $network; ?>">
+                        <div class="network-prices" id="prices-<?php echo $network; ?>" style="margin-bottom: 20px;">
                             <h4><?php echo ucfirst($network); ?> Bundles</h4>
                             <table class="wp-list-table widefat fixed striped">
                                 <thead>
@@ -241,28 +261,24 @@ class Kaa_Mall_Admin {
                                 </thead>
                                 <tbody>
                                     <?php
-                                    $prices_str = get_option('kaa_mall_' . $network . '_prices');
-                                    if (!empty($prices_str)) {
-                                        $lines = explode("\n", $prices_str);
-                                        foreach ($lines as $line) {
-                                            $parts = explode('=', $line);
-                                            if (count($parts) == 2) {
-                                                $name = trim($parts[0]);
-                                                $price = trim($parts[1]);
-                                                ?>
-                                                <tr>
-                                                    <td><input type="text" value="<?php echo esc_attr($name); ?>" class="bundle-name"></td>
-                                                    <td><input type="number" step="0.01" value="<?php echo esc_attr($price); ?>" class="bundle-price"></td>
-                                                    <td><button type="button" class="button remove-price-row">Remove</button></td>
-                                                </tr>
-                                                <?php
-                                            }
+                                    $prices_arr = get_option('kaa_mall_' . $network . '_prices');
+                                    if (is_array($prices_arr)) {
+                                        foreach ($prices_arr as $item) {
+                                            $name = $item['name'];
+                                            $price = $item['price'];
+                                            ?>
+                                            <tr>
+                                                <td><input type="text" value="<?php echo esc_attr($name); ?>" class="bundle-name"></td>
+                                                <td><input type="number" step="0.01" value="<?php echo esc_attr($price); ?>" class="bundle-price"></td>
+                                                <td><button type="button" class="button remove-price-row">Remove</button></td>
+                                            </tr>
+                                            <?php
                                         }
                                     }
                                     ?>
                                 </tbody>
                             </table>
-                            <button type="button" class="button add-price-row" data-network="<?php echo $network; ?>">Add Row</button>
+                            <button type="button" class="button add-price-row" data-network="<?php echo $network; ?>" style="margin-top: 10px;">Add Row</button>
                         </div>
                         <input type="hidden" name="kaa_mall_<?php echo $network; ?>_prices" id="hidden-prices-<?php echo $network; ?>">
                         <?php
@@ -278,8 +294,8 @@ class Kaa_Mall_Admin {
                     var network = $(this).data('network');
                     var table_body = $('#prices-' + network).find('tbody');
                     var new_row = '<tr>' +
-                        '<td><input type="text" class="bundle-name"></td>' +
-                        '<td><input type="number" step="0.01" class="bundle-price"></td>' +
+                        '<td><input type="text" class="bundle-name" placeholder="e.g., 500MB"></td>' +
+                        '<td><input type="number" step="0.01" class="bundle-price" placeholder="e.g., 5.00"></td>' +
                         '<td><button type="button" class="button remove-price-row">Remove</button></td>' +
                         '</tr>';
                     table_body.append(new_row);
@@ -292,16 +308,16 @@ class Kaa_Mall_Admin {
                 $('form').on('submit', function() {
                     var networks = ['mtn', 'airteltigo', 'vodafone', 'telecel'];
                     networks.forEach(function(network) {
-                        var prices_str = '';
+                        var prices_arr = [];
                         var table_rows = $('#prices-' + network).find('tbody tr');
                         table_rows.each(function() {
                             var name = $(this).find('.bundle-name').val().trim();
                             var price = $(this).find('.bundle-price').val().trim();
                             if (name && price) {
-                                prices_str += name + '=' + price + '\n';
+                                prices_arr.push({ name: name, price: price });
                             }
                         });
-                        $('#hidden-prices-' + network).val(prices_str.trim());
+                        $('#hidden-prices-' + network).val(JSON.stringify(prices_arr));
                     });
                 });
             });
