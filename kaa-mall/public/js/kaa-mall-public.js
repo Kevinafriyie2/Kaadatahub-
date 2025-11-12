@@ -75,9 +75,16 @@
 
         // Initial setup on page load
         if (kaa_mall_params.is_user_logged_in) {
-            update_wallet_balance();
-            load_recent_transactions();
-            setup_sales_chart();
+            if ($('.purchase-history').length > 0) {
+                // We are on the history page
+                load_all_orders();
+                load_wallet_transactions_for_history();
+            } else {
+                // We are on the main dashboard
+                update_wallet_balance();
+                load_recent_transactions();
+                setup_sales_chart();
+            }
         } else {
             // For guests, check if the default form is present and load its prices
             var default_form = $('#kaa-mall-bundle-purchase-form');
@@ -86,6 +93,45 @@
                 load_bundle_prices(network);
             }
         }
+
+        $('body').on('click', '.action-icon', function() {
+            var action = $(this).data('action');
+
+            if (action === 'buy-data') {
+                // Find the MTN link in the sidebar and trigger a click
+                $('.sidebar-nav .nav-link[data-network="mtn"]').trigger('click');
+            } else if (action === 'topup') {
+                // Find and click the topup button inside the balance card
+                $('.balance-card .top-up-btn').trigger('click');
+            } else if (action === 'history') {
+                // Find the history link from the bottom nav and navigate to it
+                var history_url = $('.bottom-nav a[href*="history"]').attr('href');
+                if (history_url) {
+                    window.location.href = history_url;
+                }
+            } else if (action === 'refer') {
+                // Load the refer view
+                 $('#kaa-mall-main-view').html('<div class="kaa-mall-loader"></div>');
+                $.ajax({
+                    url: kaa_mall_params.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'kaa_mall_get_referral_view',
+                        nonce: kaa_mall_params.nonce
+                    },
+                    success: function(response) {
+                        $('#kaa-mall-main-view').html(response);
+                    }
+                });
+            }
+        });
+
+        $('body').on('click', '.header-icons .fa-user', function() {
+            var profile_url = $('.bottom-nav a[href*="my-account"]').attr('href');
+            if (profile_url) {
+                window.location.href = profile_url;
+            }
+        });
 
         // Handle network tab switching
         $('.network-tabs .tab-link').on('click', function() {
@@ -410,6 +456,40 @@
                         });
                     } else {
                         orders_table.append('<tr><td colspan="6">No recent orders found.</td></tr>');
+                    }
+                }
+            });
+        }
+
+        function load_wallet_transactions_for_history() {
+            var transactions_table = $('.wallet-transactions tbody');
+            transactions_table.empty().append('<tr><td colspan="5">Loading...</td></tr>');
+            $.ajax({
+                url: kaa_mall_params.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'kaa_mall_get_wallet_transactions',
+                    nonce: kaa_mall_params.nonce
+                },
+                success: function(response) {
+                    transactions_table.empty();
+                    if (response.success && response.data.length > 0) {
+                        $.each(response.data, function(index, trx) {
+                            var trx_date = new Date(trx.created_at);
+                            var formatted_date = trx_date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + trx_date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                            var amount_class = trx.amount > 0 ? 'positive' : 'negative';
+                            transactions_table.append(
+                                '<tr>' +
+                                '<td>' + formatted_date + '</td>' +
+                                '<td>' + trx.type + '</td>' +
+                                '<td class="' + amount_class + '">GH₵' + parseFloat(trx.amount).toFixed(2) + '</td>' +
+                                '<td>' + trx.details + '</td>' +
+                                '<td>GH₵' + parseFloat(trx.balance_after).toFixed(2) + '</td>' +
+                                '</tr>'
+                            );
+                        });
+                    } else {
+                        transactions_table.append('<tr><td colspan="5">No transactions found.</td></tr>');
                     }
                 }
             });

@@ -434,3 +434,23 @@ body {
     border-radius: 8px;
     font-size: 14px;
 }
+
+/* History Page Table Styles */
+.purchase-history table, .wallet-transactions table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.purchase-history th, .purchase-history td,
+.wallet-transactions th, .wallet-transactions td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.purchase-history th, .wallet-transactions th {
+    background-color: #f7f8fc;
+    font-weight: 600;
+    font-size: 14px;
+}

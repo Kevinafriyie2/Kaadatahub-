@@ -31,6 +31,13 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_kaa_mall_get_data_bundle_form', array( $this, 'ajax_get_data_bundle_form' ) );
         add_action( 'wp_ajax_kaa_mall_get_afa_registration_form', array( $this, 'ajax_get_afa_registration_form' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_view', array( $this, 'ajax_get_wallet_view' ) );
+        add_action( 'wp_ajax_kaa_mall_get_referral_view', array( $this, 'ajax_get_referral_view' ) );
+    }
+
+    public function ajax_get_referral_view() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        echo $this->render_referral_view();
+        wp_die();
     }
 
     // AJAX handlers for dynamic content
@@ -148,6 +155,37 @@ class Kaa_Mall_Public {
                 <ul class="transactions-list" id="wallet-transactions-list">
                     <!-- Transactions will be loaded here by JS -->
                 </ul>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    private function get_referral_link() {
+        if ( ! is_user_logged_in() ) {
+            return '';
+        }
+        $user_id = get_current_user_id();
+        $shop_name = get_user_meta( $user_id, '_kaa_mall_shop_name', true );
+        if ( $shop_name ) {
+            return home_url( '/?ref_shop=' . $shop_name );
+        }
+        return home_url( '/?ref=' . $user_id );
+    }
+
+    public function render_referral_view() {
+        ob_start();
+        $referral_link = $this->get_referral_link();
+        ?>
+        <div class="kaa-mall-dynamic-content-wrapper">
+            <h3>Refer a Friend</h3>
+            <p>Share your unique link to earn rewards when your friends make a purchase.</p>
+            <div class="form-group">
+                <label for="referral-link">Your Referral Link</label>
+                <input type="text" id="referral-link" value="<?php echo esc_url($referral_link); ?>" readonly>
+            </div>
+             <div class="form-group">
+                <button class="kaa-mall-btn" onclick="navigator.clipboard.writeText('<?php echo esc_url($referral_link); ?>')">Copy Link</button>
             </div>
         </div>
         <?php
@@ -783,102 +821,105 @@ class Kaa_Mall_Public {
         }
 
         ob_start();
-
-        echo Kaa_Mall_Portal_Header::render();
+        $current_user = wp_get_current_user();
+        $history_page_url = get_permalink( get_page_by_path( 'history' ) );
         ?>
-        <style>
-            :root {
-                --primary-color: #ffc107;
-                --secondary-color: #8a2be2;
-                --text-color: #ffffff;
-                --heading-color: #ffffff;
-                --border-color: rgba(255, 255, 255, 0.2);
-                --shadow-color: rgba(0, 0, 0, 0.5);
-            }
+        <div class="kaa-mall-portal-body">
+             <!-- Sidebar -->
+            <div class="kaa-mall-sidebar">
+                <div class="sidebar-header">
+                    <h2 class="brand-title">Kaadatahub</h2>
+                    <button class="close-sidebar-btn">&times;</button>
+                </div>
+                <ul class="sidebar-nav">
+                    <li class="nav-section-title">Services</li>
+                    <li><a href="<?php echo esc_url( get_permalink( get_page_by_path( 'user-portal' ) ) ); ?>"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li><a href="#" class="nav-link" data-network="mtn"><i class="fas fa-mobile-alt"></i> MTN</a></li>
+                    <li><a href="#" class="nav-link" data-network="airteltigo"><i class="fas fa-mobile-alt"></i> Airteltigo</a></li>
+                    <li><a href="#" class="nav-link" data-network="vodafone"><i class="fas fa-mobile-alt"></i> Telecel</a></li>
+                    <li><a href="#" class="nav-link" data-afa="true"><i class="fas fa-user-plus"></i> AFA Registration</a></li>
 
+                    <li class="nav-section-title">Credits & Debits</li>
+                    <li><a href="#" class="nav-link" data-wallet="true"><i class="fas fa-wallet"></i> Wallet</a></li>
 
-            .kaa-mall-portal {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                color: var(--text-color);
-                padding: 100px 20px 20px;
-                padding-top: 80px;
-                width: 100%;
-                box-sizing: border-box;
-                position: relative;
-                z-index: 1;
-                background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            }
-
-            .kaa-mall-card {
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 16px;
-                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                border: 1px solid var(--border-color);
-                padding: 20px;
-                margin-bottom: 20px;
-            }
-
-            .purchase-history, .wallet-transactions {
-                overflow-x: auto;
-            }
-
-            .purchase-history table, .wallet-transactions table {
-                width: 100%;
-                border-collapse: collapse;
-                min-width: 600px;
-            }
-
-            .purchase-history th, .purchase-history td,
-            .wallet-transactions th, .wallet-transactions td {
-                padding: 10px;
-                text-align: left;
-                border-bottom: 1px solid var(--border-color);
-            }
-
-            .purchase-history th, .wallet-transactions th {
-                font-weight: bold;
-            }
-        </style>
-        <div class="kaa-mall-portal">
-            <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="color: white;">History</h2>
-                <button id="download-history-btn" style="background-color: var(--primary-color); color: #121212; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">Download History</button>
+                    <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
+                    <li class="nav-section-title">Business</li>
+                    <li><a href="<?php echo esc_url( get_permalink( get_page_by_path( 'reseller-portal' ) ) ); ?>"><i class="fas fa-store"></i> Reseller</a></li>
+                    <?php endif; ?>
+                </ul>
             </div>
-            <div id="history">
-                <div class="kaa-mall-card purchase-history">
+            <div class="sidebar-overlay"></div>
+
+            <div class="kaa-mall-main-content">
+                 <div class="main-header">
+                    <button class="open-sidebar-btn"><i class="fas fa-bars"></i></button>
+                    <div class="header-user-info">
+                        <span>Hello, <?php echo esc_html( $current_user->display_name ); ?></span>
+                    </div>
+                    <div class="header-icons">
+                        <i class="fas fa-bell"></i>
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+                <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>History</h2>
+                    <button id="download-history-btn" class="kaa-mall-btn" style="width: auto;">Download History</button>
+                </div>
+                 <div class="recent-transactions-card purchase-history">
                     <h3>Purchase History</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Date</th>
-                                <th>Bundle</th>
-                                <th>Phone</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Date</th>
+                                    <th>Bundle</th>
+                                    <th>Phone</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <div class="kaa-mall-card wallet-transactions">
+                <div class="recent-transactions-card wallet-transactions">
                     <h3>Wallet History</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Amount</th>
-                                <th>Details</th>
-                                <th>Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                     <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Details</th>
+                                    <th>Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
+            </div>
+             <!-- Bottom Navigation -->
+            <div class="bottom-nav">
+                <a href="<?php echo esc_url( get_permalink( get_page_by_path( 'user-portal' ) ) ); ?>" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#" class="nav-item active">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Services</span>
+                </a>
+                <a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>" class="nav-item">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
             </div>
         </div>
         <?php
@@ -923,6 +964,7 @@ class Kaa_Mall_Public {
                 </div>
                 <ul class="sidebar-nav">
                     <li class="nav-section-title">Services</li>
+                    <li><a href="<?php echo esc_url( get_permalink( get_page_by_path( 'user-portal' ) ) ); ?>"><i class="fas fa-home"></i> Dashboard</a></li>
                     <li><a href="#" class="nav-link" data-network="mtn"><i class="fas fa-mobile-alt"></i> MTN</a></li>
                     <li><a href="#" class="nav-link" data-network="airteltigo"><i class="fas fa-mobile-alt"></i> Airteltigo</a></li>
                     <li><a href="#" class="nav-link" data-network="vodafone"><i class="fas fa-mobile-alt"></i> Telecel</a></li>
@@ -930,6 +972,11 @@ class Kaa_Mall_Public {
 
                     <li class="nav-section-title">Credits & Debits</li>
                     <li><a href="#" class="nav-link" data-wallet="true"><i class="fas fa-wallet"></i> Wallet</a></li>
+
+                    <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
+                    <li class="nav-section-title">Business</li>
+                    <li><a href="<?php echo esc_url( get_permalink( get_page_by_path( 'reseller-portal' ) ) ); ?>"><i class="fas fa-store"></i> Reseller</a></li>
+                    <?php endif; ?>
                 </ul>
             </div>
             <div class="sidebar-overlay"></div>
@@ -966,25 +1013,25 @@ class Kaa_Mall_Public {
                     </div>
 
                     <div class="action-icons">
-                         <div class="action-icon">
+                         <div class="action-icon" data-action="buy-data">
                             <div class="icon-wrapper" style="background-color: #e6f7ff;">
                                 <i class="fas fa-shopping-cart" style="color: #1890ff;"></i>
                             </div>
                             <span>Buy Data</span>
                         </div>
-                        <div class="action-icon">
+                        <div class="action-icon" data-action="topup">
                             <div class="icon-wrapper" style="background-color: #f9f0ff;">
                                 <i class="fas fa-wallet" style="color: #722ed1;"></i>
                             </div>
                             <span>Topup</span>
                         </div>
-                        <div class="action-icon">
+                        <div class="action-icon" data-action="history">
                              <div class="icon-wrapper" style="background-color: #fff1f0;">
                                 <i class="fas fa-history" style="color: #cf1322;"></i>
                             </div>
                             <span>History</span>
                         </div>
-                        <div class="action-icon">
+                        <div class="action-icon" data-action="refer">
                             <div class="icon-wrapper" style="background-color: #fffbe6;">
                                 <i class="fas fa-users" style="color: #d48806;"></i>
                             </div>
