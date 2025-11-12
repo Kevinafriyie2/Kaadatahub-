@@ -87,12 +87,12 @@ class Kaa_Mall {
     }
 
     private function load_dependencies() {
-        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-kaa-mall-wallet.php';
-        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-kaa-mall-admin.php';
-        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-public.php';
-        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-reseller.php';
-        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-auth.php';
-        require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-portal-header.php';
+        require_once plugin_dir_path( __FILE__ ) . 'class-kaa-mall-wallet.php';
+        require_once plugin_dir_path( __FILE__ ) . '../admin/class-kaa-mall-admin.php';
+        require_once plugin_dir_path( __FILE__ ) . '../public/class-kaa-mall-public.php';
+        require_once plugin_dir_path( __FILE__ ) . '../public/class-kaa-mall-reseller.php';
+        require_once plugin_dir_path( __FILE__ ) . '../public/class-kaa-mall-auth.php';
+        require_once plugin_dir_path( __FILE__ ) . '../public/class-kaa-mall-portal-header.php';
     }
 
     private function define_admin_hooks() {
@@ -101,8 +101,7 @@ class Kaa_Mall {
 
     private function define_public_hooks() {
         $plugin_public = new Kaa_Mall_Public( $this->get_plugin_name(), $this->get_version() );
-        // Run after default priority (10) to ensure WooCommerce session is initialized first.
-        add_action( 'init', array( $plugin_public, 'init_session' ), 20 );
+        add_action( 'init', array( $plugin_public, 'init_session' ) );
         $plugin_reseller = new Kaa_Mall_Reseller();
         $plugin_auth = new Kaa_Mall_Auth();
     }

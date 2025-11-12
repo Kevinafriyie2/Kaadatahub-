@@ -3,32 +3,11 @@
 class Kaa_Mall_Activator {
 
     public static function activate() {
-        self::create_wallet_transactions_table();
         self::create_virtual_product( 'Wallet Top-up' );
         self::create_virtual_product( 'Data Bundle' );
         self::create_virtual_product( 'AFA Registration' );
         self::add_reseller_role();
         self::create_history_page();
-    }
-
-    private static function create_wallet_transactions_table() {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'kaa_mall_wallet_transactions';
-        $charset_collate = $wpdb->get_charset_collate();
-
-        $sql = "CREATE TABLE $table_name (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            user_id bigint(20) NOT NULL,
-            amount decimal(10, 2) NOT NULL,
-            type varchar(255) NOT NULL,
-            details text NOT NULL,
-            balance_after decimal(10, 2) NOT NULL,
-            created_at datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-            PRIMARY KEY  (id)
-        ) $charset_collate;";
-
-        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
-        dbDelta( $sql );
     }
 
     private static function add_reseller_role() {
