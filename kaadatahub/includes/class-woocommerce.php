@@ -86,5 +86,3 @@ class KDH_WooCommerce {
         }
     }
 }
-
-KDH_WooCommerce::init();

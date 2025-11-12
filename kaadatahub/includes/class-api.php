@@ -67,5 +67,3 @@ class KDH_API {
         wp_send_json_success(['balance' => $balance]);
     }
 }
-
-KDH_API::init();

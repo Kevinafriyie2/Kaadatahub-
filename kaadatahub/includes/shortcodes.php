@@ -59,5 +59,3 @@ class KDH_Shortcodes {
         return ob_get_clean();
     }
 }
-
-KDH_Shortcodes::init();

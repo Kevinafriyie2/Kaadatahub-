@@ -91,5 +91,3 @@ class KDH_Admin {
         include KDH_PLUGIN_DIR . 'admin/partials/settings.php';
     }
 }
-
-KDH_Admin::init();

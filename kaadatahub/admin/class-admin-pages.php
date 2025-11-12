@@ -104,5 +104,3 @@ class KDH_Admin_Pages {
         echo '<input type="text" name="kdh_paystack_public_key" value="' . esc_attr($value) . '" class="regular-text">';
     }
 }
-
-KDH_Admin_Pages::init();
