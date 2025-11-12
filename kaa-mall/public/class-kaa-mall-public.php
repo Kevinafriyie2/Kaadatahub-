@@ -232,7 +232,11 @@ class Kaa_Mall_Public {
     }
 
     public function init_session() {
-        if ( class_exists('WooCommerce') && ! is_admin() && ! defined( 'DOING_AJAX' ) ) {
+        if ( function_exists('WC') && class_exists('WC_Session_Handler') ) {
+            if ( is_null( WC()->session ) ) {
+                WC()->session = new WC_Session_Handler();
+                WC()->session->init();
+            }
             if ( WC()->session && ! WC()->session->has_session() ) {
                 WC()->session->set_customer_session_cookie( true );
             }
