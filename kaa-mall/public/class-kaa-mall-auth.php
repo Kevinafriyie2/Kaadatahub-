@@ -64,12 +64,12 @@ class Kaa_Mall_Auth {
                         <form id="kaa-mall-login-form" class="kaa-mall-form" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>" method="post">
                             <div class="form-group">
                                 <label for="user_login" style="display: none;">Email</label>
-                                <input type="text" name="log" id="user_login" required placeholder="kevinadfrifiye2@gmail.com" style="background-color: #ffffcc;">
+                                <input type="text" name="log" id="user_login" required placeholder="Email Address">
                             </div>
                             <div class="form-group">
                                 <label for="user_pass" style="display: none;">Password</label>
                                 <div style="position: relative;">
-                                    <input type="password" name="pwd" id="user_pass" required placeholder=".........." style="background-color: #ffffcc; padding-right: 40px;">
+                                    <input type="password" name="pwd" id="user_pass" required placeholder="Password">
                                     <i class="fas fa-eye" id="togglePassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer;"></i>
                                 </div>
                             </div>

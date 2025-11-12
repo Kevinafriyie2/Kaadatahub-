@@ -833,7 +833,7 @@ class Kaa_Mall_Public {
                 </div>
                 <ul class="sidebar-nav">
                     <li class="nav-section-title">Services</li>
-                    <li><a href="<?php echo esc_url( get_permalink( get_page_by_path( 'user-portal' ) ) ); ?>"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li><a href="https://kaadatahub.shop/users-portal-new/"><i class="fas fa-home"></i> Dashboard</a></li>
                     <li><a href="#" class="nav-link" data-network="mtn"><i class="fas fa-mobile-alt"></i> MTN</a></li>
                     <li><a href="#" class="nav-link" data-network="airteltigo"><i class="fas fa-mobile-alt"></i> Airteltigo</a></li>
                     <li><a href="#" class="nav-link" data-network="vodafone"><i class="fas fa-mobile-alt"></i> Telecel</a></li>
@@ -921,7 +921,7 @@ class Kaa_Mall_Public {
             </div>
              <!-- Bottom Navigation -->
             <div class="bottom-nav">
-                <a href="<?php echo esc_url( get_permalink( get_page_by_path( 'user-portal' ) ) ); ?>" class="nav-item">
+                <a href="https://kaadatahub.shop/users-portal-new/" class="nav-item">
                     <i class="fas fa-home"></i>
                     <span>Home</span>
                 </a>
@@ -929,10 +929,17 @@ class Kaa_Mall_Public {
                     <i class="fas fa-history"></i>
                     <span>History</span>
                 </a>
+                <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
+                <a href="<?php echo esc_url( get_permalink( get_page_by_path( 'reseller-portal' ) ) ); ?>" class="nav-item">
+                    <i class="fas fa-store"></i>
+                    <span>Reseller</span>
+                </a>
+                <?php else: ?>
                 <a href="#" class="nav-item">
                     <i class="fas fa-briefcase"></i>
                     <span>Services</span>
                 </a>
+                <?php endif; ?>
                 <a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>" class="nav-item">
                     <i class="fas fa-user"></i>
                     <span>Profile</span>
@@ -981,7 +988,7 @@ class Kaa_Mall_Public {
                 </div>
                 <ul class="sidebar-nav">
                     <li class="nav-section-title">Services</li>
-                    <li><a href="<?php echo esc_url( get_permalink( get_page_by_path( 'user-portal' ) ) ); ?>"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li><a href="https://kaadatahub.shop/users-portal-new/"><i class="fas fa-home"></i> Dashboard</a></li>
                     <li><a href="#" class="nav-link" data-network="mtn"><i class="fas fa-mobile-alt"></i> MTN</a></li>
                     <li><a href="#" class="nav-link" data-network="airteltigo"><i class="fas fa-mobile-alt"></i> Airteltigo</a></li>
                     <li><a href="#" class="nav-link" data-network="vodafone"><i class="fas fa-mobile-alt"></i> Telecel</a></li>
@@ -1008,8 +1015,25 @@ class Kaa_Mall_Public {
                         <span>Hello, <?php echo esc_html( $current_user->display_name ); ?></span>
                     </div>
                     <div class="header-icons">
+                        <div class="dark-mode-toggle">
+                            <i class="fas fa-sun"></i>
+                            <i class="fas fa-moon"></i>
+                        </div>
                         <i class="fas fa-bell"></i>
-                        <i class="fas fa-user"></i>
+                        <i class="fas fa-user" id="profile-icon"></i>
+                    </div>
+                    <div class="profile-popup">
+                        <div class="profile-header">
+                            <span class="profile-name"><?php echo esc_html( $current_user->display_name ); ?></span>
+                            <span class="profile-role">Basic</span>
+                            <button class="close-popup-btn">&times;</button>
+                        </div>
+                        <ul class="profile-menu">
+                            <li><a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>"><i class="fas fa-user-circle"></i> My Profile</a></li>
+                            <li><a href="#"><i class="fas fa-question-circle"></i> Support</a></li>
+                            <li><a href="#"><i class="fas fa-cog"></i> Setting</a></li>
+                            <li><a href="<?php echo esc_url( wp_logout_url( get_permalink() ) ); ?>"><i class="fas fa-sign-out-alt"></i> Log Out</a></li>
+                        </ul>
                     </div>
                     <?php else: ?>
                         <h2 class="brand-title">Kaadatahub</h2>
@@ -1078,7 +1102,7 @@ class Kaa_Mall_Public {
             <!-- Bottom Navigation -->
             <?php if ( is_user_logged_in() ): ?>
             <div class="bottom-nav">
-                <a href="#" class="nav-item active">
+                <a href="https://kaadatahub.shop/users-portal-new/" class="nav-item active">
                     <i class="fas fa-home"></i>
                     <span>Home</span>
                 </a>
@@ -1086,10 +1110,17 @@ class Kaa_Mall_Public {
                     <i class="fas fa-history"></i>
                     <span>History</span>
                 </a>
+                <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
+                <a href="<?php echo esc_url( get_permalink( get_page_by_path( 'reseller-portal' ) ) ); ?>" class="nav-item">
+                    <i class="fas fa-store"></i>
+                    <span>Reseller</span>
+                </a>
+                <?php else: ?>
                 <a href="#" class="nav-item">
                     <i class="fas fa-briefcase"></i>
                     <span>Services</span>
                 </a>
+                <?php endif; ?>
                 <a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>" class="nav-item">
                     <i class="fas fa-user"></i>
                     <span>Profile</span>

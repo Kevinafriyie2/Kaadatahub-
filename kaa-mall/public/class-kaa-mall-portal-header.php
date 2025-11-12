@@ -101,7 +101,7 @@ class Kaa_Mall_Portal_Header {
                 <span class="bar"></span>
             </div>
             <nav class="header-nav">
-                <a href="<?php echo esc_url( get_option('kaa_mall_user_portal_url') ); ?>">Dashboard</a>
+                <a href="https://kaadatahub.shop/users-portal-new/">Dashboard</a>
                 <?php
                 $history_url = get_option('kaa_mall_history_portal_url');
                 if ( empty( $history_url ) ) {

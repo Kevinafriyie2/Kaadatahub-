@@ -191,10 +191,12 @@
             }
         });
 
-        $('body').on('click', '.header-icons .fa-user', function() {
-            var profile_url = $('.bottom-nav a[href*="my-account"]').attr('href');
-            if (profile_url) {
-                window.location.href = profile_url;
+        $('body').on('click', '.header-icons .fa-user', function(e) {
+            if (!$(this).is('#profile-icon')) {
+                var profile_url = $('.bottom-nav a[href*="my-account"]').attr('href');
+                if (profile_url) {
+                    window.location.href = profile_url;
+                }
             }
         });
 
@@ -363,7 +365,8 @@
         // Handle AFA registration form submission
         $('body').on('submit', '#kaa-mall-afa-registration-form', function(e) {
             e.preventDefault();
-            var formData = $(this).serialize();
+            var form = $(this);
+            var formData = form.serialize();
 
             $.ajax({
                 url: kaa_mall_params.ajax_url,
@@ -373,6 +376,7 @@
                     if (response.success) {
                         update_wallet_balance();
                         show_notification('AFA registration successful!', 'success');
+                        form.trigger('reset');
                         // Optionally, redirect or clear form
                     } else {
                         show_notification('Error: ' + response.data.message, 'error');
