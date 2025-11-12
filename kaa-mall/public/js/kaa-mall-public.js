@@ -74,6 +74,18 @@
             }
         });
 
+        // Hide balance functionality
+        $('body').on('click', '.hide-balance-btn', function() {
+            var $balance = $(this).closest('.balance-card').find('.balance-amount');
+            if ($(this).text() === 'Hide') {
+                $balance.text('GH₵ ****');
+                $(this).text('Show');
+            } else {
+                update_wallet_balance();
+                $(this).text('Hide');
+            }
+        });
+
         $('.close-sidebar-btn, .sidebar-overlay').on('click', function() {
             $('.kaa-mall-sidebar').removeClass('open');
             $('.sidebar-overlay').removeClass('open');
@@ -197,6 +209,19 @@
                 if (profile_url) {
                     window.location.href = profile_url;
                 }
+            }
+        });
+
+        // Handle notification bell click
+        $('body').on('click', '.header-icons .fa-bell', function() {
+            show_notification('Notifications are not available yet.', 'info');
+        });
+
+        // Handle "Setting" link click
+        $('body').on('click', '.profile-menu a[href="#"]', function(e) {
+            e.preventDefault();
+            if ($(this).find('.fa-cog').length) {
+                show_notification('Settings are not yet available.', 'info');
             }
         });
 

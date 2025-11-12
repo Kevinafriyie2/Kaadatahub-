@@ -888,7 +888,7 @@ class Kaa_Mall_Public {
                         </div>
                         <ul class="profile-menu">
                             <li><a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>"><i class="fas fa-user-circle"></i> My Profile</a></li>
-                            <li><a href="#"><i class="fas fa-question-circle"></i> Support</a></li>
+                            <li><a href="https://chat.whatsapp.com/JZEJZlNO3DV8VCyeTwzYgt" target="_blank"><i class="fas fa-question-circle"></i> Support</a></li>
                             <li><a href="#"><i class="fas fa-cog"></i> Setting</a></li>
                             <li><a href="<?php echo esc_url( wp_logout_url( get_permalink() ) ); ?>"><i class="fas fa-sign-out-alt"></i> Log Out</a></li>
                         </ul>
