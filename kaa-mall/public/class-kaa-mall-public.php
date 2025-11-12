@@ -844,7 +844,10 @@ class Kaa_Mall_Public {
 
                     <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
                     <li class="nav-section-title">Business</li>
-                    <li><a href="<?php echo esc_url( get_permalink( get_page_by_path( 'reseller-portal' ) ) ); ?>"><i class="fas fa-store"></i> Reseller</a></li>
+                    <li><a href="https://kaadatahub.shop/resellers-portal/"><i class="fas fa-store"></i> Reseller</a></li>
+                    <?php else: ?>
+                    <li class="nav-section-title">Business</li>
+                    <li><a href="https://kaadatahub.shop/apply-as-a-reseller/"><i class="fas fa-store"></i> Apply as a Reseller</a></li>
                     <?php endif; ?>
                 </ul>
             </div>
@@ -930,14 +933,14 @@ class Kaa_Mall_Public {
                     <span>History</span>
                 </a>
                 <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
-                <a href="<?php echo esc_url( get_permalink( get_page_by_path( 'reseller-portal' ) ) ); ?>" class="nav-item">
+                <a href="https://kaadatahub.shop/resellers-portal/" class="nav-item">
                     <i class="fas fa-store"></i>
                     <span>Reseller</span>
                 </a>
                 <?php else: ?>
-                <a href="#" class="nav-item">
+                <a href="https://kaadatahub.shop/apply-as-a-reseller/" class="nav-item">
                     <i class="fas fa-briefcase"></i>
-                    <span>Services</span>
+                    <span>Apply as a Reseller</span>
                 </a>
                 <?php endif; ?>
                 <a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>" class="nav-item">
@@ -999,7 +1002,10 @@ class Kaa_Mall_Public {
 
                     <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
                     <li class="nav-section-title">Business</li>
-                    <li><a href="<?php echo esc_url( get_permalink( get_page_by_path( 'reseller-portal' ) ) ); ?>"><i class="fas fa-store"></i> Reseller</a></li>
+                    <li><a href="https://kaadatahub.shop/resellers-portal/"><i class="fas fa-store"></i> Reseller</a></li>
+                    <?php else: ?>
+                    <li class="nav-section-title">Business</li>
+                    <li><a href="https://kaadatahub.shop/apply-as-a-reseller/"><i class="fas fa-store"></i> Apply as a Reseller</a></li>
                     <?php endif; ?>
                 </ul>
             </div>
@@ -1111,14 +1117,14 @@ class Kaa_Mall_Public {
                     <span>History</span>
                 </a>
                 <?php if ( in_array( 'reseller', (array) $current_user->roles ) ) : ?>
-                <a href="<?php echo esc_url( get_permalink( get_page_by_path( 'reseller-portal' ) ) ); ?>" class="nav-item">
+                <a href="https://kaadatahub.shop/resellers-portal/" class="nav-item">
                     <i class="fas fa-store"></i>
                     <span>Reseller</span>
                 </a>
                 <?php else: ?>
-                <a href="#" class="nav-item">
+                <a href="https://kaadatahub.shop/apply-as-a-reseller/" class="nav-item">
                     <i class="fas fa-briefcase"></i>
-                    <span>Services</span>
+                    <span>Apply as a Reseller</span>
                 </a>
                 <?php endif; ?>
                 <a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>" class="nav-item">
