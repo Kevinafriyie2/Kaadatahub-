@@ -136,6 +136,7 @@ class Kaa_Mall_Public {
                 $order->set_customer_id( $user_id );
                 $order->add_product( $product, 1, array( 'subtotal' => $amount, 'total' => $amount ) );
                 $order->set_total( $amount );
+                $order->calculate_totals();
                 $order->set_status( 'completed' );
                 $order->save();
             }
@@ -200,6 +201,7 @@ class Kaa_Mall_Public {
             $order->set_customer_id( $user_id );
             $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
             $order->set_total( $final_price );
+            $order->calculate_totals();
             $order->set_status( 'processing' );
             $order->update_meta_data( 'Network', $network );
             $order->update_meta_data( 'Bundle', $bundle );
@@ -297,6 +299,7 @@ class Kaa_Mall_Public {
 
                 $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
                 $order->set_total( $final_price );
+                $order->calculate_totals();
                 $order->set_status( 'processing' );
                 $order->update_meta_data( 'Network', $network );
                 $order->update_meta_data( 'Bundle', $bundle );
@@ -362,6 +365,7 @@ class Kaa_Mall_Public {
             $order->set_customer_id( $user_id );
             $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
             $order->set_total( $final_price );
+            $order->calculate_totals();
             $order->set_status( 'processing' );
             $order->update_meta_data( 'Full Name', $full_name );
             $order->update_meta_data( 'Phone Number', $phone_number );
@@ -445,6 +449,7 @@ class Kaa_Mall_Public {
                     <ul>
                         <li><a href="#" class="nav-link active" data-target="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
                         <li><a href="#" class="nav-link" data-target="buy-data-mtn"><i class="fas fa-mobile-alt"></i> MTN</a></li>
+                        <li><a href="#" class="nav-link" data-target="buy-data-vodafone"><i class="fas fa-mobile-alt"></i> Vodafone</a></li>
                         <li><a href="#" class="nav-link" data-target="buy-data-airteltigo"><i class="fas fa-mobile-alt"></i> Airteltigo</a></li>
                         <li><a href="#" class="nav-link" data-target="buy-data-telecel"><i class="fas fa-mobile-alt"></i> Telecel</a></li>
                         <li><a href="#" class="nav-link" data-target="afa-registration"><i class="fas fa-user-plus"></i> AFA Registration</a></li>
@@ -539,93 +544,92 @@ class Kaa_Mall_Public {
                     </div>
 
                     <!-- Hidden Data Purchase Forms -->
-                    <div id="buy-data-forms" class="kaa-mall-card data-bundles" style="display: none;">
-                        <div class="network-tabs">
-                            <button class="tab-link active" data-network="mtn">MTN</button>
-                            <button class="tab-link" data-network="airteltigo">AirtelTigo</button>
-                            <button class="tab-link" data-network="vodafone">Vodafone</button>
-                            <button class="tab-link" data-network="telecel">Telecel</button>
-                        </div>
-                        <div id="mtn" class="network-tab-content active">
-                            <form class="bundle-form" data-network="mtn">
-                                <?php if ( ! is_user_logged_in() ) : ?>
-                                    <label>Your Email</label>
-                                    <input type="email" name="email" placeholder="Enter your email" required>
+                    <div id="buy-data-mtn" class="kaa-mall-card data-bundles" style="display: none;">
+                        <h3>MTN Bundles</h3>
+                        <form class="bundle-form" data-network="mtn">
+                            <?php if ( ! is_user_logged_in() ) : ?>
+                                <label>Your Email</label>
+                                <input type="email" name="email" placeholder="Enter your email" required>
+                            <?php endif; ?>
+                            <label>MTN Phone Number</label>
+                            <input type="tel" name="phone_number" placeholder="0241234567" required>
+                            <label>Select Bundle</label>
+                            <select name="bundle" required></select>
+                            <label>Payment Method</label>
+                            <div class="payment-method">
+                                <?php if ( is_user_logged_in() ) : ?>
+                                <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
                                 <?php endif; ?>
-                                <label>MTN Phone Number</label>
-                                <input type="tel" name="phone_number" placeholder="0241234567" required>
-                                <label>Select Bundle</label>
-                                <select name="bundle" required></select>
-                                <label>Payment Method</label>
-                                <div class="payment-method">
-                                    <?php if ( is_user_logged_in() ) : ?>
-                                    <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                                    <?php endif; ?>
-                                    <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
-                                </div>
-                                <button type="submit">Buy MTN Bundle</button>
-                            </form>
-                        </div>
-                        <div id="airteltigo" class="network-tab-content">
-                             <form class="bundle-form" data-network="airteltigo">
-                                <?php if ( ! is_user_logged_in() ) : ?>
-                                    <label>Your Email</label>
-                                    <input type="email" name="email" placeholder="Enter your email" required>
+                                <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                            </div>
+                            <button type="submit">Buy MTN Bundle</button>
+                        </form>
+                    </div>
+
+                    <div id="buy-data-airteltigo" class="kaa-mall-card data-bundles" style="display: none;">
+                        <h3>AirtelTigo Bundles</h3>
+                        <form class="bundle-form" data-network="airteltigo">
+                            <?php if ( ! is_user_logged_in() ) : ?>
+                                <label>Your Email</label>
+                                <input type="email" name="email" placeholder="Enter your email" required>
+                            <?php endif; ?>
+                            <label>AirtelTigo Phone Number</label>
+                            <input type="tel" name="phone_number" placeholder="0241234567" required>
+                            <label>Select Bundle</label>
+                            <select name="bundle" required></select>
+                            <label>Payment Method</label>
+                            <div class="payment-method">
+                                <?php if ( is_user_logged_in() ) : ?>
+                                <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
                                 <?php endif; ?>
-                                <label>AirtelTigo Phone Number</label>
-                                <input type="tel" name="phone_number" placeholder="0241234567" required>
-                                <label>Select Bundle</label>
-                                <select name="bundle" required></select>
-                                <label>Payment Method</label>
-                                <div class="payment-method">
-                                    <?php if ( is_user_logged_in() ) : ?>
-                                    <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                                    <?php endif; ?>
-                                    <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
-                                </div>
-                                <button type="submit">Buy AirtelTigo Bundle</button>
-                            </form>
-                        </div>
-                        <div id="vodafone" class="network-tab-content">
-                            <form class="bundle-form" data-network="vodafone">
-                                <?php if ( ! is_user_logged_in() ) : ?>
-                                    <label>Your Email</label>
-                                    <input type="email" name="email" placeholder="Enter your email" required>
+                                <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                            </div>
+                            <button type="submit">Buy AirtelTigo Bundle</button>
+                        </form>
+                    </div>
+
+                    <div id="buy-data-vodafone" class="kaa-mall-card data-bundles" style="display: none;">
+                        <h3>Vodafone Bundles</h3>
+                        <form class="bundle-form" data-network="vodafone">
+                            <?php if ( ! is_user_logged_in() ) : ?>
+                                <label>Your Email</label>
+                                <input type="email" name="email" placeholder="Enter your email" required>
+                            <?php endif; ?>
+                            <label>Vodafone Phone Number</label>
+                            <input type="tel" name="phone_number" placeholder="0241234567" required>
+                            <label>Select Bundle</label>
+                            <select name="bundle" required></select>
+                            <label>Payment Method</label>
+                            <div class="payment-method">
+                                <?php if ( is_user_logged_in() ) : ?>
+                                <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
                                 <?php endif; ?>
-                                <label>Vodafone Phone Number</label>
-                                <input type="tel" name="phone_number" placeholder="0241234567" required>
-                                <label>Select Bundle</label>
-                                <select name="bundle" required></select>
-                                <label>Payment Method</label>
-                                <div class="payment-method">
-                                    <?php if ( is_user_logged_in() ) : ?>
-                                    <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                                    <?php endif; ?>
-                                    <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
-                                </div>
-                                <button type="submit">Buy Vodafone Bundle</button>
-                            </form>
-                        </div>
-                        <div id="telecel" class="network-tab-content">
-                             <form class="bundle-form" data-network="telecel">
-                                <?php if ( ! is_user_logged_in() ) : ?>
-                                    <label>Your Email</label>
-                                    <input type="email" name="email" placeholder="Enter your email" required>
+                                <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                            </div>
+                            <button type="submit">Buy Vodafone Bundle</button>
+                        </form>
+                    </div>
+
+                    <div id="buy-data-telecel" class="kaa-mall-card data-bundles" style="display: none;">
+                        <h3>Telecel Bundles</h3>
+                        <form class="bundle-form" data-network="telecel">
+                            <?php if ( ! is_user_logged_in() ) : ?>
+                                <label>Your Email</label>
+                                <input type="email" name="email" placeholder="Enter your email" required>
+                            <?php endif; ?>
+                            <label>Telecel Phone Number</label>
+                            <input type="tel" name="phone_number" placeholder="0241234567" required>
+                            <label>Select Bundle</label>
+                            <select name="bundle" required></select>
+                            <label>Payment Method</label>
+                            <div class="payment-method">
+                                <?php if ( is_user_logged_in() ) : ?>
+                                <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
                                 <?php endif; ?>
-                                <label>Telecel Phone Number</label>
-                                <input type="tel" name="phone_number" placeholder="0241234567" required>
-                                <label>Select Bundle</label>
-                                <select name="bundle" required></select>
-                                <label>Payment Method</label>
-                                <div class="payment-method">
-                                    <?php if ( is_user_logged_in() ) : ?>
-                                    <label><input type="radio" name="payment_method" value="wallet" checked> Wallet Balance</label>
-                                    <?php endif; ?>
-                                    <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
-                                </div>
-                                <button type="submit">Buy Telecel Bundle</button>
-                            </form>
-                        </div>
+                                <label><input type="radio" name="payment_method" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack (Card/Mobile Money)</label>
+                            </div>
+                            <button type="submit">Buy Telecel Bundle</button>
+                        </form>
                     </div>
 
                     <!-- Hidden AFA Form -->

@@ -283,3 +283,55 @@ body {
         display: flex;
     }
 }
+
+/* Data Bundle Forms */
+.data-bundles h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 20px;
+    color: #333;
+}
+
+.bundle-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555;
+}
+
+.bundle-form input[type="tel"],
+.bundle-form input[type="email"],
+.bundle-form select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    box-sizing: border-box; /* Ensures padding doesn't affect width */
+}
+
+.payment-method {
+    margin-bottom: 20px;
+}
+
+.payment-method label {
+    display: inline-block;
+    margin-right: 15px;
+}
+
+.bundle-form button[type="submit"] {
+    width: 100%;
+    padding: 15px;
+    background-color: #6f42c1;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.bundle-form button[type="submit"]:hover {
+    background-color: #5a3e9a;
+}

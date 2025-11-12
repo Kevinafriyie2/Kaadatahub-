@@ -19,7 +19,12 @@
         }
 
         function load_bundle_prices(network) {
-            var bundle_select = $('#' + network).find('select[name="bundle"]');
+            var form_container = $('#buy-data-' + network);
+            if (!form_container.length) {
+                console.error('No container found for network:', network);
+                return;
+            }
+            var bundle_select = form_container.find('select[name="bundle"]');
             bundle_select.empty().append('<option>Loading...</option>');
             $.ajax({
                 url: kaa_mall_params.ajax_url,
@@ -192,6 +197,11 @@
             e.preventDefault();
             var target = $(this).data('target');
 
+            // Handle "Buy Data" quick action default
+            if (target === 'buy-data') {
+                target = 'buy-data-mtn';
+            }
+
             // De-activate all nav links
             $('.sidebar-nav a, .kaa-mall-bottom-nav a').removeClass('active');
             // Activate the one that was clicked (and its counterpart in the other nav)
@@ -199,13 +209,13 @@
 
             // Show/hide content sections
             $('.portal-main > .kaa-mall-card').hide();
+
             if (target === 'dashboard' || target === 'home') {
                 $('.balance-card, .quick-actions, .sales-performance, .recent-transactions').show();
-            } else if (target.startsWith('buy-data')) {
-                 $('#buy-data-forms').show();
-                 var network = target.split('-').pop();
-                 if (network === 'data') network = 'mtn'; // Default for "Buy Data" quick action
-                 $('#buy-data-forms .tab-link[data-network="' + network + '"]').click();
+            } else if (target.startsWith('buy-data-')) {
+                 var network = target.replace('buy-data-', '');
+                 $('#' + target).show();
+                 load_bundle_prices(network);
             } else if (target === 'afa-registration') {
                  $('#afa-registration-form').show();
             } else if (target === 'history') {
@@ -218,16 +228,6 @@
             if ($('.kaa-mall-sidebar').hasClass('open')) {
                 $('.kaa-mall-sidebar').removeClass('open');
             }
-        });
-
-        // Data Bundle Network Tabs
-        $('#buy-data-forms .tab-link').on('click', function() {
-            var network = $(this).data('network');
-            $('#buy-data-forms .tab-link').removeClass('active');
-            $(this).addClass('active');
-            $('#buy-data-forms .network-tab-content').removeClass('active');
-            $('#' + network).addClass('active');
-            load_bundle_prices(network);
         });
 
         // Handle ALL form submissions
