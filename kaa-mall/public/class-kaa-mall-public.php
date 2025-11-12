@@ -32,6 +32,8 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_kaa_mall_get_afa_registration_form', array( $this, 'ajax_get_afa_registration_form' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_view', array( $this, 'ajax_get_wallet_view' ) );
         add_action( 'wp_ajax_kaa_mall_get_referral_view', array( $this, 'ajax_get_referral_view' ) );
+
+        add_action( 'init', array( $this, 'init_session' ) );
     }
 
     public function ajax_get_referral_view() {
