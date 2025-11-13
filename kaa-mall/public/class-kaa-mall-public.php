@@ -169,10 +169,7 @@ class Kaa_Mall_Public {
         $final_price = $admin_prices[ $bundle ];
 
         if ( $reseller_id ) {
-            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
-            if ( ! empty( $reseller_prices ) && isset( $reseller_prices[ $bundle ] ) ) {
-                $final_price = $reseller_prices[ $bundle ];
-            }
+            $final_price = Kaa_Mall_Helpers::get_reseller_tier_discounted_price( $final_price, $reseller_id, $network, $bundle );
         }
 
         $user_id = get_current_user_id();
@@ -246,10 +243,7 @@ class Kaa_Mall_Public {
         $final_price = $admin_prices[ $bundle ];
 
         if ( $reseller_id ) {
-            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
-            if ( ! empty( $reseller_prices ) && isset( $reseller_prices[ $bundle ] ) ) {
-                $final_price = $reseller_prices[ $bundle ];
-            }
+            $final_price = Kaa_Mall_Helpers::get_reseller_tier_discounted_price( $final_price, $reseller_id, $network, $bundle );
         }
 
         $secret_key = get_option( 'kaa_mall_paystack_secret_key' );

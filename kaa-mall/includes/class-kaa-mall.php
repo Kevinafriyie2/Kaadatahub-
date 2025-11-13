@@ -152,6 +152,7 @@ class Kaa_Mall {
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-reseller.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-auth.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-portal-header.php';
+        require_once plugin_dir_path( __FILE__ ) . 'class-kaa-mall-helpers.php';
     }
 
     private function define_admin_hooks() {

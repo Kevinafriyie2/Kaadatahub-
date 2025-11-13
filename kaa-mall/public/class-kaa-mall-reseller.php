@@ -220,6 +220,40 @@ class Kaa_Mall_Reseller {
 
             <div class="reseller-grid">
                 <div class="reseller-card">
+                    <h3>Your Reseller Tier</h3>
+                    <?php
+                    $tier_name = get_user_meta( $reseller_id, '_kaa_mall_reseller_tier', true );
+                    $total_sales = Kaa_Mall_Helpers::get_reseller_total_sales( $reseller_id );
+                    $tiers = get_option( 'kaa_mall_reseller_tiers', array() );
+                    $next_tier_goal = 0;
+                    $current_tier_discount = 0;
+
+                    // Sort tiers by sales goal ascending
+                    usort( $tiers, function( $a, $b ) {
+                        return $a['goal'] - $b['goal'];
+                    } );
+
+                    foreach( $tiers as $tier ) {
+                        if ( $tier['name'] === $tier_name ) {
+                            $current_tier_discount = $tier['discount'];
+                        }
+                        if ( $total_sales < $tier['goal'] ) {
+                            $next_tier_goal = $tier['goal'];
+                            break;
+                        }
+                    }
+                    ?>
+                    <p><strong>Current Tier:</strong> <?php echo esc_html( $tier_name ); ?></p>
+                    <p><strong>Current Discount:</strong> <?php echo esc_html( $current_tier_discount ); ?>%</p>
+                    <?php if ( $next_tier_goal > 0 ) : ?>
+                        <p><strong>Next Tier Goal:</strong> <?php echo wc_price( $next_tier_goal ); ?></p>
+                        <progress value="<?php echo $total_sales; ?>" max="<?php echo $next_tier_goal; ?>"></progress>
+                    <?php else : ?>
+                        <p>You are at the highest tier!</p>
+                    <?php endif; ?>
+                </div>
+
+                <div class="reseller-card">
                     <h3>Your Profit Wallet</h3>
                     <p>Your current profit balance is:</p>
                     <p class="profit-balance"><?php echo wc_price( $profit_balance ); ?></p>
@@ -263,9 +297,10 @@ class Kaa_Mall_Reseller {
                         <button class="tab-link active" data-network="mtn">MTN</button>
                         <button class="tab-link" data-network="airteltigo">AirtelTigo</button>
                         <button class="tab-link" data-network="vodafone">Vodafone</button>
+                        <button class="tab-link" data-network="telecel">Telecel</button>
                     </div>
 
-                    <?php foreach ( array('mtn', 'airteltigo', 'vodafone') as $network ) : ?>
+                    <?php foreach ( array('mtn', 'airteltigo', 'vodafone', 'telecel') as $network ) : ?>
                         <div id="reseller-prices-<?php echo $network; ?>" class="network-tab-content <?php echo $network === 'mtn' ? 'active' : ''; ?>">
                             <form class="reseller-prices-form" data-network="<?php echo $network; ?>">
                                 <table>
