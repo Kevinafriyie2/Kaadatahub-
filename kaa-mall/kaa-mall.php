@@ -3,7 +3,7 @@
  * Plugin Name: KAA Mall
  * Plugin URI: https://yourwebsite.com
  * Description: A modern data bundle and wallet portal for WordPress.
- * Version: 1.1.0
+ * Version: 1.0.0
  * Author: Your Name
  * Author URI: https://yourwebsite.com
  * License: GPL-2.0+
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 // Define plugin version.
-define( 'KAA_MALL_VERSION', '1.1.0' );
+define( 'KAA_MALL_VERSION', '1.0.0' );
 
 function kaa_mall_woocommerce_not_active_notice() {
     ?>

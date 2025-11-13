@@ -7,87 +7,40 @@ class Kaa_Mall {
     protected $version;
 
     public function __construct() {
-        if ( defined( 'KAA_MALL_VERSION' ) ) {
-            $this->version = KAA_MALL_VERSION;
-        } else {
-            $this->version = '1.1.0';
+        if ( ! defined( 'KAA_MALL_VERSION' ) ) {
+            define( 'KAA_MALL_VERSION', '1.0.3' );
         }
         $this->plugin_name = 'kaa-mall';
-
+        $this->version = KAA_MALL_VERSION;
         $this->load_dependencies();
         $this->define_admin_hooks();
         $this->define_public_hooks();
         add_action( 'init', array( $this, 'add_rewrite_rules' ) );
-        add_action( 'init', array( $this, 'register_post_types' ) );
-        add_action( 'plugins_loaded', array( $this, 'check_for_updates' ) );
+        add_action( 'init', array( $this, 'register_withdrawal_post_type' ) );
+        add_action( 'plugins_loaded', array( $this, 'run_upgrade_routines' ) );
     }
 
-    public function check_for_updates() {
-        $db_version = get_option( 'kaa_mall_version' );
-        if ( version_compare( $db_version, $this->version, '<' ) ) {
-            // Run updates for this version
-            if ( version_compare( $db_version, '1.1.0', '<' ) ) {
-                $this->update_to_1_1_0();
-            }
-            update_option( 'kaa_mall_version', $this->version );
+    public function run_upgrade_routines() {
+        $current_version = get_option( 'kaa_mall_version', '1.0.0' );
+        if ( version_compare( $current_version, '1.0.3', '<' ) ) {
+            // Since the activation hook now handles product creation/deletion,
+            // we can just call the same robust functions here.
+            require_once plugin_dir_path( __FILE__ ) . 'class-kaa-mall-activator.php';
+            Kaa_Mall_Activator::delete_all_data_products();
+            Kaa_Mall_Activator::create_data_bundle_products();
+            update_option( 'kaa_mall_version', '1.0.3' );
         }
     }
 
-    private function update_to_1_1_0() {
-        $airteltigo_prices = array(
-            array('name' => '1GB', 'price' => 5.00),
-            array('name' => '2GB', 'price' => 10.00),
-            array('name' => '3GB', 'price' => 14.00),
-            array('name' => '4GB', 'price' => 18.00),
-            array('name' => '5GB', 'price' => 24.00),
-            array('name' => '6GB', 'price' => 28.00),
-            array('name' => '8GB', 'price' => 34.00),
-            array('name' => '10GB', 'price' => 44.00),
-            array('name' => '15GB', 'price' => 64.00),
-            array('name' => '20GB', 'price' => 84.00),
-            array('name' => '25GB', 'price' => 106.00),
-            array('name' => '30GB', 'price' => 127.00),
-            array('name' => '40GB', 'price' => 166.00),
-            array('name' => '50GB', 'price' => 206.00),
-        );
-
-        $telecel_prices = array(
-            array('name' => '5GB', 'price' => 24.00),
-            array('name' => '10GB', 'price' => 42.00),
-            array('name' => '20GB', 'price' => 82.00),
-            array('name' => '25GB', 'price' => 106.00),
-            array('name' => '30GB', 'price' => 128.00),
-            array('name' => '40GB', 'price' => 167.00),
-            array('name' => '50GB', 'price' => 190.00),
-            array('name' => '90GB', 'price' => 255.00),
-            array('name' => '190GB', 'price' => 356.00),
-            array('name' => '280GB', 'price' => 537.00),
-            array('name' => '380GB', 'price' => 658.00),
-        );
-
-        $mtn_prices = array(
-            array('name' => '1GB', 'price' => 5.2),
-            array('name' => '2GB', 'price' => 10.2),
-            array('name' => '3GB', 'price' => 15),
-            array('name' => '4GB', 'price' => 20),
-            array('name' => '5GB', 'price' => 25),
-            array('name' => '6GB', 'price' => 30.5),
-            array('name' => '8GB', 'price' => 35),
-            array('name' => '10GB', 'price' => 45),
-            array('name' => '15GB', 'price' => 65),
-            array('name' => '20GB', 'price' => 86),
-            array('name' => '25GB', 'price' => 104.2),
-            array('name' => '30GB', 'price' => 125),
-            array('name' => '40GB', 'price' => 167),
-            array('name' => '50GB', 'price' => 206),
-        );
-
-        update_option( 'kaa_mall_airteltigo_prices', $airteltigo_prices );
-        update_option( 'kaa_mall_telecel_prices', $telecel_prices );
-        update_option( 'kaa_mall_mtn_prices', $mtn_prices );
+    // The update_product_prices function is now obsolete as the activator logic is reused.
+    // It is kept here to avoid breaking any potential future logic, but it is not called.
+    private function update_product_prices() {
+        $products_to_update = array(); // This is now empty.
+        // Logic has been moved to the run_upgrade_routines function for consistency.
     }
 
-    public function register_post_types() {
+
+    public function register_withdrawal_post_type() {
         register_post_type( 'kaa_withdrawal',
             array(
                 'labels'      => array(
@@ -98,23 +51,6 @@ class Kaa_Mall {
                 'show_ui'     => true,
                 'show_in_menu'=> 'kaa_mall',
                 'supports'    => array( 'title' ),
-                'capabilities' => array(
-                    'create_posts' => 'do_not_allow', // Disable creation from admin UI
-                ),
-                'map_meta_cap' => true,
-            )
-        );
-
-        register_post_type( 'reseller_application',
-            array(
-                'labels'      => array(
-                    'name'          => __( 'Reseller Applications', 'kaa-mall' ),
-                    'singular_name' => __( 'Reseller Application', 'kaa-mall' ),
-                ),
-                'public'      => false,
-                'show_ui'     => true,
-                'show_in_menu'=> 'kaa_mall',
-                'supports'    => array( 'title', 'author' ),
                 'capabilities' => array(
                     'create_posts' => 'do_not_allow',
                 ),
@@ -152,7 +88,6 @@ class Kaa_Mall {
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-reseller.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-auth.php';
         require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-kaa-mall-portal-header.php';
-        require_once plugin_dir_path( __FILE__ ) . 'class-kaa-mall-helpers.php';
     }
 
     private function define_admin_hooks() {
@@ -166,7 +101,7 @@ class Kaa_Mall {
     }
 
     public function run() {
-        // This is where we would run the loader, but we're not using one yet.
+        // Not in use.
     }
 
     public function get_plugin_name() {

@@ -2,66 +2,67 @@
     'use strict';
 
     $(function() {
-        // Handle hamburger menu toggle
-        $('.hamburger-menu').on('click', function() {
-            $('.header-nav').toggleClass('active');
+        // --- Modal Handling ---
+        const modal = $('#success-modal');
+        const closeModalBtn = $('#close-modal-btn');
+
+        function show_success_modal() {
+            modal.fadeIn();
+        }
+
+        function hide_success_modal() {
+            modal.fadeOut();
+        }
+
+        closeModalBtn.on('click', hide_success_modal);
+        modal.on('click', function(e) {
+            if ($(e.target).is(modal)) {
+                hide_success_modal();
+            }
         });
 
-        // Initial setup on page load
-        update_wallet_balance();
-        load_recent_orders();
-        load_bundle_prices('mtn'); // Load default tab prices
+        // --- Notification System ---
+        function show_notification(message, type = 'info') {
+            var notification = $('<div class="kaa-mall-notification ' + type + '">' + message + '</div>');
+            $('.kaa-mall-portal-container').prepend(notification);
+            notification.fadeIn();
+            setTimeout(function() {
+                notification.fadeOut(500, function() {
+                    $(this).remove();
+                });
+            }, 4000); // Increased duration for better readability
+        }
 
-        // Handle network tab switching
+        // --- Initial Setup ---
+        if (kaa_mall_params.is_user_logged_in) {
+            update_wallet_balance();
+            load_recent_orders();
+        }
+        load_bundle_prices('mtn');
+
+        // --- Event Handlers ---
         $('.network-tabs .tab-link').on('click', function() {
             var network = $(this).data('network');
-
             $('.network-tabs .tab-link').removeClass('active');
             $(this).addClass('active');
-
             $('.network-tab-content').removeClass('active');
             $('#' + network).addClass('active');
-
             load_bundle_prices(network);
         });
 
-        // Handle wallet top-up button click
-        $('.top-up-wallet-btn').on('click', function(e) {
+        $(document).on('submit', '.bundle-form', function(e) {
             e.preventDefault();
-
-            var amount = prompt("Enter amount to top up:", "10");
-            if (amount === null || amount === "" || isNaN(amount) || parseFloat(amount) <= 0) {
-                show_notification('Please enter a valid amount.', 'error');
-                return;
-            }
-            amount = parseFloat(amount);
-
-            var handler = PaystackPop.setup({
-                key: kaa_mall_params.paystack_public_key,
-                email: kaa_mall_params.user_email,
-                amount: amount * 100, // in pesewas
-                currency: kaa_mall_params.currency,
-                ref: '' + Math.floor((Math.random() * 1000000000) + 1),
-                callback: function(response) {
-                    verify_paystack_topup(response.reference, amount);
-                },
-                onClose: function() {
-                    show_notification('Transaction was not completed.', 'error');
-                },
-            });
-            handler.openIframe();
-        });
-
-        // Handle data bundle form submission for all networks
-        $('.bundle-form').on('submit', function(e) {
-            e.preventDefault();
-
             var form = $(this);
-            var payment_method = form.find('input[name="payment_method"]:checked').val();
-            var network = form.data('network');
+            var payment_method = form.find('input[name^="payment_method"]:checked').val();
             var bundle_select = form.find('select[name="bundle"] option:selected');
             var bundle_text = bundle_select.text();
-            var bundle_price = parseFloat(bundle_text.match(/(\d+\.\d+)/)[0]);
+            var priceMatch = bundle_text.match(/(\d+\.\d+)/);
+
+            if (!priceMatch) {
+                show_notification('Invalid bundle selected. Please choose a valid package.', 'error');
+                return;
+            }
+            var bundle_price = parseFloat(priceMatch[0]);
 
             if (payment_method === 'wallet') {
                 purchase_from_wallet(form);
@@ -70,180 +71,223 @@
             }
         });
 
-        // Handle AFA registration form submission
         $('#kaa-mall-afa-form').on('submit', function(e) {
             e.preventDefault();
-            var formData = $(this).serialize();
+            var form = $(this);
+            var submitButton = form.find('button[type="submit"]');
+            submitButton.text('Processing...').prop('disabled', true);
 
             $.ajax({
                 url: kaa_mall_params.ajax_url,
                 type: 'POST',
-                data: formData + '&action=kaa_mall_afa_registration&nonce=' + kaa_mall_params.nonce,
+                data: form.serialize() + '&action=kaa_mall_afa_registration&nonce=' + kaa_mall_params.nonce,
                 success: function(response) {
                     if (response.success) {
                         update_wallet_balance();
-                        load_recent_orders();
-                        show_notification('AFA registration successful!', 'success');
+                        show_success_modal();
+                        form.trigger('reset');
                     } else {
-                        show_notification('Error: ' + response.data.message, 'error');
+                        show_notification(response.data.message, 'error');
                     }
+                },
+                error: function() {
+                    show_notification('An unexpected error occurred. Please try again.', 'error');
+                },
+                complete: function() {
+                    submitButton.text('Register Now - GH₵13').prop('disabled', false);
                 }
             });
         });
 
+        $(document).on('click', '.top-up-btn', function(e){
+            e.preventDefault();
+            var amount = prompt("Enter amount to top up:", "10");
+            if (amount === null || amount === "" || isNaN(amount) || parseFloat(amount) <= 0) {
+                if (amount !== null) { // Don't show error if user just cancelled
+                   show_notification('Please enter a valid amount.', 'error');
+                }
+                return;
+            }
+            amount = parseFloat(amount);
+
+            var handler = PaystackPop.setup({
+                key: kaa_mall_params.paystack_public_key,
+                email: kaa_mall_params.user_email,
+                amount: amount * 100,
+                currency: 'GHS',
+                ref: '' + Math.floor((Math.random() * 1000000000) + 1),
+                callback: function(response) {
+                    verify_paystack_topup(response.reference);
+                },
+                onClose: function() {
+                    show_notification('Transaction was not completed.', 'info');
+                },
+            });
+            handler.openIframe();
+        });
+
+        // --- AJAX Functions ---
         function purchase_from_wallet(form) {
+            var submitButton = form.find('button[type="submit"]');
+            submitButton.text('Processing...').prop('disabled', true);
+
             $.ajax({
                 url: kaa_mall_params.ajax_url,
                 type: 'POST',
-                data: form.serialize() + '&action=kaa_mall_purchase_bundle&nonce=' + kaa_mall_params.nonce + '&network=' + form.data('network'),
+                data: form.serialize() + '&action=kaa_mall_purchase_bundle&nonce=' + kaa_mall_params.nonce,
                 success: function(response) {
                     if (response.success) {
                         update_wallet_balance();
-                        load_recent_orders();
-                        show_notification('Bundle purchase successful!', 'success');
+                        show_success_modal();
                     } else {
-                        show_notification('Error: ' + response.data.message, 'error');
+                        show_notification(response.data.message, 'error');
                     }
+                },
+                error: function() {
+                    show_notification('An unexpected error occurred. Please try again.', 'error');
+                },
+                complete: function() {
+                    submitButton.text('Continue').prop('disabled', false);
                 }
             });
         }
 
         function purchase_with_paystack(form, amount) {
+            var submitButton = form.find('button[type="submit"]');
+            var email_input = form.find('input[name="email"]');
+            var user_email = kaa_mall_params.is_user_logged_in ? kaa_mall_params.user_email : email_input.val();
+
+            if (!user_email) {
+                show_notification('Please provide a valid email address.', 'error');
+                return;
+            }
+
             var handler = PaystackPop.setup({
                 key: kaa_mall_params.paystack_public_key,
-                email: kaa_mall_params.user_email,
+                email: user_email,
                 amount: amount * 100,
-                currency: kaa_mall_params.currency,
+                currency: 'GHS',
                 ref: '' + Math.floor((Math.random() * 1000000000) + 1),
                 callback: function(response) {
+                    submitButton.text('Verifying...').prop('disabled', true);
                     $.ajax({
                         url: kaa_mall_params.ajax_url,
                         type: 'POST',
-                        data: form.serialize() + '&action=kaa_mall_purchase_bundle_paystack&reference=' + response.reference + '&nonce=' + kaa_mall_params.nonce + '&network=' + form.data('network'),
-                        success: function(response) {
-                            if (response.success) {
-                                load_recent_orders();
-                                show_notification('Bundle purchase successful!', 'success');
+                        data: form.serialize() + '&action=kaa_mall_purchase_bundle_paystack&reference=' + response.reference + '&nonce=' + kaa_mall_params.nonce + '&email=' + user_email,
+                        success: function(ajax_response) {
+                            if (ajax_response.success) {
+                                show_success_modal();
                             } else {
-                                show_notification('Error: ' + response.data.message, 'error');
+                                show_notification(ajax_response.data.message, 'error');
                             }
+                        },
+                        error: function() {
+                            show_notification('Verification failed. Please contact support.', 'error');
+                        },
+                        complete: function() {
+                            submitButton.text('Continue').prop('disabled', false);
                         }
                     });
                 },
                 onClose: function() {
-                    show_notification('Transaction was not completed.', 'error');
+                    show_notification('Transaction was not completed.', 'info');
                 },
             });
             handler.openIframe();
         }
 
-        function verify_paystack_topup(reference, amount) {
+        function verify_paystack_topup(reference) {
             $.ajax({
                 url: kaa_mall_params.ajax_url,
                 type: 'POST',
                 data: {
                     action: 'kaa_mall_verify_paystack_transaction',
                     reference: reference,
-                    amount: amount,
                     nonce: kaa_mall_params.nonce
                 },
                 success: function(response) {
                     if (response.success) {
                         update_wallet_balance();
-                        load_recent_orders();
-                        show_notification('Top-up successful!', 'success');
+                        show_success_modal();
                     } else {
-                        show_notification('Error: ' + response.data.message, 'error');
+                        show_notification(response.data.message, 'error');
                     }
+                },
+                error: function() {
+                    show_notification('Top-up verification failed. Please contact support.', 'error');
                 }
             });
         }
 
         function load_bundle_prices(network) {
             var bundle_select = $('#' + network).find('select[name="bundle"]');
-            bundle_select.empty().append('<option>Loading...</option>');
+            bundle_select.empty().append('<option value="">Loading...</option>');
 
             $.ajax({
                 url: kaa_mall_params.ajax_url,
                 type: 'POST',
-                data: {
-                    action: 'kaa_mall_get_bundle_prices',
-                    network: network,
-                    nonce: kaa_mall_params.nonce
-                },
+                data: { action: 'kaa_mall_get_bundle_prices', network: network, nonce: kaa_mall_params.nonce },
                 success: function(response) {
-                    bundle_select.empty();
+                    bundle_select.empty().append('<option value="">Select package</option>');
                     if (response.success && Object.keys(response.data).length > 0) {
                         $.each(response.data, function(bundle_name, price) {
-                            bundle_select.append('<option value="' + bundle_name + '">' + bundle_name + ' (GH₵' + price.toFixed(2) + ')</option>');
+                            bundle_select.append('<option value="' + bundle_name + '">' + bundle_name.split(' ')[1] + ' - ' + price.toFixed(2) + '</option>');
                         });
                     } else {
-                        bundle_select.append('<option>No bundles available</option>');
+                        bundle_select.append('<option value="">No bundles available</option>');
                     }
+                },
+                error: function() {
+                    bundle_select.empty().append('<option value="">Could not load bundles</option>');
                 }
             });
         }
 
         function load_recent_orders() {
-            var orders_table = $('.purchase-history tbody');
-            orders_table.empty().append('<tr><td colspan="4">Loading...</td></tr>');
+            if (!kaa_mall_params.is_user_logged_in) return;
+            var history_table_body = $('.purchase-history .history-table tbody');
+            history_table_body.html('<tr><td colspan="6">Loading history...</td></tr>');
+
             $.ajax({
                 url: kaa_mall_params.ajax_url,
                 type: 'POST',
-                data: {
-                    action: 'kaa_mall_get_recent_orders',
-                    nonce: kaa_mall_params.nonce
-                },
+                data: { action: 'kaa_mall_get_recent_orders', nonce: kaa_mall_params.nonce },
                 success: function(response) {
-                    orders_table.empty();
+                    history_table_body.empty();
                     if (response.success && response.data.length > 0) {
                         $.each(response.data, function(index, order) {
-                            var order_date = new Date(order.date);
-                            var formatted_date = order_date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + order_date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                            var order_link = kaa_mall_params.ajax_url.replace('admin-ajax.php', 'post.php?post=' + order.reference + '&action=edit');
-                            orders_table.append(
-                                '<tr>' +
-                                '<td><a href="' + order_link + '">' + order.reference + '</a></td>' +
-                                '<td>' + formatted_date + '</td>' +
-                                '<td>' + (order.bundle || 'N/A') + '</td>' +
-                                '<td>' + (order.phone || 'N/A') + '</td>' +
-                                '<td>GH₵' + parseFloat(order.amount).toFixed(2) + '</td>' +
+                            var row = '<tr>' +
+                                '<td>' + order.reference + '</td>' +
+                                '<td>' + order.date + '</td>' +
+                                '<td>' + order.bundle + '</td>' +
+                                '<td>' + order.phone + '</td>' +
+                                '<td>GH₵' + order.amount + '</td>' +
                                 '<td>' + order.status + '</td>' +
-                                '</tr>'
-                            );
+                                '</tr>';
+                            history_table_body.append(row);
                         });
                     } else {
-                        orders_table.append('<tr><td colspan="6">No recent orders found.</td></tr>');
+                        history_table_body.html('<tr><td colspan="6">No recent orders found.</td></tr>');
                     }
+                },
+                error: function() {
+                    history_table_body.html('<tr><td colspan="6">Could not load history.</td></tr>');
                 }
             });
         }
 
         function update_wallet_balance() {
+            if (!kaa_mall_params.is_user_logged_in) return;
             $.ajax({
                 url: kaa_mall_params.ajax_url,
                 type: 'POST',
-                data: {
-                    action: 'kaa_mall_get_wallet_balance',
-                    nonce: kaa_mall_params.nonce
-                },
+                data: { action: 'kaa_mall_get_wallet_balance', nonce: kaa_mall_params.nonce },
                 success: function(response) {
                     if (response.success) {
-                        $('.balance-amount').text('GH₵' + response.data);
+                        $('.wallet-balance-display').text(response.data);
                     }
                 }
             });
         }
-
-        function show_notification(message, type) {
-            var notification = $('<div class="kaa-mall-notification ' + type + '">' + message + '</div>');
-            $('.kaa-mall-portal').prepend(notification);
-            setTimeout(function() {
-                notification.fadeOut(500, function() {
-                    $(this).remove();
-                });
-            }, 3000);
-        }
     });
-
 })(jQuery);

@@ -15,11 +15,6 @@ class Kaa_Mall_Admin {
         add_action( 'admin_post_kaa_mall_top_up_wallet', array( $this, 'handle_top_up_wallet' ) );
         add_action( 'admin_post_kaa_mall_bulk_update_order_status', array( $this, 'handle_bulk_update_order_status' ) );
         add_action( 'admin_post_kaa_mall_mark_withdrawal_paid', array( $this, 'handle_mark_withdrawal_paid' ) );
-        add_action( 'kaa_mall_update_reseller_tiers_cron', array( $this, 'update_reseller_tiers' ) );
-
-        if ( ! wp_next_scheduled( 'kaa_mall_update_reseller_tiers_cron' ) ) {
-            wp_schedule_event( time(), 'daily', 'kaa_mall_update_reseller_tiers_cron' );
-        }
     }
 
     public function handle_mark_withdrawal_paid() {
@@ -38,48 +33,6 @@ class Kaa_Mall_Admin {
         exit;
     }
 
-    public function update_reseller_tiers() {
-        $tiers = get_option( 'kaa_mall_reseller_tiers', array() );
-        if ( empty( $tiers ) ) {
-            return;
-        }
-
-        // Sort tiers by sales goal descending
-        usort( $tiers, function( $a, $b ) {
-            return $b['goal'] - $a['goal'];
-        } );
-
-        $resellers = get_users( array( 'role' => 'reseller' ) );
-        foreach ( $resellers as $reseller ) {
-            $total_sales = Kaa_Mall_Helpers::get_reseller_total_sales( $reseller->ID );
-            $assigned_tier = 'None';
-            foreach ( $tiers as $tier ) {
-                if ( $total_sales >= $tier['goal'] ) {
-                    $assigned_tier = $tier['name'];
-                    break;
-                }
-            }
-            update_user_meta( $reseller->ID, '_kaa_mall_reseller_tier', $assigned_tier );
-        }
-    }
-
-    private function get_reseller_total_sales( $reseller_id ) {
-        $args = array(
-            'post_type'   => 'shop_order',
-            'post_status' => array( 'wc-completed', 'wc-processing' ),
-            'numberposts' => -1,
-            'meta_query'  => array(
-                array(
-                    'key'   => '_reseller_id',
-                    'value' => $reseller_id,
-                ),
-            ),
-        );
-        $orders = get_posts( $args );
-        $total_sales = 0;
-        foreach ( $orders as $order_post ) {
-            $order = wc_get_order( $order_post->ID );
-            $total_sales += $order->get_total();
     public function enqueue_styles() {
         // Styles are now inlined in the shortcode output.
     }
@@ -117,37 +70,12 @@ class Kaa_Mall_Admin {
 
     public function add_admin_menu() {
         add_menu_page(
+            'KAA Mall Settings',
             'KAA Mall',
-            'KAA Mall',
             'manage_options',
-            'kaa_mall_dashboard',
-            array( $this, 'render_dashboard_page' ),
-            'dashicons-store',
-            2
-        );
-        add_submenu_page(
-            'kaa_mall_dashboard',
-            'User Management',
-            'User Management',
-            'manage_options',
-            'kaa_mall_user_management',
-            array( $this, 'render_user_management_page' )
-        );
-        add_submenu_page(
-            'kaa_mall_dashboard',
-            'Reports',
-            'Reports',
-            'manage_options',
-            'kaa_mall_reports',
-            array( $this, 'render_reports_page' )
-        );
-        add_submenu_page(
-            'kaa_mall_dashboard',
-            'Settings',
-            'Settings',
-            'manage_options',
-            'kaa_mall_settings',
-            array( $this, 'render_settings_page' )
+            'kaa_mall',
+            array( $this, 'render_settings_page' ),
+            'dashicons-store'
         );
     }
 
@@ -160,269 +88,6 @@ class Kaa_Mall_Admin {
         register_setting( 'kaa_mall_options', 'kaa_mall_business_email' );
         register_setting( 'kaa_mall_options', 'kaa_mall_user_portal_url' );
         register_setting( 'kaa_mall_options', 'kaa_mall_reseller_portal_url' );
-        register_setting( 'kaa_mall_options', 'kaa_mall_reseller_tiers' );
-    }
-
-    private function get_total_reseller_profit() {
-        $resellers = get_users( array( 'role' => 'reseller' ) );
-        $total_profit = 0;
-        foreach ( $resellers as $reseller ) {
-            $total_profit += get_user_meta( $reseller->ID, '_kaa_mall_reseller_profit_balance', true );
-        }
-        return $total_profit;
-    }
-
-    private function get_total_sales_today() {
-        $args = array(
-            'post_type'   => 'shop_order',
-            'post_status' => array( 'wc-completed', 'wc-processing' ),
-            'date_query'  => array(
-                array(
-                    'after' => 'today',
-                ),
-            ),
-            'numberposts' => -1,
-        );
-        $orders = get_posts( $args );
-        $total_sales = 0;
-        foreach ( $orders as $order_post ) {
-            $order = wc_get_order( $order_post->ID );
-            $total_sales += $order->get_total();
-        }
-        return $total_sales;
-    }
-
-    private function get_new_users_this_month() {
-        $args = array(
-            'date_query' => array(
-                array(
-                    'after' => 'first day of this month',
-                ),
-            ),
-        );
-        $users = get_users( $args );
-        return count( $users );
-    }
-
-    private function get_monthly_revenue_data() {
-        $revenue_data = array();
-        for ( $i = 11; $i >= 0; $i-- ) {
-            $month = date( 'Y-m', strtotime( "-$i months" ) );
-            $revenue_data[ $month ] = 0;
-        }
-
-        $args = array(
-            'post_type'   => 'shop_order',
-            'post_status' => 'wc-completed',
-            'numberposts' => -1,
-            'date_query'  => array(
-                array(
-                    'after' => '12 months ago',
-                ),
-            ),
-        );
-        $orders = get_posts( $args );
-        foreach ( $orders as $order_post ) {
-            $order = wc_get_order( $order_post->ID );
-            $month = $order->get_date_created()->date( 'Y-m' );
-            if ( isset( $revenue_data[ $month ] ) ) {
-                $revenue_data[ $month ] += $order->get_total();
-            }
-        }
-        return $revenue_data;
-    }
-
-    private function get_popular_bundles() {
-        $args = array(
-            'post_type'   => 'shop_order',
-            'post_status' => array( 'wc-completed', 'wc-processing' ),
-            'numberposts' => -1,
-        );
-        $orders = get_posts( $args );
-        $bundles = array();
-        foreach ( $orders as $order_post ) {
-            $order = wc_get_order( $order_post->ID );
-            $bundle = $order->get_meta( 'Bundle' );
-            if ( ! empty( $bundle ) ) {
-                if ( ! isset( $bundles[ $bundle ] ) ) {
-                    $bundles[ $bundle ] = 0;
-                }
-                $bundles[ $bundle ]++;
-            }
-        }
-        arsort( $bundles );
-        return array_slice( $bundles, 0, 5, true );
-    }
-
-    public function render_dashboard_page() {
-        ?>
-        <style>
-            .kaa-admin-card { background: #fff; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
-            .kaa-admin-card h3 { margin-top: 0; }
-            .kaa-admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-            .kaa-admin-stat-card { text-align: center; }
-            .kaa-admin-stat-card .stat-number { font-size: 2.5em; font-weight: bold; }
-            .kaa-admin-stat-card .stat-label { color: #555; }
-        </style>
-        <div class="wrap">
-            <h1>Kaadatahub Dashboard</h1>
-
-            <div class="kaa-admin-grid">
-                <div class="kaa-admin-card kaa-admin-stat-card">
-                    <div class="stat-number"><?php echo wc_price( $this->get_total_reseller_profit() ); ?></div>
-                    <div class="stat-label">Total Reseller Profit</div>
-                </div>
-                <div class="kaa-admin-card kaa-admin-stat-card">
-                    <div class="stat-number"><?php echo wc_price( $this->get_total_sales_today() ); ?></div>
-                    <div class="stat-label">Total Sales Today</div>
-                </div>
-                <div class="kaa-admin-card kaa-admin-stat-card">
-                     <div class="stat-number"><?php echo $this->get_new_users_this_month(); ?></div>
-                    <div class="stat-label">New Users This Month</div>
-                </div>
-            </div>
-
-            <div class="kaa-admin-card">
-                <h3>Popular Bundles</h3>
-                <ul>
-                    <?php
-                    $popular_bundles = $this->get_popular_bundles();
-                    foreach ( $popular_bundles as $bundle => $count ) {
-                        echo '<li>' . esc_html( $bundle ) . ' (' . $count . ' sales)</li>';
-                    }
-                    ?>
-                </ul>
-            </div>
-
-             <div class="kaa-admin-card">
-                <h3>Quick Links</h3>
-                <ul>
-                    <li><a href="<?php echo admin_url('admin.php?page=kaa_mall_user_management'); ?>">Manage Users</a></li>
-                    <li><a href="<?php echo admin_url('admin.php?page=kaa_mall_reports'); ?>">View Reports</a></li>
-                    <li><a href="<?php echo admin_url('admin.php?page=kaa_mall_settings'); ?>">Plugin Settings</a></li>
-                    <li><a href="<?php echo admin_url('edit.php?post_type=shop_order'); ?>">View All Orders</a></li>
-                </ul>
-            </div>
-        </div>
-        <?php
-    }
-
-    public function render_user_management_page() {
-        $users = get_users();
-        ?>
-        <div class="wrap">
-            <h1>User Management</h1>
-            <div class="kaa-admin-grid">
-                <div class="kaa-admin-card" style="grid-column: 1 / -1;">
-                    <h3>All Users</h3>
-                    <table class="wp-list-table widefat fixed striped">
-                        <thead>
-                            <tr>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Wallet Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ( $users as $user ) : ?>
-                                <tr>
-                                    <td><?php echo esc_html( $user->user_login ); ?></td>
-                                    <td><?php echo esc_html( $user->user_email ); ?></td>
-                                    <td><?php echo esc_html( implode( ', ', $user->roles ) ); ?></td>
-                                    <td>₵<?php echo number_format( $this->get_wallet_balance( $user->ID ), 2 ); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="kaa-admin-card">
-                    <h3>Top Up User Wallet</h3>
-                    <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-                        <input type="hidden" name="action" value="kaa_mall_top_up_wallet">
-                        <?php wp_nonce_field( 'kaa_mall_top_up_wallet_nonce', 'kaa_mall_top_up_wallet_nonce' ); ?>
-                        <table class="form-table">
-                            <tr valign="top">
-                                <th scope="row">Select User</th>
-                                <td>
-                                    <select name="user_id" style="width: 100%;">
-                                        <?php foreach ( $users as $user ) : ?>
-                                            <option value="<?php echo $user->ID; ?>"><?php echo esc_html( $user->display_name ); ?> (<?php echo esc_html( $user->user_email ); ?>)</option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </td>
-                            </tr>
-                            <tr valign="top">
-                                <th scope="row">Amount (GH₵)</th>
-                                <td><input type="number" name="amount" step="0.01" min="0.01" required /></td>
-                            </tr>
-                        </table>
-                        <?php submit_button( 'Top Up Wallet' ); ?>
-                    </form>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    public function render_reports_page() {
-        wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '3.7.0', true );
-        $monthly_revenue = $this->get_monthly_revenue_data();
-        $popular_bundles = $this->get_popular_bundles();
-        ?>
-        <div class="wrap">
-            <h1>Sales Reports</h1>
-            <div class="kaa-admin-card">
-                <h3>Monthly Revenue</h3>
-                <canvas id="monthlyRevenueChart" width="400" height="200"></canvas>
-            </div>
-            <div class="kaa-admin-card">
-                <h3>Top Selling Bundles</h3>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th>Bundle</th>
-                            <th>Sales Count</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ( $popular_bundles as $bundle => $count ) : ?>
-                            <tr>
-                                <td><?php echo esc_html( $bundle ); ?></td>
-                                <td><?php echo $count; ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <script>
-            jQuery(document).ready(function($) {
-                var ctx = document.getElementById('monthlyRevenueChart').getContext('2d');
-                var myChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: <?php echo json_encode( array_keys( $monthly_revenue ) ); ?>,
-                        datasets: [{
-                            label: 'Monthly Revenue',
-                            data: <?php echo json_encode( array_values( $monthly_revenue ) ); ?>,
-                            backgroundColor: 'rgba(74, 144, 226, 0.5)',
-                            borderColor: 'rgba(74, 144, 226, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
-            });
-        </script>
-        <?php
     }
 
     public function render_settings_page() {
@@ -468,74 +133,11 @@ class Kaa_Mall_Admin {
                 <textarea name="kaa_mall_mtn_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_mtn_prices') ); ?></textarea>
                 <h3>AirtelTigo Prices</h3>
                 <textarea name="kaa_mall_airteltigo_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_airteltigo_prices') ); ?></textarea>
-                <h3>Telecel Prices</h3>
-                <textarea name="kaa_mall_telecel_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_telecel_prices') ); ?></textarea>
-
-                <h3>Reseller Tiers</h3>
-                <div id="kaa-mall-tier-manager">
-                    <table class="wp-list-table widefat fixed striped">
-                        <thead>
-                            <tr>
-                                <th>Tier Name</th>
-                                <th>Sales Goal (GH₵)</th>
-                                <th>Discount (%)</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tier-rows-container">
-                        </tbody>
-                    </table>
-                    <button type="button" class="button" id="add-tier-row" style="margin-top: 10px;">Add Tier</button>
-                    <input type="hidden" name="kaa_mall_reseller_tiers" id="hidden-tiers-input">
-                </div>
-
+                <h3>Vodafone Prices</h3>
+                <textarea name="kaa_mall_vodafone_prices" rows="10" cols="50"><?php echo esc_attr( get_option('kaa_mall_vodafone_prices') ); ?></textarea>
                 <?php submit_button(); ?>
             </form>
         </div>
-        <script>
-            jQuery(document).ready(function($) {
-                // Tiers
-                var tiers = <?php echo json_encode( get_option('kaa_mall_reseller_tiers', array() ) ); ?>;
-
-                function render_tier_rows() {
-                    var container = $('#tier-rows-container');
-                    container.empty();
-                    tiers.forEach(function(tier, index) {
-                        var row = '<tr>' +
-                            '<td><input type="text" class="tier-name" value="' + tier.name + '"></td>' +
-                            '<td><input type="number" class="tier-goal" value="' + tier.goal + '"></td>' +
-                            '<td><input type="number" class="tier-discount" value="' + tier.discount + '"></td>' +
-                            '<td><button type="button" class="button remove-tier-row" data-index="' + index + '">Remove</button></td>' +
-                            '</tr>';
-                        container.append(row);
-                    });
-                }
-
-                $('#add-tier-row').on('click', function() {
-                    tiers.push({ name: '', goal: 0, discount: 0 });
-                    render_tier_rows();
-                });
-
-                $('#tier-rows-container').on('click', '.remove-tier-row', function() {
-                    var index = $(this).data('index');
-                    tiers.splice(index, 1);
-                    render_tier_rows();
-                });
-
-                $('form').on('submit', function() {
-                    var updated_tiers = [];
-                    $('#tier-rows-container tr').each(function() {
-                        var name = $(this).find('.tier-name').val();
-                        var goal = $(this).find('.tier-goal').val();
-                        var discount = $(this).find('.tier-discount').val();
-                        updated_tiers.push({ name: name, goal: goal, discount: discount });
-                    });
-                    $('#hidden-tiers-input').val(JSON.stringify(updated_tiers));
-                });
-
-                render_tier_rows();
-            });
-        </script>
         <?php
     }
 
