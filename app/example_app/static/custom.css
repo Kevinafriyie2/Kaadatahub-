@@ -1,0 +1,60 @@
+/* Custom CSS for the Defang Todos app */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+body {
+    background-color: #f5f5f5;
+    font-family: 'Poppins', sans-serif;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.box {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+.box:hover {
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+}
+
+.button.is-primary {
+    background-color: #4A90E2;
+}
+
+.button.is-primary:hover {
+    background-color: #357ABD;
+}
+
+.button.is-success {
+    background-color: #50E3C2;
+}
+
+.button.is-success:hover {
+    background-color: #38A89D;
+}
+
+.button.is-warning {
+    background-color: #F5A623;
+}
+
+.button.is-warning:hover {
+    background-color: #D48B1F;
+}
+
+.button.is-danger {
+    background-color: #D0021B;
+}
+
+.button.is-danger:hover {
+    background-color: #A30215;
+}
+
+.has-text-weight-bold {
+    font-weight: 600;
+}
