@@ -7,14 +7,38 @@ class Kaa_Mall {
     protected $version;
 
     public function __construct() {
+        if ( ! defined( 'KAA_MALL_VERSION' ) ) {
+            define( 'KAA_MALL_VERSION', '1.0.3' );
+        }
         $this->plugin_name = 'kaa-mall';
-        $this->version = '1.0.0';
+        $this->version = KAA_MALL_VERSION;
         $this->load_dependencies();
         $this->define_admin_hooks();
         $this->define_public_hooks();
         add_action( 'init', array( $this, 'add_rewrite_rules' ) );
         add_action( 'init', array( $this, 'register_withdrawal_post_type' ) );
+        add_action( 'plugins_loaded', array( $this, 'run_upgrade_routines' ) );
     }
+
+    public function run_upgrade_routines() {
+        $current_version = get_option( 'kaa_mall_version', '1.0.0' );
+        if ( version_compare( $current_version, '1.0.3', '<' ) ) {
+            // Since the activation hook now handles product creation/deletion,
+            // we can just call the same robust functions here.
+            require_once plugin_dir_path( __FILE__ ) . 'class-kaa-mall-activator.php';
+            Kaa_Mall_Activator::delete_all_data_products();
+            Kaa_Mall_Activator::create_data_bundle_products();
+            update_option( 'kaa_mall_version', '1.0.3' );
+        }
+    }
+
+    // The update_product_prices function is now obsolete as the activator logic is reused.
+    // It is kept here to avoid breaking any potential future logic, but it is not called.
+    private function update_product_prices() {
+        $products_to_update = array(); // This is now empty.
+        // Logic has been moved to the run_upgrade_routines function for consistency.
+    }
+
 
     public function register_withdrawal_post_type() {
         register_post_type( 'kaa_withdrawal',
@@ -28,7 +52,7 @@ class Kaa_Mall {
                 'show_in_menu'=> 'kaa_mall',
                 'supports'    => array( 'title' ),
                 'capabilities' => array(
-                    'create_posts' => 'do_not_allow', // Disable creation from admin UI
+                    'create_posts' => 'do_not_allow',
                 ),
                 'map_meta_cap' => true,
             )
@@ -77,7 +101,7 @@ class Kaa_Mall {
     }
 
     public function run() {
-        // This is where we would run the loader, but we're not using one yet.
+        // Not in use.
     }
 
     public function get_plugin_name() {
