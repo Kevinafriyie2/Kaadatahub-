@@ -19,23 +19,38 @@ class Kaa_Mall_Public {
         add_action( 'wp_ajax_kaa_mall_afa_registration', array( $this, 'afa_registration' ) );
         add_action( 'wp_ajax_kaa_mall_get_recent_orders', array( $this, 'get_recent_orders' ) );
         add_action( 'wp_ajax_kaa_mall_get_wallet_balance', array( $this, 'ajax_get_wallet_balance' ) );
+        add_action( 'wp_ajax_kaa_mall_get_afa_status', array( $this, 'ajax_get_afa_status' ) );
+    }
+
+    public function ajax_get_afa_status() {
+        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
+        $user_id = get_current_user_id();
+        $args = array(
+            'customer_id' => $user_id,
+            'post_status' => array('wc-completed', 'wc-processing'),
+            'limit' => 1,
+        );
+        $orders = wc_get_orders( $args );
+        $is_registered = false;
+        foreach($orders as $order){
+            foreach($order->get_items() as $item){
+                $product = $item->get_product();
+                if($product && $product->get_name() === 'AFA Registration'){
+                    $is_registered = true;
+                    break 2;
+                }
+            }
+        }
+        wp_send_json_success(array('is_registered' => $is_registered));
     }
 
     public function enqueue_scripts() {
         global $post;
         if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'kaa_user_portal' ) ) {
-            $css_file_path = plugin_dir_path( __FILE__ ) . 'css/kaa-mall-portal-redesign.css';
-            $css_file_url = plugin_dir_url( __FILE__ ) . 'css/kaa-mall-portal-redesign.css';
-            $css_version = filemtime( $css_file_path );
-            wp_enqueue_style( 'kaa-mall-portal-redesign', $css_file_url, array(), $css_version );
+            wp_enqueue_style( 'kaa-mall-portal-redesign', plugin_dir_url( __FILE__ ) . 'css/kaa-mall-portal-redesign.css', array(), filemtime( plugin_dir_path( __FILE__ ) . 'css/kaa-mall-portal-redesign.css' ) );
             wp_enqueue_style( 'font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css' );
-
-            $js_file_path = plugin_dir_path( __FILE__ ) . 'js/kaa-mall-public.js';
-            $js_file_url = plugin_dir_url( __FILE__ ) . 'js/kaa-mall-public.js';
-            $js_version = filemtime( $js_file_path );
-
-            wp_enqueue_script( 'paystack-inline', 'https://js.paystack.co/v1/inline.js', array(), $this->version, false );
-            wp_enqueue_script( 'kaa-mall-public', $js_file_url, array( 'jquery', 'paystack-inline' ), $js_version, false );
+            wp_enqueue_script( 'paystack-inline', 'https://js.paystack.co/v1/inline.js', array(), $this->version, true );
+            wp_enqueue_script( 'kaa-mall-public', plugin_dir_url( __FILE__ ) . 'js/kaa-mall-public.js', array( 'jquery', 'paystack-inline' ), filemtime( plugin_dir_path( __FILE__ ) . 'js/kaa-mall-public.js' ), true );
 
             $user = wp_get_current_user();
             wp_localize_script( 'kaa-mall-public', 'kaa_mall_params', array(
@@ -50,15 +65,12 @@ class Kaa_Mall_Public {
     }
 
     private function get_wallet_balance( $user_id ) {
-        $balance = get_user_meta( $user_id, '_kaa_mall_wallet_balance', true );
-        return empty( $balance ) ? 0.00 : floatval( $balance );
+        return floatval( get_user_meta( $user_id, '_kaa_mall_wallet_balance', true ) );
     }
 
     public function ajax_get_wallet_balance() {
         check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
-        $user_id = get_current_user_id();
-        $balance = $this->get_wallet_balance( $user_id );
-        wp_send_json_success( number_format( $balance, 2 ) );
+        wp_send_json_success( number_format( $this->get_wallet_balance( get_current_user_id() ), 2 ) );
     }
 
     private function get_product_by_name( $product_name ) {
@@ -70,33 +82,22 @@ class Kaa_Mall_Public {
     }
 
     public function get_bundle_prices() {
-        check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
-        $network = sanitize_text_field( $_POST['network'] );
-
-        $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
-        $admin_prices = array();
-        if ( ! empty( $admin_prices_str ) ) {
-            $lines = explode( "\n", $admin_prices_str );
-            foreach ( $lines as $line ) {
-                $parts = explode( '=', $line );
-                if ( count( $parts ) == 2 ) {
-                    $admin_prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
-                }
+        // This function is now simplified as prices are directly on the product
+        $network_prefix = sanitize_text_field( $_POST['network'] );
+        $args = array(
+            'post_type' => 'product',
+            'posts_per_page' => -1,
+            's' => $network_prefix . ' ', // Search for products starting with "MTN ", "AT ", etc.
+        );
+        $products = get_posts($args);
+        $prices = array();
+        foreach($products as $product_post){
+            $product = wc_get_product($product_post->ID);
+            if($product){
+                $prices[$product->get_name()] = $product->get_price();
             }
         }
-
-        $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-        if ( $reseller_id ) {
-            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
-            if ( ! empty( $reseller_prices ) ) {
-                // Merge reseller prices with admin prices, ensuring all bundles are available
-                $final_prices = array_merge( $admin_prices, $reseller_prices );
-                wp_send_json_success( $final_prices );
-                return;
-            }
-        }
-
-        wp_send_json_success( $admin_prices );
+        wp_send_json_success($prices);
     }
 
     public function verify_paystack_transaction() {
@@ -159,31 +160,11 @@ class Kaa_Mall_Public {
         $bundle = sanitize_text_field( $_POST['bundle'] );
         $phone_number = sanitize_text_field( $_POST['phone_number'] );
 
-        $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
-        $admin_prices = array();
-        if ( ! empty( $admin_prices_str ) ) {
-            $lines = explode( "\n", $admin_prices_str );
-            foreach ( $lines as $line ) {
-                $parts = explode( '=', $line );
-                if ( count( $parts ) == 2 ) {
-                    $admin_prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
-                }
-            }
+        $product = $this->get_product_by_name($bundle);
+        if ( ! $product ) {
+            wp_send_json_error( array( 'message' => 'Invalid bundle selected. Please choose another package.' ) );
         }
-
-        if ( ! isset( $admin_prices[ $bundle ] ) ) {
-            wp_send_json_error( array( 'message' => 'Invalid bundle selected.' ) );
-        }
-
-        $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-        $final_price = $admin_prices[ $bundle ];
-
-        if ( $reseller_id ) {
-            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
-            if ( ! empty( $reseller_prices ) && isset( $reseller_prices[ $bundle ] ) ) {
-                $final_price = $reseller_prices[ $bundle ];
-            }
-        }
+        $final_price = $product->get_price();
 
         $user_id = get_current_user_id();
         $wallet_balance = $this->get_wallet_balance( $user_id );
@@ -195,30 +176,15 @@ class Kaa_Mall_Public {
         $new_balance = $wallet_balance - $final_price;
         update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
 
-        $product = $this->get_product_by_name( 'Data Bundle' );
-        if ( $product ) {
-            $order = wc_create_order();
-            $order->set_customer_id( $user_id );
-            $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
-            $order->set_total( $final_price );
-            $order->set_status( 'processing' );
-            $order->update_meta_data( 'Network', $network );
-            $order->update_meta_data( 'Bundle', $bundle );
-            $order->update_meta_data( 'Phone Number', $phone_number );
-
-            if ( $reseller_id ) {
-                $order->update_meta_data( '_reseller_id', $reseller_id );
-                $profit = $final_price - $admin_prices[ $bundle ];
-                if ( $profit > 0 ) {
-                    $order->update_meta_data( '_reseller_profit', $profit );
-                    $current_profit_balance = get_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', true );
-                    $new_profit_balance = floatval($current_profit_balance) + $profit;
-                    update_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', $new_profit_balance );
-                }
-            }
-
-            $order->save();
-        }
+        $order = wc_create_order();
+        $order->set_customer_id( $user_id );
+        $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
+        $order->set_total( $final_price );
+        $order->set_status( 'processing' );
+        $order->update_meta_data( 'Network', $network );
+        $order->update_meta_data( 'Bundle', $bundle );
+        $order->update_meta_data( 'Phone Number', $phone_number );
+        $order->save();
 
         wp_send_json_success();
     }
@@ -236,31 +202,11 @@ class Kaa_Mall_Public {
             return;
         }
 
-        $admin_prices_str = get_option( 'kaa_mall_' . $network . '_prices' );
-        $admin_prices = array();
-        if ( ! empty( $admin_prices_str ) ) {
-            $lines = explode( "\n", $admin_prices_str );
-            foreach ( $lines as $line ) {
-                $parts = explode( '=', $line );
-                if ( count( $parts ) == 2 ) {
-                    $admin_prices[ trim( $parts[0] ) ] = floatval( trim( $parts[1] ) );
-                }
-            }
+        $product = $this->get_product_by_name($bundle);
+        if ( ! $product ) {
+            wp_send_json_error( array( 'message' => 'Invalid bundle selected. Please choose another package.' ) );
         }
-
-        if ( ! isset( $admin_prices[ $bundle ] ) ) {
-            wp_send_json_error( array( 'message' => 'Invalid bundle selected.' ) );
-        }
-
-        $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-        $final_price = $admin_prices[ $bundle ];
-
-        if ( $reseller_id ) {
-            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_' . $network, true );
-            if ( ! empty( $reseller_prices ) && isset( $reseller_prices[ $bundle ] ) ) {
-                $final_price = $reseller_prices[ $bundle ];
-            }
-        }
+        $final_price = $product->get_price();
 
         $secret_key = get_option( 'kaa_mall_paystack_secret_key' );
 
@@ -286,36 +232,22 @@ class Kaa_Mall_Public {
         if ( 'success' === $result->data->status ) {
             $user_id = is_user_logged_in() ? get_current_user_id() : 0;
 
-            $product = $this->get_product_by_name( 'Data Bundle' );
-            if ( $product ) {
-                $order = wc_create_order();
+            $order = wc_create_order();
 
-                if ( $user_id ) {
-                    $order->set_customer_id( $user_id );
-                } else {
-                    $order->set_billing_email( $email );
-                }
-
-                $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
-                $order->set_total( $final_price );
-                $order->set_status( 'processing' );
-                $order->update_meta_data( 'Network', $network );
-                $order->update_meta_data( 'Bundle', $bundle );
-                $order->update_meta_data( 'Phone Number', $phone_number );
-
-                if ( $reseller_id ) {
-                    $order->update_meta_data( '_reseller_id', $reseller_id );
-                    $profit = $final_price - $admin_prices[ $bundle ];
-                    if ( $profit > 0 ) {
-                        $order->update_meta_data( '_reseller_profit', $profit );
-                        $current_profit_balance = get_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', true );
-                        $new_profit_balance = floatval($current_profit_balance) + $profit;
-                        update_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', $new_profit_balance );
-                    }
-                }
-
-                $order->save();
+            if ( $user_id ) {
+                $order->set_customer_id( $user_id );
+            } else {
+                $order->set_billing_email( $email );
             }
+
+            $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
+            $order->set_total( $final_price );
+            $order->set_status( 'processing' );
+            $order->update_meta_data( 'Network', $network );
+            $order->update_meta_data( 'Bundle', $bundle );
+            $order->update_meta_data( 'Phone Number', $phone_number );
+            $order->payment_complete();
+            $order->save();
 
             wp_send_json_success();
         } else {
@@ -336,16 +268,11 @@ class Kaa_Mall_Public {
         $location = sanitize_text_field( $_POST['location'] );
         $ghana_card = sanitize_text_field( $_POST['ghana_card'] );
 
-        $afa_fee = 13.00; // This is a fixed admin price
-        $reseller_id = WC()->session->get( 'kaa_mall_reseller_id' );
-        $final_price = $afa_fee;
-
-        if($reseller_id) {
-            $reseller_prices = get_user_meta( $reseller_id, '_kaa_mall_reseller_prices_afa', true );
-            if ( ! empty( $reseller_prices ) && isset( $reseller_prices['registration'] ) ) {
-                $final_price = $reseller_prices['registration'];
-            }
+        $product = $this->get_product_by_name('AFA Registration');
+        if(!$product){
+             wp_send_json_error( array( 'message' => 'AFA Registration product not found.' ) );
         }
+        $final_price = $product->get_price();
 
         $user_id = get_current_user_id();
         $wallet_balance = $this->get_wallet_balance( $user_id );
@@ -357,31 +284,16 @@ class Kaa_Mall_Public {
         $new_balance = $wallet_balance - $final_price;
         update_user_meta( $user_id, '_kaa_mall_wallet_balance', $new_balance );
 
-        $product = $this->get_product_by_name( 'AFA Registration' );
-        if ( $product ) {
-            $order = wc_create_order();
-            $order->set_customer_id( $user_id );
-            $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
-            $order->set_total( $final_price );
-            $order->set_status( 'processing' );
-            $order->update_meta_data( 'Full Name', $full_name );
-            $order->update_meta_data( 'Phone Number', $phone_number );
-            $order->update_meta_data( 'Location', $location );
-            $order->update_meta_data( 'Ghana Card', $ghana_card );
-
-            if ( $reseller_id ) {
-                $order->update_meta_data( '_reseller_id', $reseller_id );
-                $profit = $final_price - $afa_fee;
-                if( $profit > 0 ) {
-                    $order->update_meta_data( '_reseller_profit', $profit );
-                    $current_profit_balance = get_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', true );
-                    $new_profit_balance = floatval($current_profit_balance) + $profit;
-                    update_user_meta( $reseller_id, '_kaa_mall_reseller_profit_balance', $new_profit_balance );
-                }
-            }
-
-            $order->save();
-        }
+        $order = wc_create_order();
+        $order->set_customer_id( $user_id );
+        $order->add_product( $product, 1, array( 'subtotal' => $final_price, 'total' => $final_price ) );
+        $order->set_total( $final_price );
+        $order->set_status( 'processing' );
+        $order->update_meta_data( 'Full Name', $full_name );
+        $order->update_meta_data( 'Phone Number', $phone_number );
+        $order->update_meta_data( 'Location', $location );
+        $order->update_meta_data( 'Ghana Card', $ghana_card );
+        $order->save();
 
         wp_send_json_success();
     }
@@ -389,9 +301,11 @@ class Kaa_Mall_Public {
     public function get_recent_orders() {
         check_ajax_referer( 'kaa_mall_nonce', 'nonce' );
         $user_id = get_current_user_id();
+        $limit = isset($_POST['limit']) ? intval($_POST['limit']) : -1;
+
         $args = array(
             'customer_id' => $user_id,
-            'limit' => 20,
+            'limit' => $limit,
             'orderby' => 'date',
             'order' => 'DESC',
         );
@@ -414,6 +328,7 @@ class Kaa_Mall_Public {
     }
 
     public function render_user_portal() {
+        // Session handling for referrals
         if ( isset( $_GET['ref'] ) ) {
             $reseller_id = intval( $_GET['ref'] );
             if ( get_user_by( 'id', $reseller_id ) ) {
@@ -428,117 +343,163 @@ class Kaa_Mall_Public {
 
         ob_start();
         ?>
-        <div class="kaa-mall-portal-container">
-            <header class="portal-header">
-                <div class="menu-icon">
-                    <i class="fas fa-bars"></i>
+        <div class="kaa-mall-portal-body">
+            <!-- Sidebar Navigation -->
+            <aside class="portal-sidebar">
+                <div class="sidebar-header">
+                    <h2>Kaadatahub</h2>
                 </div>
-                <div class="header-icons">
-                    <a href="#" class="icon-circle"><i class="fas fa-sun"></i></a>
-                    <a href="#" class="icon-circle"><i class="fas fa-bell"></i></a>
-                    <a href="#" class="icon-circle"><i class="fas fa-user"></i></a>
-                </div>
-            </header>
+                <nav class="sidebar-nav">
+                    <a href="#" class="nav-item active" data-view="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a href="#" class="nav-item" data-view="mtn"><i class="fas fa-sim-card"></i> MTN</a>
+                    <a href="#" class="nav-item" data-view="airteltigo"><i class="fas fa-sim-card"></i> AirtelTigo</a>
+                    <a href="#" class="nav-item" data-view="telecel"><i class="fas fa-sim-card"></i> Telecel</a>
+                    <a href="#" class="nav-item" data-view="afa-registration"><i class="fas fa-user-plus"></i> AFA Registration</a>
+                    <a href="#" class="nav-item" data-view="purchase-history"><i class="fas fa-history"></i> Purchase History</a>
+                    <a href="https://wa.me/<?php echo esc_attr(get_option('kaa_mall_admin_whatsapp_number')); ?>" class="nav-item" target="_blank"><i class="fas fa-headset"></i> Contact Admin</a>
+                </nav>
+            </aside>
+            <div class="sidebar-overlay"></div>
 
-            <main>
-                <div class="info-card">
-                    <h1>Data Bundle Store</h1>
-                    <p>Instant Data Top-up for All Networks</p>
-                </div>
+            <!-- Main Content -->
+            <div class="kaa-mall-main-content">
+                <header class="portal-header">
+                    <div class="menu-icon">
+                        <i class="fas fa-bars"></i>
+                    </div>
+                    <div class="header-icons">
+                        <a href="#" class="icon-circle"><i class="fas fa-sun"></i></a>
+                        <a href="#" class="icon-circle"><i class="fas fa-bell"></i></a>
+                        <a href="#" class="icon-circle"><i class="fas fa-user"></i></a>
+                    </div>
+                </header>
 
-                <?php if ( is_user_logged_in() ) : ?>
-                <div class="form-card wallet-card">
-                    <div class="balance-display">
-                        <span>Wallet Balance</span>
-                        <span class="balance-amount">GH₵<span class="wallet-balance-display">0.00</span></span>
-                    </div>
-                    <button class="btn-secondary top-up-btn">Top Up</button>
-                </div>
-                <?php endif; ?>
-
-                <div class="form-card">
-                    <div class="network-tabs">
-                        <button class="tab-link active" data-network="mtn">MTN</button>
-                        <button class="tab-link" data-network="airteltigo">AirtelTigo</button>
-                        <button class="tab-link" data-network="telecel">Telecel</button>
-                    </div>
-
-                    <div id="mtn" class="network-tab-content active">
-                        <?php $this->render_bundle_form('mtn', 'MTN'); ?>
-                    </div>
-                    <div id="airteltigo" class="network-tab-content">
-                        <?php $this->render_bundle_form('airteltigo', 'AirtelTigo'); ?>
-                    </div>
-                    <div id="telecel" class="network-tab-content">
-                        <?php $this->render_bundle_form('telecel', 'Telecel'); ?>
-                    </div>
-                </div>
-
-                <?php if ( is_user_logged_in() ) : ?>
-                <div class="form-card afa-registration">
-                     <h3>AFA Bundle Registration</h3>
-                     <p>Register for AFA bundles and get amazing benefits!</p>
-                     <form id="kaa-mall-afa-form">
-                         <div class="form-group">
-                             <label for="full_name">Full Name</label>
-                             <input type="text" id="full_name" name="full_name" class="form-control" placeholder="Enter your full name" required>
-                         </div>
-                         <div class="form-group">
-                             <label for="location">Location</label>
-                             <input type="text" id="location" name="location" class="form-control" placeholder="Enter your location" required>
-                         </div>
-                         <div class="form-group">
-                             <label for="ghana_card">ID Ghana Card Number</label>
-                             <input type="text" id="ghana_card" name="ghana_card" class="form-control" placeholder="GHA-XXXXXXXXX-X" required>
-                         </div>
-                         <div class="balance-info">
-                            <span>Registration Fee</span>
-                            <span>GH₵13.00</span>
+                <main>
+                    <!-- View Containers -->
+                    <div id="dashboard" class="portal-view active">
+                        <div class="dashboard-grid">
+                            <!-- Wallet Balance Card -->
+                            <div class="card wallet-card">
+                                <span>Wallet Balance</span>
+                                <span class="balance-amount">GH₵<span class="wallet-balance-display">...</span></span>
+                                <button class="btn-primary top-up-btn">Top Up</button>
+                            </div>
+                            <!-- AFA Status Card -->
+                            <div class="card afa-status-card">
+                                <span>AFA Registration</span>
+                                <div class="afa-status-content">
+                                    <!-- Content will be loaded by JS -->
+                                </div>
+                            </div>
                         </div>
-                         <button type="submit" class="btn-primary">Register Now - GH₵13</button>
-                     </form>
-                </div>
 
-                <div class="form-card purchase-history">
-                    <h3>Purchase History</h3>
-                    <div class="table-responsive">
-                        <table class="history-table">
-                            <thead>
-                                <tr>
-                                    <th>Order ID</th>
-                                    <th>Date</th>
-                                    <th>Bundle</th>
-                                    <th>Phone</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
+                        <!-- Quick Access Network Cards -->
+                        <div class="quick-access">
+                            <h3>Buy Data</h3>
+                            <div class="network-cards">
+                                <a href="#" class="card network-card" data-view="mtn">
+                                    <i class="fas fa-sim-card"></i><span>MTN</span>
+                                </a>
+                                <a href="#" class="card network-card" data-view="airteltigo">
+                                    <i class="fas fa-sim-card"></i><span>AirtelTigo</span>
+                                </a>
+                                <a href="#" class="card network-card" data-view="telecel">
+                                    <i class="fas fa-sim-card"></i><span>Telecel</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Recent Purchases -->
+                        <div class="recent-purchases">
+                             <h3>Recent Purchases</h3>
+                             <div class="history-table-container">
+                                 <!-- Loaded by JS -->
+                             </div>
+                             <a href="#" class="view-all-history" data-view="purchase-history">View All</a>
+                        </div>
                     </div>
-                </div>
-                <?php endif; ?>
-                 <div class="form-card need-help">
-                    <h3>Need Help?</h3>
-                    <p>Our support team is here to help you 24/7</p>
-                    <a href="#" class="btn-primary contact-admin-btn">Contact the Admin</a>
-                </div>
-            </main>
 
-            <footer class="secured-footer">
-                <p><i class="fas fa-lock"></i> Secured by hubnet</p>
-            </footer>
-
-            <!-- Success Modal -->
-            <div id="success-modal" class="modal-overlay" style="display: none;">
-                <div class="modal-content">
-                    <div class="modal-icon">
-                        <i class="fas fa-check-circle"></i>
+                    <div id="mtn" class="portal-view">
+                        <div class="form-card">
+                            <h2>MTN Bundles</h2>
+                            <?php $this->render_bundle_form('mtn', 'MTN'); ?>
+                        </div>
                     </div>
-                    <h2>Thank You!</h2>
-                    <p>Your order was successful. Please check your purchase history for the receipt.</p>
-                    <button class="btn-primary" id="close-modal-btn">Go to Dashboard</button>
-                </div>
+
+                    <div id="airteltigo" class="portal-view">
+                        <div class="form-card">
+                           <h2>AirtelTigo Bundles</h2>
+                           <?php $this->render_bundle_form('airteltigo', 'AirtelTigo'); ?>
+                        </div>
+                    </div>
+
+                    <div id="telecel" class="portal-view">
+                         <div class="form-card">
+                            <h2>Telecel Bundles</h2>
+                            <?php $this->render_bundle_form('telecel', 'Telecel'); ?>
+                        </div>
+                    </div>
+
+                    <div id="afa-registration" class="portal-view">
+                        <div class="form-card afa-registration">
+                             <h3>AFA Bundle Registration</h3>
+                             <p>Register for AFA bundles and get amazing benefits!</p>
+                             <form id="kaa-mall-afa-form">
+                                 <div class="form-group">
+                                     <label for="full_name">Full Name</label>
+                                     <input type="text" id="full_name" name="full_name" class="form-control" placeholder="Enter your full name" required>
+                                 </div>
+                                 <div class="form-group">
+                                     <label for="location">Location</label>
+                                     <input type="text" id="location" name="location" class="form-control" placeholder="Enter your location" required>
+                                 </div>
+                                 <div class="form-group">
+                                     <label for="ghana_card">ID Ghana Card Number</label>
+                                     <input type="text" id="ghana_card" name="ghana_card" class="form-control" placeholder="GHA-XXXXXXXXX-X" required>
+                                 </div>
+                                 <div class="balance-info">
+                                    <span>Registration Fee</span>
+                                    <span>GH₵13.00</span>
+                                </div>
+                                 <button type="submit" class="btn-primary">Register Now - GH₵13</button>
+                             </form>
+                        </div>
+                    </div>
+
+                    <div id="purchase-history" class="portal-view">
+                        <div class="form-card purchase-history">
+                            <h3>Purchase History</h3>
+                            <div class="table-responsive">
+                                <table class="history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Order ID</th>
+                                            <th>Date</th>
+                                            <th>Bundle</th>
+                                            <th>Phone</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+                 <footer class="secured-footer">
+                    <p><i class="fas fa-lock"></i> Powered by Kaadatahub</p>
+                </footer>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="success-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-icon"><i class="fas fa-check-circle"></i></div>
+                <h2>Thank You!</h2>
+                <p>Your order was successful. Please check your purchase history for the receipt.</p>
+                <button class="btn-primary" id="close-modal-btn">Go to Dashboard</button>
             </div>
         </div>
         <?php
@@ -546,6 +507,8 @@ class Kaa_Mall_Public {
     }
 
     private function render_bundle_form($network, $network_name) {
+        // This function remains largely the same, but we make sure the input names are unique
+        // enough, or that our JS can handle them within their specific forms.
         ?>
         <form class="bundle-form" data-network="<?php echo esc_attr($network); ?>">
             <?php if ( ! is_user_logged_in() ) : ?>
@@ -559,22 +522,22 @@ class Kaa_Mall_Public {
                 <input type="tel" id="phone_number_<?php echo esc_attr($network); ?>" name="phone_number" class="form-control" placeholder="0241234567" required>
             </div>
             <div class="form-group">
-                <label for="bundle_package_<?php echo esc_attr($network); ?>">Choose a Menu *</label>
+                <label for="bundle_package_<?php echo esc_attr($network); ?>">Choose a Package *</label>
                 <select id="bundle_package_<?php echo esc_attr($network); ?>" name="bundle" class="form-control" required>
                      <option value="">Select package</option>
                 </select>
             </div>
 
             <div class="balance-info">
-                 <span>Available balance : GH₵<span class="wallet-balance-display">0.00</span></span>
-                 <span class="info-icon">i</span>
+                 <span>Available balance: GH₵<span class="wallet-balance-display">0.00</span></span>
+                 <a href="#" class="info-icon">i</a>
              </div>
 
             <div class="form-group payment-method">
                 <label>Payment Method</label>
                 <div class="payment-options">
                     <?php if ( is_user_logged_in() ) : ?>
-                    <label><input type="radio" name="payment_method_<?php echo esc_attr($network); ?>" value="wallet" checked> Wallet Balance</label>
+                    <label><input type="radio" name="payment_method_<?php echo esc_attr($network); ?>" value="wallet" checked> Wallet</label>
                     <?php endif; ?>
                     <label><input type="radio" name="payment_method_<?php echo esc_attr($network); ?>" value="paystack" <?php echo ! is_user_logged_in() ? 'checked' : ''; ?>> Paystack</label>
                 </div>
