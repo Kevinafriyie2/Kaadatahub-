@@ -312,6 +312,26 @@ else status.text('Error: '+r.message);
 add_action('wp_ajax_osc_admin_test_webhook','osc_admin_test_webhook');
 add_action('wp_ajax_osc_add_network', 'osc_ajax_add_network');
 add_action('wp_ajax_osc_delete_network', 'osc_ajax_delete_network');
+add_action('wp_ajax_osc_save_network_products', 'osc_ajax_save_network_products');
+
+function osc_ajax_save_network_products() {
+    if (!current_user_can('manage_options') || !check_ajax_referer('osc_network_nonce', 'nonce', false)) {
+        wp_send_json_error('Unauthorized action.');
+    }
+
+    $network_products_data = isset($_POST['network_products']) ? $_POST['network_products'] : [];
+    $sanitized_data = [];
+
+    // Sanitize the incoming data
+    foreach ($network_products_data as $network => $product_ids) {
+        $sanitized_network = sanitize_text_field(stripslashes($network));
+        $sanitized_ids = is_array($product_ids) ? array_map('intval', $product_ids) : [];
+        $sanitized_data[$sanitized_network] = $sanitized_ids;
+    }
+
+    update_option('osc_network_products', $sanitized_data);
+    wp_send_json_success('Product assignments saved.');
+}
 
 function osc_ajax_add_network() {
     if (!current_user_can('manage_options') || !check_ajax_referer('osc_network_nonce', 'nonce', false)) {
@@ -372,27 +392,11 @@ Network Products assignment
 --------------------------- */
 function osc_network_products_page(){
     if(!current_user_can('manage_options')) wp_die('Unauthorized');
-
-    // Handle Save Product Assignments
-    if(isset($_POST['osc_network_products_save']) && check_admin_referer('osc_network_products_save','osc_network_products_nonce')){
-        $network_products = get_option('osc_network_products', []);
-        $submitted_products = $_POST['osc_network_products'] ?? [];
-
-        foreach($network_products as $network => $assigned_ids){
-            if(isset($submitted_products[$network])){
-                $network_products[$network] = array_map('intval', $submitted_products[$network]);
-            }
-        }
-
-        update_option('osc_network_products', $network_products);
-        echo '<div class="notice notice-success is-dismissible"><p>Product assignments saved.</p></div>';
-    }
-
-    $products = class_exists('WC_Product') ? wc_get_products(array('limit'=>-1,'status'=>'publish')) : [];
     $network_products = get_option('osc_network_products', []);
 ?>
 <div class="wrap">
     <h1>Network Products Assignment</h1>
+    <div id="osc-admin-notice" style="display: none;"></div>
 
     <div class="card">
         <h2 class="title">Add New Network</h2>
@@ -404,19 +408,16 @@ function osc_network_products_page(){
 
     <hr>
 
-    <form method="post">
-        <div id="osc-network-list">
+    <div id="osc-network-products-form">
+        <table class="form-table" id="osc-network-table">
+            <tbody>
             <?php foreach($network_products as $network => $assigned_ids): ?>
-            <div class="network-row">
-                <span><?php echo esc_html($network); ?></span>
-                <button class="button is-destructive delete-network" data-network="<?php echo esc_attr($network); ?>">Delete</button>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <table class="form-table">
-            <?php foreach($network_products as $network => $assigned_ids): ?>
-            <tr>
-                <th scope="row" style="width: 200px;"><?php echo esc_html($network); ?></th>
+            <tr data-network="<?php echo esc_attr($network); ?>">
+                <th scope="row" style="width: 200px;">
+                    <?php echo esc_html($network); ?>
+                    <br>
+                    <button class="button is-destructive delete-network" data-network="<?php echo esc_attr($network); ?>">Delete</button>
+                </th>
                 <td>
                     <select name="osc_network_products[<?php echo esc_attr($network); ?>][]" multiple class="wc-product-search" style="width: 100%;" data-placeholder="Search for products…">
                         <?php foreach($assigned_ids as $pid): $p = wc_get_product($pid); if($p): ?>
@@ -426,47 +427,109 @@ function osc_network_products_page(){
                 </td>
             </tr>
             <?php endforeach; ?>
+            </tbody>
         </table>
-        <?php if (!empty($network_products)) submit_button('Save Changes','primary','osc_network_products_save'); ?>
-    </form>
+        <button id="osc-save-products" class="button button-primary">Save Changes</button>
+        <span class="spinner"></span>
+    </div>
 </div>
 <script>
-    jQuery(document).ready(function($) {
+jQuery(document).ready(function($) {
+    function showNotice(type, message) {
+        const notice = $('#osc-admin-notice');
+        notice.removeClass('notice-success notice-error').addClass('notice-' + type).html('<p>' + message + '</p>').fadeIn();
+        setTimeout(() => notice.fadeOut(), 3000);
+    }
+
+    function renderNetworkRow(network) {
+        const newRow = `
+            <tr data-network="${network}">
+                <th scope="row" style="width: 200px;">
+                    ${network}
+                    <br>
+                    <button class="button is-destructive delete-network" data-network="${network}">Delete</button>
+                </th>
+                <td>
+                    <select name="osc_network_products[${network}][]" multiple class="wc-product-search" style="width: 100%;" data-placeholder="Search for products…"></select>
+                </td>
+            </tr>`;
+        $('#osc-network-table tbody').append(newRow);
         $(document.body).trigger('wc-enhanced-select-init');
+    }
 
-        $('#osc-add-network-form').on('submit', function(e) {
-            e.preventDefault();
-            var networkName = $('#new-network-name').val();
-            $.post(ajaxurl, {
-                action: 'osc_add_network',
-                network_name: networkName,
-                nonce: '<?php echo wp_create_nonce('osc_network_nonce'); ?>'
-            }, function(response) {
-                if (response.success) {
-                    location.reload();
-                } else {
-                    alert(response.data);
-                }
-            });
-        });
+    $('#osc-add-network-form').on('submit', function(e) {
+        e.preventDefault();
+        const networkNameInput = $('#new-network-name');
+        const networkName = networkNameInput.val().trim();
+        if (!networkName) return;
 
-        $('.delete-network').on('click', function(e) {
-            e.preventDefault();
-            if (!confirm('Are you sure you want to delete this network?')) return;
-            var networkName = $(this).data('network');
-            $.post(ajaxurl, {
-                action: 'osc_delete_network',
-                network_name: networkName,
-                nonce: '<?php echo wp_create_nonce('osc_network_nonce'); ?>'
-            }, function(response) {
-                if (response.success) {
-                    location.reload();
-                } else {
-                    alert(response.data);
-                }
-            });
+        $.post(ajaxurl, {
+            action: 'osc_add_network',
+            network_name: networkName,
+            nonce: '<?php echo wp_create_nonce('osc_network_nonce'); ?>'
+        }, function(response) {
+            if (response.success) {
+                renderNetworkRow(networkName);
+                networkNameInput.val('');
+                showNotice('success', 'Network added. Save changes to assign products.');
+            } else {
+                showNotice('error', response.data);
+            }
         });
     });
+
+    $(document).on('click', '.delete-network', function(e) {
+        e.preventDefault();
+        if (!confirm('Are you sure you want to delete this network? This cannot be undone.')) return;
+        const networkName = $(this).data('network');
+
+        $.post(ajaxurl, {
+            action: 'osc_delete_network',
+            network_name: networkName,
+            nonce: '<?php echo wp_create_nonce('osc_network_nonce'); ?>'
+        }, function(response) {
+            if (response.success) {
+                $(`tr[data-network="${networkName}"]`).remove();
+                showNotice('success', 'Network deleted.');
+            } else {
+                showNotice('error', response.data);
+            }
+        });
+    });
+
+    $('#osc-save-products').on('click', function() {
+        const button = $(this);
+        const spinner = button.siblings('.spinner');
+        let networkProductsData = {};
+
+        $('#osc-network-table select').each(function() {
+            const nameAttr = $(this).attr('name');
+            const network = nameAttr.substring(nameAttr.indexOf('[') + 1, nameAttr.indexOf(']'));
+            networkProductsData[network] = $(this).val();
+        });
+
+        spinner.addClass('is-active');
+        button.prop('disabled', true);
+
+        $.post(ajaxurl, {
+            action: 'osc_save_network_products',
+            network_products: networkProductsData,
+            nonce: '<?php echo wp_create_nonce('osc_network_nonce'); ?>'
+        }, function(response) {
+            if (response.success) {
+                showNotice('success', response.data);
+            } else {
+                showNotice('error', response.data);
+            }
+        }).always(function() {
+            spinner.removeClass('is-active');
+            button.prop('disabled', false);
+        });
+    });
+
+    // Initial load
+    $(document.body).trigger('wc-enhanced-select-init');
+});
 </script>
 <?php
 }
@@ -2007,6 +2070,7 @@ return ob_get_clean();
 return '<div class="notice notice-warning"><p>You cannot register as an agent. Only customers can upgrade to Ocean Service Agents.</p></div>';
 }
 
+
 // Not logged in - show registration form for new customers
 if($_POST && isset($_POST['osc_customer_register_submit']) && check_admin_referer('osc_customer_register','osc_customer_register_nonce')){
 $first_name = sanitize_text_field($_POST['osc_first_name'] ?? '');
@@ -2118,165 +2182,213 @@ Shortcode: Order History (Real-time from WooCommerce)
 --------------------------- */
 add_shortcode('osc_order_history', 'osc_order_history_shortcode');
 function osc_order_history_shortcode() {
-if (!is_user_logged_in()) {
-return '<div class="notice notice-info"><p>Please log in to view your order history.</p></div>';
-}
+    if (!is_user_logged_in()) {
+        return '<div class="notice notice-info"><p>Please log in to view your order history.</p></div>';
+    }
+    if (!class_exists('WooCommerce')) {
+        return '<div class="notice notice-error"><p>WooCommerce is not active.</p></div>';
+    }
 
-// Check if WooCommerce is active
-if (!class_exists('WooCommerce')) {
-return '<div class="notice notice-error"><p>WooCommerce is not active.</p></div>';
-}
-
-ob_start();
-$user_id = get_current_user_id();
-
-// Get WooCommerce orders
-$orders = wc_get_orders(array(
-'customer_id' => $user_id,
-'limit' => 50,
-'orderby' => 'date',
-'order' => 'DESC',
-'status' => array('completed', 'processing', 'pending', 'on-hold', 'cancelled', 'failed')
-));
+    ob_start();
+    $user_id = get_current_user_id();
+    $orders = wc_get_orders([
+        'customer_id' => $user_id,
+        'limit' => 50,
+        'orderby' => 'date',
+        'order' => 'DESC',
+        'status' => array('completed', 'processing', 'pending', 'on-hold', 'cancelled', 'failed')
+    ]);
 ?>
 <style>
+    :root { --osc-font-family: 'Inter', sans-serif; }
     .osc-order-history-container {
-        font-family: var(--osc-font-family, sans-serif);
-        background: #fff;
-        padding: 2.5rem;
-        border-radius: 20px;
-        box-shadow: 0 15px 40px -15px rgba(0,0,0,0.08);
+        font-family: var(--osc-font-family);
+        background: #f9fafb;
+        padding: 2rem;
+        border-radius: 16px;
     }
-    .osc-history-header { text-align: center; margin-bottom: 2rem; }
-    .osc-history-header h2 { font-size: 1.8rem; color: var(--osc-primary-color, #0052cc); }
-    .osc-order-item { border: 1px solid #eee; border-radius: 12px; margin-bottom: 1rem; overflow: hidden; }
-    .osc-order-summary { display: grid; grid-template-columns: 2fr 1fr 1fr auto; align-items: center; padding: 1.2rem; gap: 1rem; }
-    .osc-order-details { display: flex; flex-direction: column; }
-    .osc-order-id { font-weight: 600; }
-    .osc-order-date { font-size: 0.9rem; color: #777; }
-    .osc-order-total { font-weight: 700; font-size: 1.1rem; }
-    .osc-order-status { font-weight: 500; }
-    .osc-toggle-details { background: none; border: 1px solid #ccc; border-radius: 50%; cursor: pointer; width: 30px; height: 30px; }
-    .osc-order-collapsible { padding: 0 1.5rem 1.5rem; display: none; }
+    .osc-history-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .osc-history-header h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a202c;
+    }
+    .osc-history-header p {
+        color: #718096;
+    }
+    .osc-order-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.04);
+        transition: box-shadow 0.2s;
+    }
+    .osc-order-card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.05);
+    }
+    .osc-card-summary {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        cursor: pointer;
+    }
+    .osc-summary-icon { font-size: 1.5rem; margin-right: 1rem; }
+    .osc-summary-info { flex-grow: 1; }
+    .osc-summary-info .product { font-weight: 600; color: #2d3748; }
+    .osc-summary-info .date { font-size: 0.85rem; color: #718096; }
+    .osc-summary-total { font-weight: 700; font-size: 1.1rem; color: #1a202c; }
+    .osc-summary-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-left: 1.5rem;
+    }
+    .status-completed { background-color: #e6fffa; color: #2c7a7b; }
+    .status-processing { background-color: #ebf8ff; color: #2b6cb0; }
+    .status-pending { background-color: #fefcbf; color: #975a16; }
+    .status-on-hold { background-color: #fefcbf; color: #975a16; }
+    .status-cancelled { background-color: #fed7d7; color: #9b2c2c; }
+    .status-failed { background-color: #fed7d7; color: #9b2c2c; }
+
+    .osc-card-details {
+        display: none;
+        padding: 0 1.5rem 1.5rem;
+        border-top: 1px solid #e2e8f0;
+        margin-top: 1rem;
+    }
+    .osc-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .osc-detail-item h4 {
+        font-size: 0.8rem;
+        color: #a0aec0;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+    .osc-detail-item p {
+        font-weight: 500;
+        color: #4a5568;
+    }
+    .osc-no-orders { text-align: center; padding: 3rem; background: #fff; border-radius: 12px; }
+    .osc-history-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    .osc-summary-card {
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        text-align: center;
+    }
+    .osc-summary-card h4 {
+        font-size: 0.9rem;
+        color: #718096;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+    .osc-summary-card p {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1a202c;
+    }
 </style>
+
 <div class="osc-order-history-container">
-<div class="osc-history-header">
-<h2>📋 Order History</h2>
-<p>Your recent purchases and transactions</p>
+    <div class="osc-history-header">
+        <h2>Order History</h2>
+        <p>Your recent purchases and transactions.</p>
+    </div>
+
+    <?php if (empty($orders)): ?>
+        <div class="osc-no-orders">
+            <h3>No orders yet</h3>
+            <p>Your purchase history will appear here.</p>
+        </div>
+    <?php else: ?>
+        <?php foreach ($orders as $order):
+            $order_items = $order->get_items();
+            $first_item = !empty($order_items) ? reset($order_items)->get_name() : 'Order';
+            $status = $order->get_status();
+
+            // Meta data
+            $network = $order->get_meta('bundle_network') ?: 'N/A';
+            $agent_phone = $order->get_meta('agent_phone') ?: 'N/A';
+            $beneficiary_phone = $order->get_billing_phone() ?: $order->get_meta('bundle_recipient_phone') ?: $order->get_meta('_osc_beneficiary') ?: $order->get_meta('_bundle_phone_number') ?: 'N/A';
+        ?>
+        <div class="osc-order-card">
+            <div class="osc-card-summary">
+                <div class="osc-summary-icon">📦</div>
+                <div class="osc-summary-info">
+                    <div class="product"><?php echo esc_html($first_item); ?></div>
+                    <div class="date">Order #<?php echo $order->get_order_number(); ?> &bull; <?php echo $order->get_date_created()->date('M d, Y'); ?></div>
+                </div>
+                <div class="osc-summary-total"><?php echo $order->get_formatted_order_total(); ?></div>
+                <div class="osc-summary-status status-<?php echo esc_attr($status); ?>">
+                    <?php echo esc_html(wc_get_order_status_name($status)); ?>
+                </div>
+            </div>
+            <div class="osc-card-details">
+                <div class="osc-details-grid">
+                    <div class="osc-detail-item"><h4>Network</h4><p><?php echo esc_html($network); ?></p></div>
+                    <div class="osc-detail-item"><h4>Beneficiary Phone</h4><p><?php echo esc_html($beneficiary_phone); ?></p></div>
+                    <div class="osc-detail-item"><h4>Agent Phone</h4><p><?php echo esc_html($agent_phone); ?></p></div>
+                    <div class="osc-detail-item"><h4>Payment Method</h4><p><?php echo esc_html($order->get_payment_method_title()); ?></p></div>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+
+        <div class="osc-history-summary">
+            <div class="osc-summary-card">
+                <h4>Total Orders</h4>
+                <p><?php echo count($orders); ?></p>
+            </div>
+            <div class="osc-summary-card">
+                <h4>Total Spent</h4>
+                <p>
+                    <?php
+                    $total_spent = 0;
+                    foreach ($orders as $order) {
+                        if ($order->get_status() === 'completed') {
+                            $total_spent += $order->get_total();
+                        }
+                    }
+                    echo wc_price($total_spent);
+                    ?>
+                </p>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
-<?php if (empty($orders)): ?>
-<div class="osc-no-orders" style="text-align: center; padding: 3rem;">
-<span style="font-size: 3rem;">📭</span>
-<h3>No orders yet</h3>
-<p>Your purchase history will appear here once you make your first order.</p>
-<a href="<?php echo get_permalink(wc_get_page_id('shop')); ?>" class="button">Start Shopping</a>
-</div>
-<?php else: ?>
-<div class="osc-orders-list">
-<?php foreach ($orders as $order):
-$order_date = $order->get_date_created();
-$order_total = $order->get_total();
-$order_status = $order->get_status();
-$order_items = $order->get_items();
-
-// ✅ FIX: Get phone number from multiple possible sources
-$phone_number = $order->get_billing_phone();
-if (!$phone_number) {
-$phone_number = $order->get_meta('_osc_beneficiary');
-}
-if (!$phone_number) {
-$phone_number = $order->get_meta('bundle_recipient_phone');
-}
-if (!$phone_number) {
-$phone_number = $order->get_meta('_bundle_phone_number');
-}
-if (!$phone_number) {
-$phone_number = 'Not provided';
-}
-$agent_phone = $order->get_meta('agent_phone');
-$network = $order->get_meta('bundle_network');
-?>
-<div class="osc-order-item">
-<div class="osc-order-summary">
-<div class="osc-order-details">
-<span class="osc-order-id">📱 Order #<?php echo $order->get_order_number(); ?></span>
-<span class="osc-order-date">📅 <?php echo $order_date ? $order_date->date('M j, Y g:i A') : ''; ?></span>
-</div>
-<div class="osc-order-total">
-<?php echo wc_price($order_total); ?>
-</div>
-<div class="osc-order-status">
+<script>
+jQuery(document).ready(function($) {
+    $('.osc-card-summary').on('click', function() {
+        $(this).siblings('.osc-card-details').slideToggle('fast');
+    });
+});
+</script>
 <?php
-$status_icons = [
-'completed' => '✅',
-'processing' => '🔄',
-'pending' => '⏳',
-'on-hold' => '📦',
-'cancelled' => '❌',
-'failed' => '🚫'
-];
-echo ($status_icons[$order_status] ?? '📝') . ' ' . wc_get_order_status_name($order_status);
-?>
-</div>
-<button class="osc-toggle-details">▼</button>
-</div>
-<div class="osc-order-collapsible">
-<p><strong>Items:</strong>
-<?php
-$product_names = array();
-foreach ($order_items as $item) {
-$product_names[] = $item->get_name();
-}
-echo esc_html(implode(', ', $product_names));
-?>
-</p>
-<p><strong>Network:</strong> <?php echo esc_html($network); ?></p>
-<p><strong>Beneficiary Phone:</strong> <?php echo esc_html($phone_number); ?></p>
-<?php if ($agent_phone): ?>
-<p><strong>Agent Phone:</strong> <?php echo esc_html($agent_phone); ?></p>
-<?php endif; ?>
-<p><strong>Payment Method:</strong> <?php echo $order->get_payment_method_title(); ?></p>
-<p><strong>Reference:</strong> <?php echo $order->get_order_key(); ?></p>
-</div>
-</div>
-<?php endforeach; ?>
-</div>
-
-<div class="osc-history-summary">
-<div class="osc-summary-card">
-<h4>Total Orders</h4>
-<p><?php echo count($orders); ?></p>
-</div>
-<div class="osc-summary-card">
-<h4>Total Spent</h4>
-<p>GHS
-<?php
-$total = 0;
-foreach ($orders as $order) {
-if (in_array($order->get_status(), array('completed', 'processing'))) {
-$total += $order->get_total();
-}
-}
-echo number_format($total, 2);
-?>
-</p>
-</div>
-</div>
-<?php endif; ?>
-</div>
-<?php
-return ob_get_clean();
+    return ob_get_clean();
 }
 /* ---------------------------
 Shortcode: AFA Registration Form (WooCommerce Integrated)
 --------------------------- */
 add_shortcode('afa_registration', 'osc_afa_registration_shortcode');
 function osc_afa_registration_shortcode() {
-if (!is_user_logged_in()) {
-return '<div class="notice notice-info"><p>Please log in to complete AFA registration.</p></div>';
-}
-
 // Check if WooCommerce is active
 if (!class_exists('WooCommerce')) {
 return '<div class="notice notice-error"><p>WooCommerce is not active. AFA registration requires WooCommerce.</p></div>';
@@ -2291,64 +2403,143 @@ if (!$product_id || !wc_get_product($product_id)) {
 return '<div class="notice notice-error"><p>AFA registration product is not configured. Please contact administrator.</p></div>';
 }
 ?>
-<div class="osc-afa-registration-form">
-<h2>🏢 AFA Registration</h2>
-<p>Register for Agricultural Farmers Association</p>
-<form id="afa-reg-form">
-<div class="form-row">
-<label for="afa-full-name">Full Name</label>
-<input type="text" id="afa-full-name" required>
-</div>
-<div class="form-row">
-<label for="afa-phone-number">Phone Number</label>
-<input type="tel" id="afa-phone-number" required>
-</div>
-<div class="form-row">
-<label for="afa-ghana-card">Ghana Card Number</label>
-<input type="text" id="afa-ghana-card" required>
-</div>
-<div class="form-row">
-<label for="afa-location">Location/Address</label>
-<input type="text" id="afa-location" required>
-</div>
-<div class="form-row">
-<label for="afa-notes">Notes (Optional)</label>
-<textarea id="afa-notes"></textarea>
-</div>
-<div class="afa-summary">
-<span>Registration Fee</span>
-<strong>GHS <?php echo number_format($afa_price, 2); ?></strong>
-</div>
-<button type="submit" class="button primary">Register Now</button>
-<p class="description">This registration will be processed through our secure checkout system.</p>
-</form>
-<div id="afa-form-feedback"></div>
+<style>
+    .osc-afa-container {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: #fff;
+        padding: 2.5rem;
+        border-radius: 20px;
+        max-width: 700px;
+        margin: 2rem auto;
+        box-shadow: 0 15px 40px -15px rgba(0,0,0,0.08);
+        border: 1px solid #e2e8f0;
+    }
+    .osc-afa-header { text-align: center; margin-bottom: 2rem; }
+    .osc-afa-header h2 { font-size: 1.8rem; color: #1a202c; font-weight: 700; }
+    .osc-afa-header p { color: #718096; }
+    .osc-afa-form .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+    .osc-afa-form .form-row {
+        display: flex;
+        flex-direction: column;
+    }
+    .osc-afa-form .form-row.full-width {
+        grid-column: 1 / -1;
+    }
+    .osc-afa-form label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: #4a5568;
+    }
+    .osc-afa-form input, .osc-afa-form textarea {
+        width: 100%;
+        padding: 0.8rem 1rem;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+    .osc-afa-form textarea { min-height: 100px; }
+    .osc-afa-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        margin-top: 2rem;
+        background: #f7fafc;
+        border-radius: 8px;
+    }
+    .osc-afa-summary span { font-weight: 600; color: #2d3748; }
+    .osc-afa-summary strong { font-size: 1.25rem; color: #0052cc; }
+    .osc-afa-submit-btn {
+        width: 100%;
+        padding: 1rem;
+        margin-top: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #fff;
+        background-color: #0052cc;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .osc-afa-submit-btn:hover { background-color: #0041a3; }
+    #afa-form-feedback {
+        margin-top: 1rem;
+        text-align: center;
+        font-weight: 500;
+    }
+</style>
+<div class="osc-afa-container">
+    <div class="osc-afa-header">
+        <h2>🏢 AFA Registration</h2>
+        <p>Register for the Agricultural Farmers Association.</p>
+    </div>
+    <form id="afa-reg-form" class="osc-afa-form">
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="afa-full-name">Full Name</label>
+                <input type="text" id="afa-full-name" required>
+            </div>
+            <div class="form-row">
+                <label for="afa-phone-number">Phone Number</label>
+                <input type="tel" id="afa-phone-number" required>
+            </div>
+            <div class="form-row">
+                <label for="afa-ghana-card">Ghana Card Number</label>
+                <input type="text" id="afa-ghana-card" required>
+            </div>
+            <div class="form-row">
+                <label for="afa-location">Location/Address</label>
+                <input type="text" id="afa-location" required>
+            </div>
+            <div class="form-row full-width">
+                <label for="afa-notes">Notes (Optional)</label>
+                <textarea id="afa-notes"></textarea>
+            </div>
+        </div>
+        <div class="osc-afa-summary">
+            <span>Registration Fee</span>
+            <strong>GHS <?php echo number_format($afa_price, 2); ?></strong>
+        </div>
+        <button type="submit" class="osc-afa-submit-btn">Register Now</button>
+    </form>
+    <div id="afa-form-feedback"></div>
 </div>
 
 <script>
-jQuery(document).ready(function($){
-$('#afa-reg-form').on('submit', function(e){
-e.preventDefault();
-var feedback = $('#afa-form-feedback');
-feedback.text('Processing...').show();
+jQuery(document).ready(function($) {
+    $('#afa-reg-form').on('submit', function(e) {
+        e.preventDefault();
+        const feedback = $('#afa-form-feedback');
+        const submitButton = $(this).find('.osc-afa-submit-btn');
+        feedback.text('Processing...').show();
+        submitButton.prop('disabled', true);
 
-$.post(ajaxurl, {
-action: 'osc_add_afa_to_cart',
-afa_nonce: '<?php echo wp_create_nonce('afa_registration_nonce'); ?>',
-full_name: $('#afa-full-name').val(),
-phone_number: $('#afa-phone-number').val(),
-ghana_card: $('#afa-ghana-card').val(),
-location: $('#afa-location').val(),
-notes: $('#afa-notes').val()
-}, function(response){
-if(response.success){
-feedback.css('color','green').text(response.data);
-window.location.href = '<?php echo wc_get_checkout_url(); ?>';
-} else {
-feedback.css('color','red').text(response.data);
-}
-});
-});
+        $.post('<?php echo admin_url('admin-ajax.php'); ?>', {
+            action: 'osc_add_afa_to_cart',
+            afa_nonce: '<?php echo wp_create_nonce('afa_registration_nonce'); ?>',
+            full_name: $('#afa-full-name').val(),
+            phone_number: $('#afa-phone-number').val(),
+            ghana_card: $('#afa-ghana-card').val(),
+            location: $('#afa-location').val(),
+            notes: $('#afa-notes').val()
+        }, function(response) {
+            if (response.success) {
+                feedback.css('color', 'green').text(response.data);
+                window.location.href = '<?php echo wc_get_checkout_url(); ?>';
+            } else {
+                feedback.css('color', 'red').text(response.data);
+                submitButton.prop('disabled', false);
+            }
+        }).fail(function() {
+            feedback.css('color', 'red').text('An unexpected error occurred. Please try again.');
+            submitButton.prop('disabled', false);
+        });
+    });
 });
 </script>
 <?php
