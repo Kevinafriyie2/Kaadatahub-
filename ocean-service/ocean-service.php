@@ -2069,8 +2069,7 @@ return ob_get_clean();
 // If user has other roles, don't allow
 return '<div class="notice notice-warning"><p>You cannot register as an agent. Only customers can upgrade to Ocean Service Agents.</p></div>';
 }
-}
-
+} else {
 // Not logged in - show registration form for new customers
 if($_POST && isset($_POST['osc_customer_register_submit']) && check_admin_referer('osc_customer_register','osc_customer_register_nonce')){
 $first_name = sanitize_text_field($_POST['osc_first_name'] ?? '');
@@ -2395,13 +2394,15 @@ return '<div class="notice notice-error"><p>WooCommerce is not active. AFA regis
 }
 
 ob_start();
-$afa_price = get_option('osc_afa_registration_price', 15.00);
-$product_id = get_option('osc_afa_product_id');
 
-// Check if AFA product exists
-if (!$product_id || !wc_get_product($product_id)) {
-return '<div class="notice notice-error"><p>AFA registration product is not configured. Please contact administrator.</p></div>';
+$product_id = get_option('osc_afa_product_id');
+$product = $product_id ? wc_get_product($product_id) : null;
+
+// New: Check if AFA product exists and get its price
+if (!$product) {
+    return '<div class="notice notice-error"><p>AFA registration product is not configured. Please contact administrator.</p></div>';
 }
+$afa_price = $product->get_price();
 ?>
 <style>
     .osc-afa-container {
@@ -2501,6 +2502,17 @@ return '<div class="notice notice-error"><p>AFA registration product is not conf
                 <textarea id="afa-notes"></textarea>
             </div>
         </div>
+        <div class="osc-payment-methods">
+            <div class="osc-payment-option active" data-method="wallet">
+                <span class="osc-payment-name">Wallet</span>
+                <span class="osc-payment-desc">Use your available balance.</span>
+            </div>
+            <div class="osc-payment-option" data-method="paystack">
+                <span class="osc-payment-name">Paystack</span>
+                <span class="osc-payment-desc">Card or Mobile Money.</span>
+            </div>
+        </div>
+        <input type="hidden" id="osc-selected-payment-method" value="wallet">
         <div class="osc-afa-summary">
             <span>Registration Fee</span>
             <strong>GHS <?php echo number_format($afa_price, 2); ?></strong>
@@ -2510,29 +2522,74 @@ return '<div class="notice notice-error"><p>AFA registration product is not conf
     <div id="afa-form-feedback"></div>
 </div>
 
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <script>
 jQuery(document).ready(function($) {
+    $('.osc-payment-option').on('click', function() {
+        $('.osc-payment-option').removeClass('active');
+        $(this).addClass('active');
+        $('#osc-selected-payment-method').val($(this).data('method'));
+    });
+
     $('#afa-reg-form').on('submit', function(e) {
         e.preventDefault();
         const feedback = $('#afa-form-feedback');
         const submitButton = $(this).find('.osc-afa-submit-btn');
-        feedback.text('Processing...').show();
-        submitButton.prop('disabled', true);
+        const paymentMethod = $('#osc-selected-payment-method').val();
+        const nonce = '<?php echo wp_create_nonce('afa_registration_nonce'); ?>';
 
-        $.post(ajaxurl, {
-            action: 'osc_add_afa_to_cart',
-            afa_nonce: '<?php echo wp_create_nonce('afa_registration_nonce'); ?>',
+        const formData = {
+            action: 'osc_process_afa_registration',
+            afa_nonce: nonce,
             full_name: $('#afa-full-name').val(),
             phone_number: $('#afa-phone-number').val(),
             ghana_card: $('#afa-ghana-card').val(),
             location: $('#afa-location').val(),
-            notes: $('#afa-notes').val()
-        }, function(response) {
-            if (response.success) {
-                feedback.css('color', 'green').text(response.data);
-                window.location.href = '<?php echo wc_get_checkout_url(); ?>';
+            notes: $('#afa-notes').val(),
+            method: paymentMethod
+        };
+
+        feedback.text('Processing...').show();
+        submitButton.prop('disabled', true);
+
+        $.post('<?php echo admin_url('admin-ajax.php'); ?>', formData, function(response) {
+            if (response.status === 'success') {
+                feedback.css('color', 'green').text(response.message);
+                setTimeout(() => window.location.reload(), 2000);
+            } else if (response.status === 'paystack') {
+                var handler = PaystackPop.setup({
+                    key: response.paystack_public,
+                    email: response.email,
+                    amount: response.amount * 100,
+                    ref: response.reference,
+                    currency: 'GHS', // Explicitly set currency
+                    callback: function(paystackResponse) {
+                        feedback.text('Payment successful! Verifying...').css('color', 'blue');
+                        $.post('<?php echo admin_url('admin-ajax.php'); ?>', {
+                            action: 'osc_verify_afa_paystack_payment',
+                            afa_nonce: nonce,
+                            reference: paystackResponse.reference
+                        }, function(verifyResponse) {
+                            if (verifyResponse.status === 'success') {
+                                feedback.css('color', 'green').text(verifyResponse.message);
+                                setTimeout(() => window.location.reload(), 2000);
+                            } else {
+                                feedback.css('color', 'red').text(verifyResponse.message);
+                                submitButton.prop('disabled', false);
+                            }
+                        }).fail(function() {
+                            feedback.css('color', 'red').text('Verification failed. Please contact support.');
+                            submitButton.prop('disabled', false);
+                        });
+                    },
+                    onClose: function() {
+                        feedback.text('Payment cancelled.').css('color', 'orange');
+                        submitButton.prop('disabled', false);
+                    }
+                });
+                handler.openIframe();
             } else {
-                feedback.css('color', 'red').text(response.data);
+                feedback.css('color', 'red').text(response.message);
                 submitButton.prop('disabled', false);
             }
         }).fail(function() {
@@ -2551,6 +2608,172 @@ AJAX handler to add AFA registration to cart
 --------------------------- */
 add_action('wp_ajax_osc_add_afa_to_cart', 'osc_add_afa_to_cart');
 add_action('wp_ajax_nopriv_osc_add_afa_to_cart', 'osc_add_afa_to_cart');
+add_action('wp_ajax_osc_process_afa_registration', 'osc_process_afa_registration');
+add_action('wp_ajax_nopriv_osc_process_afa_registration', 'osc_process_afa_registration');
+add_action('wp_ajax_osc_verify_afa_paystack_payment', 'osc_verify_afa_paystack_payment');
+add_action('wp_ajax_nopriv_osc_verify_afa_paystack_payment', 'osc_verify_afa_paystack_payment');
+
+function osc_verify_afa_paystack_payment() {
+    if (!wp_verify_nonce($_POST['afa_nonce'], 'afa_registration_nonce')) {
+        osc_json_exit(['status'=>'error','message'=>'Security verification failed.']);
+    }
+
+    $reference = sanitize_text_field($_POST['reference']);
+    if (empty($reference)) {
+        osc_json_exit(['status' => 'error', 'message' => 'Payment reference is missing.']);
+    }
+
+    // Retrieve registration data from transient
+    $registration_data = get_transient('afa_reg_' . $reference);
+    if (false === $registration_data) {
+        osc_json_exit(['status' => 'error', 'message' => 'Registration session expired or is invalid. Please try again.']);
+    }
+
+    // Verify transaction with Paystack
+    $secret_key = get_option('osc_paystack_secret');
+    $response = wp_remote_get("https://api.paystack.co/transaction/verify/{$reference}", [
+        'headers' => ['Authorization' => 'Bearer ' . $secret_key]
+    ]);
+
+    if (is_wp_error($response)) {
+        osc_json_exit(['status' => 'error', 'message' => 'Could not verify payment. Please contact support.']);
+    }
+
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+
+    if (!($body['status'] && $body['data']['status'] === 'success')) {
+        osc_json_exit(['status' => 'error', 'message' => 'Payment verification failed. Please contact support.']);
+    }
+
+    // All checks passed, create the order
+    try {
+        $product_id = get_option('osc_afa_product_id');
+        $product = wc_get_product($product_id);
+        $user_id = $registration_data['user_id'];
+        $order = wc_create_order(['customer_id' => $user_id]);
+        $order->add_product($product, 1);
+        $order->set_address([
+            'first_name' => $user_id ? get_user_meta($user_id, 'first_name', true) : $registration_data['full_name'],
+            'phone'      => $registration_data['phone_number'],
+            'address_1'  => $registration_data['location'],
+            'email'      => $user_id ? get_userdata($user_id)->user_email : 'guest@example.com',
+        ], 'billing');
+        $order->calculate_totals();
+
+        foreach ($registration_data as $key => $value) {
+            $order->update_meta_data('afa_' . $key, $value);
+        }
+        $default_status = get_option('osc_afa_order_status_default', 'completed');
+        $order->update_status($default_status, 'AFA registration paid via Paystack.', true);
+        $order_id = $order->get_id();
+
+        delete_transient('afa_reg_' . $reference); // Clean up
+
+    } catch (Exception $e) {
+        osc_api_log('afa_paystack_order_error', $e->getMessage(), $registration_data);
+        osc_json_exit(['status' => 'error', 'message' => 'Could not create your registration order after payment. Please contact support with reference: ' . $reference]);
+    }
+
+    osc_json_exit(['status' => 'success', 'message' => 'Registration and payment successful! Order ID: ' . $order_id]);
+}
+
+function osc_process_afa_registration(){
+    // Nonce is checked in the JS that calls this
+    if (!wp_verify_nonce($_POST['afa_nonce'], 'afa_registration_nonce')) {
+        osc_json_exit(['status'=>'error','message'=>'Security verification failed.']);
+    }
+
+    $full_name = sanitize_text_field($_POST['full_name'] ?? '');
+    $phone_number = sanitize_text_field($_POST['phone_number'] ?? '');
+    $ghana_card = sanitize_text_field($_POST['ghana_card'] ?? '');
+    $location = sanitize_text_field($_POST['location'] ?? '');
+    $notes = sanitize_textarea_field($_POST['notes'] ?? '');
+    $method = sanitize_text_field($_POST['method'] ?? 'wallet');
+
+    if (empty($full_name) || empty($phone_number) || empty($ghana_card) || empty($location)) {
+        osc_json_exit(['status' => 'error', 'message' => 'Please fill in all required fields.']);
+    }
+
+    $product_id = get_option('osc_afa_product_id');
+    $product = $product_id ? wc_get_product($product_id) : null;
+
+    if (!$product) {
+        osc_json_exit(['status' => 'error', 'message' => 'AFA registration product not configured.']);
+    }
+    $price = $product->get_price();
+    $user_id = get_current_user_id();
+
+    if ($method === 'wallet') {
+        if (!$user_id) {
+            osc_json_exit(['status' => 'error', 'message' => 'You must be logged in to pay with your wallet.']);
+        }
+        if (!osc_deduct_wallet($user_id, $price, 'AFA Registration Fee')) {
+            osc_json_exit(['status' => 'error', 'message' => 'Insufficient wallet balance.']);
+        }
+    } elseif ($method === 'paystack') {
+        $paystack_public = get_option('osc_paystack_public', '');
+        if (empty($paystack_public)) {
+            osc_json_exit(['status' => 'error', 'message' => 'Paystack is not configured.']);
+        }
+
+        $email = $user_id ? wp_get_current_user()->user_email : 'guest@example.com';
+        $reference = 'afa_' . time() . '_' . wp_rand(1000, 9999);
+
+        // Store registration data in a transient
+        $registration_data = [
+            'user_id' => $user_id,
+            'full_name' => $full_name,
+            'phone_number' => $phone_number,
+            'ghana_card' => $ghana_card,
+            'location' => $location,
+            'notes' => $notes,
+            'price' => $price
+        ];
+        set_transient('afa_reg_' . $reference, $registration_data, HOUR_IN_SECONDS);
+
+        osc_json_exit([
+            'status' => 'paystack',
+            'paystack_public' => $paystack_public,
+            'amount' => $price,
+            'email' => $email,
+            'reference' => $reference
+        ]);
+        return;
+    }
+
+    try {
+        $order = wc_create_order(['customer_id' => $user_id]);
+        $order->add_product($product, 1);
+        $address = [
+            'first_name' => $user_id ? get_user_meta($user_id, 'first_name', true) : $full_name,
+            'last_name' => $user_id ? get_user_meta($user_id, 'last_name', true) : '',
+            'phone' => $phone_number,
+            'address_1' => $location,
+            'email' => $user_id ? get_userdata($user_id)->user_email : 'guest@example.com',
+        ];
+        $order->set_address($address, 'billing');
+        $order->calculate_totals();
+
+        $order->update_meta_data('afa_full_name', $full_name);
+        $order->update_meta_data('afa_phone_number', $phone_number);
+        $order->update_meta_data('afa_ghana_card', $ghana_card);
+        $order->update_meta_data('afa_location', $location);
+        $order->update_meta_data('afa_notes', $notes);
+
+        $default_status = get_option('osc_afa_order_status_default', 'completed');
+        $order->update_status($default_status, 'AFA registration paid via Wallet.', true);
+        $order_id = $order->get_id();
+
+    } catch (Exception $e) {
+        if ($method === 'wallet' && $user_id) {
+            osc_credit_wallet($user_id, $price, 'Refund for failed AFA registration order.');
+        }
+        osc_api_log('afa_order_create_error', $e->getMessage(), $_POST);
+        osc_json_exit(['status' => 'error', 'message' => 'Could not create your registration order. Please contact support.']);
+    }
+
+    osc_json_exit(['status' => 'success', 'message' => 'Registration successful! Order ID: ' . $order_id]);
+}
 function osc_add_afa_to_cart() {
 // Verify nonce
 if (!wp_verify_nonce($_POST['afa_nonce'], 'afa_registration_nonce')) {
