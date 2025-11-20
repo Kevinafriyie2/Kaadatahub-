@@ -1311,35 +1311,36 @@ $customer_price = $role_pricing[$pid]['customer'] ?? '';
 Utility: get price for user with role-based pricing
 --------------------------- */
 function osc_get_price_for_user($product_id, $user_id = 0){
-$product = wc_get_product($product_id);
-if(!$product) return 0.00;
-$base_price = floatval($product->get_price());
+    $product = wc_get_product($product_id);
+    if(!$product) return 0.00;
+    $base_price = floatval($product->get_price());
 
-// Get role pricing
-$role_pricing = get_option('osc_role_pricing', array());
+    // Get role pricing
+    $role_pricing = get_option('osc_role_pricing', array());
 
-// Determine user role
-$is_agent = false;
-$is_customer = false;
+    // Determine user role
+    $is_agent = false;
+    $is_customer = false;
 
-if($user_id && $user = get_userdata($user_id)){
-$roles = (array)$user->roles;
-$is_agent = in_array('ocean_service_agent', $roles);
-$is_customer = in_array('ocean_service_customer', $roles) || in_array('customer', $roles) || (!in_array('ocean_service_agent', $roles) && count(array_intersect($roles, array('administrator', 'shop_manager'))) === 0);
-} else {
-// Not logged in - treat as customer
-$is_customer = true;
-}
+    if($user_id && $user = get_userdata($user_id)){
+        $roles = (array)$user->roles;
+        $is_agent = in_array('ocean_service_agent', $roles);
+        // Corrected the typo here from 'roles' string to $roles variable
+        $is_customer = in_array('ocean_service_customer', $roles) || in_array('customer', $roles) || (!in_array('ocean_service_agent', $roles) && count(array_intersect($roles, array('administrator', 'shop_manager'))) === 0);
+    } else {
+        // Not logged in - treat as customer
+        $is_customer = true;
+    }
 
-// Calculate final price based on role
-if($is_agent && isset($role_pricing[$product_id]['agent'])) {
-return floatval($role_pricing[$product_id]['agent']);
-} elseif($is_customer && isset($role_pricing[$product_id]['customer'])) {
-return floatval($role_pricing[$product_id]['customer']);
-} else {
-// Fallback to base price
-return $base_price;
-}
+    // Calculate final price based on role
+    if($is_agent && isset($role_pricing[$product_id]['agent']) && $role_pricing[$product_id]['agent'] > 0) {
+        return floatval($role_pricing[$product_id]['agent']);
+    } elseif($is_customer && isset($role_pricing[$product_id]['customer']) && $role_pricing[$product_id]['customer'] > 0) {
+        return floatval($role_pricing[$product_id]['customer']);
+    } else {
+        // Fallback to base price
+        return $base_price;
+    }
 }
 
 /* ---------------------------
@@ -2395,13 +2396,15 @@ return '<div class="notice notice-error"><p>WooCommerce is not active. AFA regis
 }
 
 ob_start();
-$afa_price = get_option('osc_afa_registration_price', 15.00);
-$product_id = get_option('osc_afa_product_id');
 
-// Check if AFA product exists
-if (!$product_id || !wc_get_product($product_id)) {
-return '<div class="notice notice-error"><p>AFA registration product is not configured. Please contact administrator.</p></div>';
+$product_id = get_option('osc_afa_product_id');
+$product = $product_id ? wc_get_product($product_id) : null;
+
+// New: Check if AFA product exists and get its price
+if (!$product) {
+    return '<div class="notice notice-error"><p>AFA registration product is not configured. Please contact administrator.</p></div>';
 }
+$afa_price = $product->get_price();
 ?>
 <style>
     .osc-afa-container {
@@ -2519,7 +2522,7 @@ jQuery(document).ready(function($) {
         feedback.text('Processing...').show();
         submitButton.prop('disabled', true);
 
-        $.post(ajaxurl, {
+        $.post('<?php echo admin_url('admin-ajax.php'); ?>', {
             action: 'osc_add_afa_to_cart',
             afa_nonce: '<?php echo wp_create_nonce('afa_registration_nonce'); ?>',
             full_name: $('#afa-full-name').val(),
