@@ -2070,8 +2070,7 @@ return ob_get_clean();
 // If user has other roles, don't allow
 return '<div class="notice notice-warning"><p>You cannot register as an agent. Only customers can upgrade to Ocean Service Agents.</p></div>';
 }
-}
-
+} else {
 // Not logged in - show registration form for new customers
 if($_POST && isset($_POST['osc_customer_register_submit']) && check_admin_referer('osc_customer_register','osc_customer_register_nonce')){
 $first_name = sanitize_text_field($_POST['osc_first_name'] ?? '');
