@@ -22,6 +22,164 @@ wp_send_json($arr);
 exit;
 }
 
+function osc_get_modern_styles() {
+    return "
+    <style>
+        :root {
+            --osc-primary-color: #0052cc; /* A professional blue */
+            --osc-secondary-color: #f0f5ff; /* A light, complementary blue */
+            --osc-accent-color: #00c853; /* A vibrant green for success actions */
+            --osc-text-color: #333;
+            --osc-text-light-color: #666;
+            --osc-border-color: #e0e0e0;
+            --osc-background-color: #f9f9f9;
+            --osc-white-color: #ffffff;
+            --osc-error-color: #d32f2f;
+            --osc-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --osc-border-radius: 12px;
+            --osc-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.07);
+        }
+
+        /* General Container Styles */
+        .osc-modern-container {
+            font-family: var(--osc-font-family);
+            background: var(--osc-background-color);
+            padding: 2rem;
+            border-radius: var(--osc-border-radius);
+            max-width: 800px;
+            margin: 2rem auto;
+            box-shadow: var(--osc-shadow);
+            border: 1px solid var(--osc-border-color);
+        }
+
+        .osc-modern-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .osc-modern-header h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--osc-primary-color);
+        }
+
+        .osc-modern-header p {
+            color: var(--osc-text-light-color);
+            margin-top: 0.5rem;
+        }
+
+        /* Form Styles */
+        .osc-modern-form .form-step {
+            background: var(--osc-white-color);
+            padding: 1.5rem;
+            border-radius: var(--osc-border-radius);
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--osc-border-color);
+        }
+
+        .osc-modern-form .form-step-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--osc-text-color);
+        }
+
+        .osc-modern-form label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .osc-modern-form .osc-select,
+        .osc-modern-form .osc-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            font-size: 1rem;
+            border: 1px solid var(--osc-border-color);
+            border-radius: 8px;
+            background: #fafafa;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .osc-modern-form .osc-select:focus,
+        .osc-modern-form .osc-input:focus {
+            outline: none;
+            border-color: var(--osc-primary-color);
+            box-shadow: 0 0 0 3px var(--osc-secondary-color);
+        }
+
+        /* Payment Method Styles */
+        .osc-payment-methods {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .osc-payment-option {
+            padding: 1.5rem;
+            border: 2px solid var(--osc-border-color);
+            border-radius: var(--osc-border-radius);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .osc-payment-option.active {
+            border-color: var(--osc-primary-color);
+            background: var(--osc-secondary-color);
+        }
+
+        .osc-payment-option .osc-payment-name {
+            font-weight: 600;
+        }
+
+        .osc-payment-option .osc-payment-desc {
+            font-size: 0.9rem;
+            color: var(--osc-text-light-color);
+        }
+
+        /* Summary and Button Styles */
+        .osc-modern-summary {
+            background: var(--osc-secondary-color);
+            padding: 1rem 1.5rem;
+            border-radius: var(--osc-border-radius);
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .osc-modern-summary span {
+            font-weight: 600;
+        }
+
+        .osc-modern-summary strong {
+            font-size: 1.2rem;
+            color: var(--osc-primary-color);
+        }
+
+        .osc-modern-submit-btn {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: var(--osc-accent-color);
+            color: var(--osc-white-color);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 1.5rem;
+        }
+
+        .osc-modern-submit-btn:hover {
+            background-color: #009624; /* Darker green */
+        }
+    </style>
+    ";
+}
+
 /* ---------------------------
 Roles
 --------------------------- */
@@ -257,9 +415,9 @@ $default_status = get_option('osc_order_status_default', 'processing');
 <td><input name="osc_company_name" type="text" id="osc_company_name" value="<?php echo esc_attr($company); ?>" class="regular-text"></td>
 </tr>
 <tr>
-<th scope="row"><label for="osc_agent_fee">Agent Registration Fee</label></th>
+<th scope="row"><label for="osc_agent_fee">Agent Upgrade Fee</label></th>
 <td><input name="osc_agent_fee" type="number" step="0.01" id="osc_agent_fee" value="<?php echo esc_attr($agent_fee); ?>" class="regular-text">
-<p class="description">Amount to credit agent wallet on registration.</p></td>
+<p class="description">The amount a user must pay to upgrade their account to an Ocean Service Agent.</p></td>
 </tr>
 <tr>
 <th scope="row"><label for="osc_paystack_public">Paystack Public Key</label></th>
@@ -1589,124 +1747,8 @@ Modern Purchase Portal Shortcode (Updated Design)
 add_shortcode('ocean_service_portal','osc_portal_shortcode');
 function osc_portal_shortcode(){
 ob_start();
+echo osc_get_modern_styles();
 ?>
-<style>
-    :root {
-        --osc-primary-color: #0052cc;
-        --osc-secondary-color: #f0f5ff;
-        --osc-text-color: #333;
-        --osc-border-color: #ddd;
-        --osc-success-color: #008a00;
-        --osc-font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    .osc-portal-container {
-        font-family: var(--osc-font-family);
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        padding: 2.5rem;
-        border-radius: 20px;
-        max-width: 850px;
-        margin: 2rem auto;
-        box-shadow: 0 20px 50px -10px rgba(0, 82, 204, 0.2);
-    }
-    .osc-portal-header { text-align: center; margin-bottom: 2rem; }
-    .osc-portal-title { font-size: 2rem; font-weight: 700; color: var(--osc-primary-color); }
-    .osc-portal-subtitle { font-size: 1rem; color: #666; }
-
-    .osc-portal-balance-card {
-        background: var(--osc-primary-color);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-    }
-    .osc-balance-label { font-size: 0.9rem; opacity: 0.8; }
-    .osc-balance-amount { font-size: 1.5rem; font-weight: 600; }
-
-    .osc-form-step {
-        background: #fff;
-        padding: 2rem;
-        border-radius: 15px;
-        margin-bottom: 1.5rem;
-        border: 1px solid #e8e8e8;
-    }
-    .osc-form-title { font-size: 1.2rem; font-weight: 600; color: #333; margin-bottom: 1.5rem; }
-    .osc-network-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; }
-    .osc-network-btn {
-        background: #fff;
-        border: 2px solid var(--osc-border-color);
-        border-radius: 10px;
-        padding: 0.8rem;
-        font-size: 0.9rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .osc-network-btn:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-    .osc-network-btn.active {
-        border-color: var(--osc-primary-color);
-        color: var(--osc-primary-color);
-        box-shadow: 0 5px 15px rgba(0, 82, 204, 0.15);
-    }
-
-    .osc-select, .osc-input {
-        width: 100%;
-        padding: 0.9rem 1rem;
-        font-size: 1rem;
-        border: 1px solid var(--osc-border-color);
-        border-radius: 10px;
-        background: #fafafa;
-    }
-
-    .osc-payment-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .osc-payment-option {
-        padding: 1.5rem;
-        border: 2px solid var(--osc-border-color);
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.2s;
-        position: relative;
-    }
-    .osc-payment-option.active {
-        border-color: var(--osc-primary-color);
-        background: var(--osc-secondary-color);
-    }
-    .osc-payment-option.active::after {
-        content: '✔';
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        color: var(--osc-primary-color);
-        font-weight: bold;
-    }
-    .osc-payment-name { font-weight: 600; }
-    .osc-payment-desc { font-size: 0.9rem; color: #666; }
-
-    .osc-summary { padding: 1.5rem; border-top: 1px solid #eee; margin-top: 1.5rem; }
-    .osc-summary-item { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
-    .osc-total { font-weight: 700; font-size: 1.2rem; color: var(--osc-primary-color); }
-
-    .osc-btn-purchase {
-        width: 100%;
-        padding: 1.1rem;
-        font-size: 1.1rem;
-        font-weight: 700;
-        background: linear-gradient(90deg, var(--osc-success-color), #00a000);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        cursor: pointer;
-        transition: all 0.3s;
-        margin-top: 1rem;
-    }
-    .osc-btn-purchase:hover { box-shadow: 0 10px 20px -5px rgba(0, 138, 0, 0.4); transform: translateY(-3px); }
-
-    /* Admin page styles */
-    .wrap .card { background: #fff; padding: 2rem; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-    .wrap h1 { color: var(--osc-primary-color); }
-</style>
 <?php
 $networks = array_keys(get_option('osc_network_products', array(
 'MTN'=>[],
@@ -1722,82 +1764,61 @@ $user_id = get_current_user_id();
 $balance = osc_get_wallet_balance($user_id);
 $user_data = $user_id ? wp_get_current_user() : null;
 ?>
-<div class="osc-portal-container">
-    <div class="osc-portal-header">
-        <h1 class="osc-portal-title">Ocean Services</h1>
-        <p class="osc-portal-subtitle">Digital Bundle Purchase</p>
-        <?php if($user_data): ?>
-            <div class="osc-user-info">
-                <span class="osc-user-avatar"><?php echo strtoupper(substr($user_data->display_name, 0, 1)); ?></span>
-                <span class="osc-user-name"><?php echo esc_html($user_data->display_name); ?></span>
-            </div>
-        <?php endif; ?>
+<div class="osc-modern-container">
+    <div class="osc-modern-header">
+        <h2>Digital Bundle Purchase</h2>
+        <p>Welcome, <?php echo esc_html($user_data ? $user_data->display_name : 'Guest'); ?>!</p>
     </div>
 
-    <div class="osc-portal-balance-card">
-        <span class="osc-balance-label">Available Balance</span>
-        <span class="osc-balance-amount">GHS <?php echo number_format($balance, 2); ?></span>
-    </div>
-
-    <div class="osc-portal-form">
-        <div class="osc-form-step">
-            <h2 class="osc-form-title">1. Choose Your Network</h2>
-            <div class="osc-network-grid">
+    <div class="osc-modern-form">
+        <div class="form-step">
+            <h3 class="form-step-title">1. Network and Bundle</h3>
+            <label for="osc-network-select">Choose Your Network</label>
+            <select id="osc-network-select" class="osc-select">
+                <option value="">Select a network</option>
                 <?php foreach($networks as $net): ?>
-                    <button class="osc-network-btn" data-network="<?php echo esc_attr($net); ?>"><?php echo esc_html($net); ?></button>
+                    <option value="<?php echo esc_attr($net); ?>"><?php echo esc_html($net); ?></option>
                 <?php endforeach; ?>
-            </div>
-            <input type="hidden" id="osc-selected-network">
-        </div>
-
-        <div class="osc-form-step">
-            <h2 class="osc-form-title">2. Select a Bundle</h2>
-            <div id="osc-bundle-loader" style="display:none;">Loading...</div>
-            <select id="osc-bundle-select" class="osc-select" disabled>
-                <option>Select a network first</option>
             </select>
+            <input type="hidden" id="osc-selected-network">
+
+            <div style="margin-top: 1rem;">
+                <label for="osc-bundle-select">Select a Bundle</label>
+                <div id="osc-bundle-loader" style="display:none;">Loading...</div>
+                <select id="osc-bundle-select" class="osc-select" disabled>
+                    <option>Select a network first</option>
+                </select>
+            </div>
         </div>
 
-        <div class="osc-form-step">
-            <h2 class="osc-form-title">3. Recipient Information</h2>
-            <input type="tel" id="osc-phone-input" class="osc-input" placeholder="Enter recipient's phone number">
+        <div class="form-step">
+            <h3 class="form-step-title">2. Recipient Information</h3>
+            <label for="osc-phone-input">Recipient's Phone Number</label>
+            <input type="tel" id="osc-phone-input" class="osc-input" placeholder="Enter phone number">
         </div>
 
-        <div class="osc-form-step">
-            <h2 class="osc-form-title">4. Payment Method</h2>
+        <div class="form-step">
+            <h3 class="form-step-title">3. Payment</h3>
             <div class="osc-payment-methods">
                 <div class="osc-payment-option active" data-method="wallet">
-                    <div class="osc-payment-details">
-                        <span class="osc-payment-name">Wallet Balance</span>
-                        <span class="osc-payment-desc">Pay with your available credit</span>
-                    </div>
+                    <span class="osc-payment-name">Wallet Balance</span>
+                    <span class="osc-payment-desc">Available: GHS <?php echo number_format($balance, 2); ?></span>
                 </div>
                 <div class="osc-payment-option" data-method="paystack">
-                    <div class="osc-payment-details">
-                        <span class="osc-payment-name">Paystack</span>
-                        <span class="osc-payment-desc">Card or Mobile Money</span>
-                    </div>
+                    <span class="osc-payment-name">Paystack</span>
+                    <span class="osc-payment-desc">Card or Mobile Money</span>
                 </div>
             </div>
             <input type="hidden" id="osc-selected-payment-method" value="wallet">
         </div>
 
-        <div class="osc-summary">
-            <div class="osc-summary-item">
-                <span>Bundle Cost</span>
-                <span id="osc-bundle-cost">GHS 0.00</span>
-            </div>
-            <div class="osc-summary-item osc-total">
-                <span>Total Amount</span>
-                <span id="osc-total-amount">GHS 0.00</span>
-            </div>
+        <div class="osc-modern-summary">
+            <span>Total Amount</span>
+            <strong id="osc-total-amount">GHS 0.00</strong>
         </div>
 
-        <button id="osc-purchase-btn" class="osc-btn-purchase">Purchase Bundle</button>
+        <button id="osc-purchase-btn" class="osc-modern-submit-btn">Purchase Bundle</button>
     </div>
-    <footer class="osc-portal-footer">
-        © <?php echo date('Y'); ?> Ocean Services. All rights reserved.
-    </footer>
 </div>
 
 <!-- Agent Phone Modal -->
@@ -1892,13 +1913,21 @@ $user_data = $user_id ? wp_get_current_user() : null;
 </div>
 </div>
 </div>
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <script type="text/javascript">
 jQuery(document).ready(function($) {
-    // Show the modal when the purchase button is clicked
     $('#osc-purchase-btn').on('click', function(e) {
         e.preventDefault();
-        $('#osc-agent-modal').css('display', 'flex');
-        $('body').css('overflow', 'hidden');
+        const paymentMethod = $('#osc-selected-payment-method').val();
+
+        // If wallet is selected, show the agent phone modal
+        if (paymentMethod === 'wallet') {
+            $('#osc-agent-modal').css('display', 'flex');
+            $('body').css('overflow', 'hidden');
+        } else {
+            // Otherwise, directly trigger the purchase flow (for Paystack)
+            handlePurchase();
+        }
     });
 
     // Close the modal when the cancel button is clicked
@@ -1907,43 +1936,64 @@ jQuery(document).ready(function($) {
         $('body').css('overflow', 'auto');
     });
 
-    // Handle the confirm button click
-    $('#osc-modal-confirm').on('click', function() {
-        var agentPhone = $('#osc-agent-phone').val();
+    $('#osc-modal-confirm').on('click', handlePurchase);
+
+    function handlePurchase() {
+        var agentPhone = $('#osc-agent-phone').val(); // This will be empty for Paystack, that's okay
         var network = $('#osc-selected-network').val();
         var productId = $('#osc-bundle-select').val();
         var recipientPhone = $('#osc-phone-input').val();
         var paymentMethod = $('#osc-selected-payment-method').val();
 
-        // Basic validation
-        if (!agentPhone) {
-            alert('Please enter your agent phone number.');
+        if (paymentMethod === 'wallet' && !agentPhone) {
+            alert('Please enter your agent phone number for wallet purchases.');
             return;
         }
 
-        // Proceed with the actual purchase
-        $.ajax({
-            url: '<?php echo admin_url('admin-ajax.php'); ?>',
-            type: 'POST',
-            data: {
-                action: 'osc_process_purchase',
-                network: network,
-                product: productId,
-                phone: recipientPhone,
-                method: paymentMethod,
-                agent_phone: agentPhone
-            },
-            success: function(response) {
-                if (response.status === 'success') {
-                    alert(response.message);
-                    location.reload();
-                } else {
-                    alert('Error: ' + response.message);
-                }
-            },
-            error: function() {
-                alert('An error occurred while processing your request.');
+        const purchaseData = {
+            action: 'osc_process_purchase',
+            network: network,
+            product: productId,
+            phone: recipientPhone,
+            method: paymentMethod,
+            agent_phone: agentPhone
+        };
+
+        $.post('<?php echo admin_url('admin-ajax.php'); ?>', purchaseData, function(response) {
+            if (response.status === 'success') {
+                alert(response.message);
+                location.reload();
+            } else if (response.status === 'paystack') {
+                var handler = PaystackPop.setup({
+                    key: response.paystack_public,
+                    email: response.email,
+                    amount: response.amount * 100,
+                    ref: response.reference,
+                    currency: 'GHS', // Explicitly set currency
+                    callback: function(paystackResponse) {
+                        alert('Payment successful! Verifying...');
+                        $.post('<?php echo admin_url('admin-ajax.php'); ?>', {
+                            action: 'osc_verify_bundle_paystack_payment',
+                            reference: paystackResponse.reference
+                        }, function(verifyResponse) {
+                            if (verifyResponse.status === 'success') {
+                                alert(verifyResponse.message);
+                            } else {
+                                alert('Error: ' + verifyResponse.message);
+                            }
+                            location.reload();
+                        });
+                    },
+                    onClose: function() {
+                        alert('Payment cancelled.');
+                    }
+                });
+                handler.openIframe();
+            } else {
+                alert('Error: ' + response.message);
             }
+        }).fail(function() {
+            alert('An error occurred while processing your request.');
         });
 
         // Hide the modal and reset body overflow
@@ -1952,11 +2002,14 @@ jQuery(document).ready(function($) {
     });
 
     // Handle network selection
-    $('.osc-network-btn').on('click', function() {
-        var network = $(this).data('network');
-        $('.osc-network-btn').removeClass('active');
-        $(this).addClass('active');
+    $('#osc-network-select').on('change', function() {
+        var network = $(this).val();
         $('#osc-selected-network').val(network);
+
+        if (!network) {
+            $('#osc-bundle-select').empty().append('<option>Select a network first</option>').prop('disabled', true);
+            return;
+        }
 
         // Show loader
         $('#osc-bundle-loader').show();
@@ -1998,8 +2051,14 @@ jQuery(document).ready(function($) {
     $('#osc-bundle-select').on('change', function() {
         var selectedOption = $(this).find('option:selected');
         var price = selectedOption.data('price') || 0;
-        $('#osc-bundle-cost').text('GHS ' + parseFloat(price).toFixed(2));
         $('#osc-total-amount').text('GHS ' + parseFloat(price).toFixed(2));
+    });
+
+    // Handle payment method selection
+    $('.osc-payment-option').on('click', function() {
+        $('.osc-payment-option').removeClass('active');
+        $(this).addClass('active');
+        $('#osc-selected-payment-method').val($(this).data('method'));
     });
 });
 </script>
@@ -2015,118 +2074,178 @@ function osc_agent_register_shortcode(){
 ob_start();
 
 if(is_user_logged_in()) {
-$user = wp_get_current_user();
-$roles = (array)$user->roles;
+    $user = wp_get_current_user();
+    $roles = (array)$user->roles;
 
-// If user is already an agent, show message
-if(in_array('ocean_service_agent', $roles)) {
-return '<div class="notice notice-info"><p>You are already an Ocean Service Agent.</p></div>';
-}
+    // If user is already an agent, show message
+    if(in_array('ocean_service_agent', $roles)) {
+        return '<div class="notice notice-info"><p>You are already an Ocean Service Agent.</p></div>';
+    }
 
-// If user is a customer or ocean service customer, allow them to upgrade
-if(in_array('ocean_service_customer', $roles) || in_array('customer', $roles)) {
-// Handle upgrade form submission
-if($_POST && isset($_POST['osc_agent_upgrade_submit']) && check_admin_referer('osc_agent_upgrade','osc_agent_upgrade_nonce')){
-// Verify user is still eligible
-$current_roles = (array)wp_get_current_user()->roles;
-if(in_array('ocean_service_customer', $current_roles) || in_array('customer', $current_roles)) {
-// Remove customer roles and add ocean service agent role
-$user->remove_role('ocean_service_customer');
-$user->remove_role('customer');
-$user->add_role('ocean_service_agent');
+    // If user is a customer or ocean service customer, allow them to upgrade
+    if(in_array('ocean_service_customer', $roles) || in_array('customer', $roles)) {
+$upgrade_fee = floatval(get_option('osc_agent_fee', 10));
+echo osc_get_modern_styles();
+        ?>
+        <div class="osc-modern-container">
+            <div class="osc-modern-header">
+                <h2>Upgrade to Ocean Service Agent</h2>
+                <p>Become an agent to enjoy special benefits and pricing.</p>
+            </div>
+            <form id="osc-agent-upgrade-form" class="osc-modern-form">
+                <div class="form-step">
+                    <h3 class="form-step-title">Payment Method</h3>
+                    <div class="osc-payment-methods">
+                        <div class="osc-payment-option" data-method="wallet">
+                            <span class="osc-payment-name">Wallet</span>
+                            <span class="osc-payment-desc">Available: GHS <?php echo number_format(osc_get_wallet_balance($user->ID), 2); ?></span>
+                        </div>
+                        <div class="osc-payment-option active" data-method="paystack">
+                            <span class="osc-payment-name">Paystack</span>
+                            <span class="osc-payment-desc">Card or Mobile Money</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="osc-selected-payment-method" value="paystack">
+                </div>
 
-// Add welcome message to wallet
-osc_credit_wallet($user->ID, get_option('osc_agent_fee', 10), 'Welcome bonus for agent registration');
+                <div class="osc-modern-summary">
+                    <span>Upgrade Fee</span>
+                    <strong>GHS <?php echo number_format($upgrade_fee, 2); ?></strong>
+                </div>
 
-echo '<div class="notice notice-success is-dismissible"><p>You have been upgraded to an Ocean Service Agent! Welcome to our service. You have been credited with GHS ' . get_option('osc_agent_fee', 10) . ' as a welcome bonus.</p></div>';
-} else {
-echo '<div class="notice notice-error"><p>You are no longer eligible for agent upgrade.</p></div>';
-}
-}
+                <button type="submit" class="osc-modern-submit-btn">Upgrade to Agent</button>
+            </form>
+            <div id="osc-upgrade-feedback" style="margin-top: 1rem; text-align: center;"></div>
+        </div>
+        <script src="https://js.paystack.co/v1/inline.js"></script>
+        <script>
+jQuery(document).ready(function($) {
+    $('.osc-payment-option').on('click', function() {
+        $('.osc-payment-option').removeClass('active');
+        $(this).addClass('active');
+        $('#osc-selected-payment-method').val($(this).data('method'));
+    });
 
-// Show upgrade form
-?>
-<div class="osc-agent-upgrade-form">
-<h2>Upgrade to Ocean Service Agent</h2>
-<p>You are currently a customer. As a customer, you can upgrade to an Ocean Service Agent to enjoy special benefits.</p>
-<form method="post">
-<?php wp_nonce_field('osc_agent_upgrade','osc_agent_upgrade_nonce'); ?>
-<?php submit_button('Upgrade to Agent','primary','osc_agent_upgrade_submit'); ?>
-</form>
-</div>
-<script>
-    jQuery(document).ready(function($) {
-        $('.osc-toggle-details').on('click', function() {
-            $(this).closest('.osc-order-item').find('.osc-order-collapsible').slideToggle('fast');
-            $(this).text($(this).text() === '▼' ? '▲' : '▼');
+    $('#osc-agent-upgrade-form').on('submit', function(e) {
+        e.preventDefault();
+        const feedback = $('#osc-upgrade-feedback');
+        const submitButton = $(this).find('.osc-afa-submit-btn');
+        const paymentMethod = $('#osc-selected-payment-method').val();
+        const nonce = '<?php echo wp_create_nonce('osc_agent_upgrade_nonce'); ?>';
+
+        feedback.text('Processing your upgrade...').show();
+        submitButton.prop('disabled', true);
+
+        $.post('<?php echo admin_url('admin-ajax.php'); ?>', {
+            action: 'osc_process_agent_upgrade',
+            nonce: nonce,
+            method: paymentMethod
+        }, function(response) {
+            if (response.status === 'success') {
+                feedback.css('color', 'green').text(response.message);
+                setTimeout(() => window.location.reload(), 2000);
+            } else if (response.status === 'paystack') {
+                var handler = PaystackPop.setup({
+                    key: response.paystack_public,
+                    email: response.email,
+                    amount: response.amount * 100,
+                    ref: response.reference,
+                    currency: 'GHS',
+                    callback: function(paystackResponse) {
+                        feedback.text('Payment successful! Verifying...').css('color', 'blue');
+                        $.post('<?php echo admin_url('admin-ajax.php'); ?>', {
+                            action: 'osc_verify_agent_upgrade_payment',
+                            nonce: nonce,
+                            reference: paystackResponse.reference
+                        }, function(verifyResponse) {
+                            if (verifyResponse.status === 'success') {
+                                feedback.css('color', 'green').text(verifyResponse.message);
+                                setTimeout(() => window.location.reload(), 2000);
+                            } else {
+                                feedback.css('color', 'red').text(verifyResponse.message);
+                                submitButton.prop('disabled', false);
+                            }
+                        });
+                    },
+                    onClose: function() {
+                        feedback.text('Payment cancelled.').css('color', 'orange');
+                        submitButton.prop('disabled', false);
+                    }
+                });
+                handler.openIframe();
+            } else {
+                feedback.css('color', 'red').text(response.message);
+                submitButton.prop('disabled', false);
+            }
         });
     });
-</script>
-<?php
-return ob_get_clean();
-}
+});
+        </script>
+        <?php
+        return ob_get_clean();
+    }
 
-// If user has other roles, don't allow
-return '<div class="notice notice-warning"><p>You cannot register as an agent. Only customers can upgrade to Ocean Service Agents.</p></div>';
-}
-}
+    // If user has other roles, don't allow
+    return '<div class="notice notice-warning"><p>You cannot register as an agent. Only customers can upgrade to Ocean Service Agents.</p></div>';
 
-// Not logged in - show registration form for new customers
-if($_POST && isset($_POST['osc_customer_register_submit']) && check_admin_referer('osc_customer_register','osc_customer_register_nonce')){
-$first_name = sanitize_text_field($_POST['osc_first_name'] ?? '');
-$last_name = sanitize_text_field($_POST['osc_last_name'] ?? '');
-$email = sanitize_email($_POST['osc_email'] ?? '');
-$username = sanitize_user($_POST['osc_username'] ?? '');
-$password = $_POST['osc_password'] ?? '';
-$confirm_password = $_POST['osc_confirm_password'] ?? '';
-
-// Validate inputs
-if(empty($first_name) || empty($last_name) || empty($email) || empty($username) || empty($password)) {
-echo '<div class="notice notice-error"><p>All fields are required.</p></div>';
-} elseif($password !== $confirm_password) {
-echo '<div class="notice notice-error"><p>Passwords do not match.</p></div>';
-} elseif(username_exists($username)) {
-echo '<div class="notice notice-error"><p>Username already exists.</p></div>';
-} elseif(email_exists($email)) {
-echo '<div class="notice notice-error"><p>Email already registered.</p></div>';
 } else {
-// Create new user with ocean_service_customer role
-$user_id = wp_insert_user(array(
-'user_login' => $username,
-'user_pass' => $password,
-'user_email' => $email,
-'first_name' => $first_name,
-'last_name' => $last_name,
-'role' => 'ocean_service_customer'
-));
+    // Not logged in - show registration form for new customers
+    if($_POST && isset($_POST['osc_customer_register_submit']) && check_admin_referer('osc_customer_register','osc_customer_register_nonce')){
+        $first_name = sanitize_text_field($_POST['osc_first_name'] ?? '');
+        $last_name = sanitize_text_field($_POST['osc_last_name'] ?? '');
+        $email = sanitize_email($_POST['osc_email'] ?? '');
+        $username = sanitize_user($_POST['osc_username'] ?? '');
+        $password = $_POST['osc_password'] ?? '';
+        $confirm_password = $_POST['osc_confirm_password'] ?? '';
 
-if(is_wp_error($user_id)) {
-echo '<div class="notice notice-error"><p>' . $user_id->get_error_message() . '</p></div>';
-} else {
-// Log in the new user
-wp_set_auth_cookie($user_id);
+        // Validate inputs
+        if(empty($first_name) || empty($last_name) || empty($email) || empty($username) || empty($password)) {
+            echo '<div class="notice notice-error"><p>All fields are required.</p></div>';
+        } elseif($password !== $confirm_password) {
+            echo '<div class="notice notice-error"><p>Passwords do not match.</p></div>';
+        } elseif(username_exists($username)) {
+            echo '<div class="notice notice-error"><p>Username already exists.</p></div>';
+        } elseif(email_exists($email)) {
+            echo '<div class="notice notice-error"><p>Email already registered.</p></div>';
+        } else {
+            // Create new user with ocean_service_customer role
+            $user_id = wp_insert_user(array(
+                'user_login' => $username,
+                'user_pass' => $password,
+                'user_email' => $email,
+                'first_name' => $first_name,
+                'last_name' => $last_name,
+                'role' => 'ocean_service_customer'
+            ));
 
-echo '<div class="notice notice-success is-dismissible"><p>Customer registration successful! You can now upgrade to an Ocean Service Agent if desired.</p></div>';
+            if(is_wp_error($user_id)) {
+                echo '<div class="notice notice-error"><p>' . $user_id->get_error_message() . '</p></div>';
+            } else {
+                // Log in the new user
+                wp_set_auth_cookie($user_id);
+
+                echo '<div class="notice notice-success is-dismissible"><p>Customer registration successful! You can now upgrade to an Ocean Service Agent if desired.</p></div>';
+            }
+        }
+    }
+    ?>
+    <div class="osc-customer-register-form">
+        <h2>Customer Registration</h2>
+        <p>Register as a customer to start using our services. You can later upgrade to an Ocean Service Agent.</p>
+        <form method="post">
+            <?php wp_nonce_field('osc_customer_register','osc_customer_register_nonce'); ?>
+            <p><label for="osc_first_name">First Name</label><br><input type="text" name="osc_first_name" id="osc_first_name" required></p>
+            <p><label for="osc_last_name">Last Name</label><br><input type="text" name="osc_last_name" id="osc_last_name" required></p>
+            <p><label for="osc_email">Email</label><br><input type="email" name="osc_email" id="osc_email" required></p>
+            <p><label for="osc_username">Username</label><br><input type="text" name="osc_username" id="osc_username" required></p>
+            <p><label for="osc_password">Password</label><br><input type="password" name="osc_password" id="osc_password" required></p>
+            <p><label for="osc_confirm_password">Confirm Password</label><br><input type="password" name="osc_confirm_password" id="osc_confirm_password" required></p>
+            <?php submit_button('Register','primary','osc_customer_register_submit'); ?>
+        </form>
+    </div>
+    <?php
+    return ob_get_clean();
 }
-}
-}
-?>
-<div class="osc-customer-register-form">
-<h2>Customer Registration</h2>
-<p>Register as a customer to start using our services. You can later upgrade to an Ocean Service Agent.</p>
-<form method="post">
-<?php wp_nonce_field('osc_customer_register','osc_customer_register_nonce'); ?>
-<p><label for="osc_first_name">First Name</label><br><input type="text" name="osc_first_name" id="osc_first_name" required></p>
-<p><label for="osc_last_name">Last Name</label><br><input type="text" name="osc_last_name" id="osc_last_name" required></p>
-<p><label for="osc_email">Email</label><br><input type="email" name="osc_email" id="osc_email" required></p>
-<p><label for="osc_username">Username</label><br><input type="text" name="osc_username" id="osc_username" required></p>
-<p><label for="osc_password">Password</label><br><input type="password" name="osc_password" id="osc_password" required></p>
-<p><label for="osc_confirm_password">Confirm Password</label><br><input type="password" name="osc_confirm_password" id="osc_confirm_password" required></p>
-<?php submit_button('Register','primary','osc_customer_register_submit'); ?>
-</form>
-</div>
-<?php
-return ob_get_clean();
 }
 
 /* ---------------------------
@@ -2190,6 +2309,7 @@ function osc_order_history_shortcode() {
     }
 
     ob_start();
+    echo osc_get_modern_styles(); // Echo the modern styles
     $user_id = get_current_user_id();
     $orders = wc_get_orders([
         'customer_id' => $user_id,
@@ -2199,185 +2319,84 @@ function osc_order_history_shortcode() {
         'status' => array('completed', 'processing', 'pending', 'on-hold', 'cancelled', 'failed')
     ]);
 ?>
-<style>
-    :root { --osc-font-family: 'Inter', sans-serif; }
-    .osc-order-history-container {
-        font-family: var(--osc-font-family);
-        background: #f9fafb;
-        padding: 2rem;
-        border-radius: 16px;
-    }
-    .osc-history-header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .osc-history-header h2 {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #1a202c;
-    }
-    .osc-history-header p {
-        color: #718096;
-    }
-    .osc-order-card {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.04);
-        transition: box-shadow 0.2s;
-    }
-    .osc-order-card:hover {
-        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.05);
-    }
-    .osc-card-summary {
-        display: flex;
-        align-items: center;
-        padding: 1rem 1.5rem;
-        cursor: pointer;
-    }
-    .osc-summary-icon { font-size: 1.5rem; margin-right: 1rem; }
-    .osc-summary-info { flex-grow: 1; }
-    .osc-summary-info .product { font-weight: 600; color: #2d3748; }
-    .osc-summary-info .date { font-size: 0.85rem; color: #718096; }
-    .osc-summary-total { font-weight: 700; font-size: 1.1rem; color: #1a202c; }
-    .osc-summary-status {
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        margin-left: 1.5rem;
-    }
-    .status-completed { background-color: #e6fffa; color: #2c7a7b; }
-    .status-processing { background-color: #ebf8ff; color: #2b6cb0; }
-    .status-pending { background-color: #fefcbf; color: #975a16; }
-    .status-on-hold { background-color: #fefcbf; color: #975a16; }
-    .status-cancelled { background-color: #fed7d7; color: #9b2c2c; }
-    .status-failed { background-color: #fed7d7; color: #9b2c2c; }
-
-    .osc-card-details {
-        display: none;
-        padding: 0 1.5rem 1.5rem;
-        border-top: 1px solid #e2e8f0;
-        margin-top: 1rem;
-    }
-    .osc-details-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-top: 1rem;
-    }
-    .osc-detail-item h4 {
-        font-size: 0.8rem;
-        color: #a0aec0;
-        text-transform: uppercase;
-        margin-bottom: 0.25rem;
-    }
-    .osc-detail-item p {
-        font-weight: 500;
-        color: #4a5568;
-    }
-    .osc-no-orders { text-align: center; padding: 3rem; background: #fff; border-radius: 12px; }
-    .osc-history-summary {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-top: 2rem;
-        padding-top: 2rem;
-        border-top: 1px solid #e2e8f0;
-    }
-    .osc-summary-card {
-        background: #fff;
-        padding: 1.5rem;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        text-align: center;
-    }
-    .osc-summary-card h4 {
-        font-size: 0.9rem;
-        color: #718096;
-        text-transform: uppercase;
-        margin-bottom: 0.5rem;
-    }
-    .osc-summary-card p {
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: #1a202c;
-    }
-</style>
-
-<div class="osc-order-history-container">
-    <div class="osc-history-header">
+<div class="osc-modern-container">
+    <div class="osc-modern-header">
         <h2>Order History</h2>
         <p>Your recent purchases and transactions.</p>
     </div>
 
     <?php if (empty($orders)): ?>
-        <div class="osc-no-orders">
+        <div class="form-step" style="text-align: center;">
             <h3>No orders yet</h3>
             <p>Your purchase history will appear here.</p>
         </div>
     <?php else: ?>
+        <style>
+            .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; }
+            .status-completed { background-color: #e6fffa; color: #2c7a7b; }
+            .status-processing { background-color: #ebf8ff; color: #2b6cb0; }
+            .status-pending, .status-on-hold { background-color: #fefcbf; color: #975a16; }
+            .status-cancelled, .status-failed { background-color: #fed7d7; color: #9b2c2c; }
+        </style>
         <?php foreach ($orders as $order):
-            $order_items = $order->get_items();
-            $first_item = !empty($order_items) ? reset($order_items)->get_name() : 'Order';
+            $first_item = !empty($order->get_items()) ? reset($order->get_items())->get_name() : 'Order';
             $status = $order->get_status();
-
-            // Meta data
-            $network = $order->get_meta('bundle_network') ?: 'N/A';
-            $agent_phone = $order->get_meta('agent_phone') ?: 'N/A';
-            $beneficiary_phone = $order->get_billing_phone() ?: $order->get_meta('bundle_recipient_phone') ?: $order->get_meta('_osc_beneficiary') ?: $order->get_meta('_bundle_phone_number') ?: 'N/A';
         ?>
-        <div class="osc-order-card">
-            <div class="osc-card-summary">
-                <div class="osc-summary-icon">📦</div>
-                <div class="osc-summary-info">
-                    <div class="product"><?php echo esc_html($first_item); ?></div>
-                    <div class="date">Order #<?php echo $order->get_order_number(); ?> &bull; <?php echo $order->get_date_created()->date('M d, Y'); ?></div>
+        <div class="form-step">
+            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" class="order-summary">
+                <div>
+                    <div style="font-weight: 600;"><?php echo esc_html($first_item); ?></div>
+                    <div style="font-size: 0.9rem; color: var(--osc-text-light-color);">
+                        #<?php echo $order->get_order_number(); ?> &bull; <?php echo $order->get_date_created()->date('M d, Y'); ?>
+                    </div>
                 </div>
-                <div class="osc-summary-total"><?php echo $order->get_formatted_order_total(); ?></div>
-                <div class="osc-summary-status status-<?php echo esc_attr($status); ?>">
-                    <?php echo esc_html(wc_get_order_status_name($status)); ?>
+                <div>
+                    <span class="status-badge status-<?php echo esc_attr($status); ?>"><?php echo esc_html(wc_get_order_status_name($status)); ?></span>
+                    <strong style="margin-left: 1rem;"><?php echo $order->get_formatted_order_total(); ?></strong>
                 </div>
             </div>
-            <div class="osc-card-details">
-                <div class="osc-details-grid">
-                    <div class="osc-detail-item"><h4>Network</h4><p><?php echo esc_html($network); ?></p></div>
-                    <div class="osc-detail-item"><h4>Beneficiary Phone</h4><p><?php echo esc_html($beneficiary_phone); ?></p></div>
-                    <div class="osc-detail-item"><h4>Agent Phone</h4><p><?php echo esc_html($agent_phone); ?></p></div>
-                    <div class="osc-detail-item"><h4>Payment Method</h4><p><?php echo esc_html($order->get_payment_method_title()); ?></p></div>
-                </div>
+            <div class="order-details" style="display: none; margin-top: 1.5rem; border-top: 1px solid var(--osc-border-color); padding-top: 1.5rem;">
+                <?php if ($order->get_meta('afa_full_name')): ?>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                        <div>
+                            <h4 style="font-size: 0.8rem; color: var(--osc-text-light-color); text-transform: uppercase; margin-bottom: 0.25rem;">Full Name</h4>
+                            <p><?php echo esc_html($order->get_meta('afa_full_name')); ?></p>
+                        </div>
+                        <div>
+                            <h4 style="font-size: 0.8rem; color: var(--osc-text-light-color); text-transform: uppercase; margin-bottom: 0.25rem;">Ghana Card</h4>
+                            <p><?php echo esc_html($order->get_meta('afa_ghana_card')); ?></p>
+                        </div>
+                        <div>
+                            <h4 style="font-size: 0.8rem; color: var(--osc-text-light-color); text-transform: uppercase; margin-bottom: 0.25rem;">Payment</h4>
+                            <p><?php echo esc_html($order->get_payment_method_title()); ?></p>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                        <div>
+                            <h4 style="font-size: 0.8rem; color: var(--osc-text-light-color); text-transform: uppercase; margin-bottom: 0.25rem;">Network</h4>
+                            <p><?php echo esc_html($order->get_meta('bundle_network') ?: 'N/A'); ?></p>
+                        </div>
+                        <div>
+                            <h4 style="font-size: 0.8rem; color: var(--osc-text-light-color); text-transform: uppercase; margin-bottom: 0.25rem;">Beneficiary</h4>
+                            <p><?php echo esc_html($order->get_billing_phone() ?: 'N/A'); ?></p>
+                        </div>
+                        <div>
+                            <h4 style="font-size: 0.8rem; color: var(--osc-text-light-color); text-transform: uppercase; margin-bottom: 0.25rem;">Payment</h4>
+                            <p><?php echo esc_html($order->get_payment_method_title()); ?></p>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php endforeach; ?>
-
-        <div class="osc-history-summary">
-            <div class="osc-summary-card">
-                <h4>Total Orders</h4>
-                <p><?php echo count($orders); ?></p>
-            </div>
-            <div class="osc-summary-card">
-                <h4>Total Spent</h4>
-                <p>
-                    <?php
-                    $total_spent = 0;
-                    foreach ($orders as $order) {
-                        if ($order->get_status() === 'completed') {
-                            $total_spent += $order->get_total();
-                        }
-                    }
-                    echo wc_price($total_spent);
-                    ?>
-                </p>
-            </div>
-        </div>
     <?php endif; ?>
 </div>
 
 <script>
 jQuery(document).ready(function($) {
-    $('.osc-card-summary').on('click', function() {
-        $(this).siblings('.osc-card-details').slideToggle('fast');
+    $('.order-summary').on('click', function() {
+        $(this).siblings('.order-details').slideToggle('fast');
     });
 });
 </script>
@@ -2389,150 +2408,145 @@ Shortcode: AFA Registration Form (WooCommerce Integrated)
 --------------------------- */
 add_shortcode('afa_registration', 'osc_afa_registration_shortcode');
 function osc_afa_registration_shortcode() {
-// Check if WooCommerce is active
-if (!class_exists('WooCommerce')) {
-return '<div class="notice notice-error"><p>WooCommerce is not active. AFA registration requires WooCommerce.</p></div>';
-}
+    // Check if WooCommerce is active
+    if (!class_exists('WooCommerce')) {
+        return '<div class="notice notice-error"><p>WooCommerce is not active. AFA registration requires WooCommerce.</p></div>';
+    }
 
-ob_start();
-$afa_price = get_option('osc_afa_registration_price', 15.00);
-$product_id = get_option('osc_afa_product_id');
+    ob_start();
+    echo osc_get_modern_styles();
 
-// Check if AFA product exists
-if (!$product_id || !wc_get_product($product_id)) {
-return '<div class="notice notice-error"><p>AFA registration product is not configured. Please contact administrator.</p></div>';
-}
+    $product_id = get_option('osc_afa_product_id');
+    $product = $product_id ? wc_get_product($product_id) : null;
+
+    if (!$product || $product->get_price() === '') {
+        return '<div class="osc-modern-container"><p style="color: var(--osc-error-color);">AFA registration product is not configured or does not have a price. Please contact an administrator.</p></div>';
+    }
+    $afa_price = $product->get_price();
 ?>
-<style>
-    .osc-afa-container {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background: #fff;
-        padding: 2.5rem;
-        border-radius: 20px;
-        max-width: 700px;
-        margin: 2rem auto;
-        box-shadow: 0 15px 40px -15px rgba(0,0,0,0.08);
-        border: 1px solid #e2e8f0;
-    }
-    .osc-afa-header { text-align: center; margin-bottom: 2rem; }
-    .osc-afa-header h2 { font-size: 1.8rem; color: #1a202c; font-weight: 700; }
-    .osc-afa-header p { color: #718096; }
-    .osc-afa-form .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-    .osc-afa-form .form-row {
-        display: flex;
-        flex-direction: column;
-    }
-    .osc-afa-form .form-row.full-width {
-        grid-column: 1 / -1;
-    }
-    .osc-afa-form label {
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-        color: #4a5568;
-    }
-    .osc-afa-form input, .osc-afa-form textarea {
-        width: 100%;
-        padding: 0.8rem 1rem;
-        border: 1px solid #cbd5e0;
-        border-radius: 8px;
-        font-size: 1rem;
-    }
-    .osc-afa-form textarea { min-height: 100px; }
-    .osc-afa-summary {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        margin-top: 2rem;
-        background: #f7fafc;
-        border-radius: 8px;
-    }
-    .osc-afa-summary span { font-weight: 600; color: #2d3748; }
-    .osc-afa-summary strong { font-size: 1.25rem; color: #0052cc; }
-    .osc-afa-submit-btn {
-        width: 100%;
-        padding: 1rem;
-        margin-top: 1rem;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #fff;
-        background-color: #0052cc;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    .osc-afa-submit-btn:hover { background-color: #0041a3; }
-    #afa-form-feedback {
-        margin-top: 1rem;
-        text-align: center;
-        font-weight: 500;
-    }
-</style>
-<div class="osc-afa-container">
-    <div class="osc-afa-header">
+<div class="osc-modern-container">
+    <div class="osc-modern-header">
         <h2>🏢 AFA Registration</h2>
         <p>Register for the Agricultural Farmers Association.</p>
     </div>
-    <form id="afa-reg-form" class="osc-afa-form">
-        <div class="form-grid">
-            <div class="form-row">
-                <label for="afa-full-name">Full Name</label>
-                <input type="text" id="afa-full-name" required>
+    <form id="afa-reg-form" class="osc-modern-form">
+        <div class="form-step">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div>
+                    <label for="afa-full-name">Full Name</label>
+                    <input type="text" id="afa-full-name" class="osc-input" required>
+                </div>
+                <div>
+                    <label for="afa-phone-number">Phone Number</label>
+                    <input type="tel" id="afa-phone-number" class="osc-input" required>
+                </div>
+                <div>
+                    <label for="afa-ghana-card">Ghana Card Number</label>
+                    <input type="text" id="afa-ghana-card" class="osc-input" required>
+                </div>
+                <div>
+                    <label for="afa-location">Location/Address</label>
+                    <input type="text" id="afa-location" class="osc-input" required>
+                </div>
             </div>
-            <div class="form-row">
-                <label for="afa-phone-number">Phone Number</label>
-                <input type="tel" id="afa-phone-number" required>
-            </div>
-            <div class="form-row">
-                <label for="afa-ghana-card">Ghana Card Number</label>
-                <input type="text" id="afa-ghana-card" required>
-            </div>
-            <div class="form-row">
-                <label for="afa-location">Location/Address</label>
-                <input type="text" id="afa-location" required>
-            </div>
-            <div class="form-row full-width">
+            <div style="margin-top: 1.5rem;">
                 <label for="afa-notes">Notes (Optional)</label>
-                <textarea id="afa-notes"></textarea>
+                <textarea id="afa-notes" class="osc-input" style="min-height: 80px;"></textarea>
             </div>
         </div>
-        <div class="osc-afa-summary">
+
+        <div class="form-step">
+            <h3 class="form-step-title">Payment</h3>
+            <div class="osc-payment-methods">
+                <div class="osc-payment-option active" data-method="wallet">
+                    <span class="osc-payment-name">Wallet</span>
+                    <span class="osc-payment-desc">Use your available balance.</span>
+                </div>
+                <div class="osc-payment-option" data-method="paystack">
+                    <span class="osc-payment-name">Paystack</span>
+                    <span class="osc-payment-desc">Card or Mobile Money.</span>
+                </div>
+            </div>
+            <input type="hidden" id="osc-selected-payment-method" value="wallet">
+        </div>
+
+        <div class="osc-modern-summary">
             <span>Registration Fee</span>
             <strong>GHS <?php echo number_format($afa_price, 2); ?></strong>
         </div>
-        <button type="submit" class="osc-afa-submit-btn">Register Now</button>
+        <button type="submit" class="osc-modern-submit-btn">Register Now</button>
     </form>
-    <div id="afa-form-feedback"></div>
+    <div id="afa-form-feedback" style="margin-top: 1rem; text-align: center; font-weight: 500;"></div>
 </div>
 
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <script>
 jQuery(document).ready(function($) {
+    $('.osc-payment-option').on('click', function() {
+        $('.osc-payment-option').removeClass('active');
+        $(this).addClass('active');
+        $('#osc-selected-payment-method').val($(this).data('method'));
+    });
+
     $('#afa-reg-form').on('submit', function(e) {
         e.preventDefault();
         const feedback = $('#afa-form-feedback');
         const submitButton = $(this).find('.osc-afa-submit-btn');
-        feedback.text('Processing...').show();
-        submitButton.prop('disabled', true);
+        const paymentMethod = $('#osc-selected-payment-method').val();
+        const nonce = '<?php echo wp_create_nonce('afa_registration_nonce'); ?>';
 
-        $.post(ajaxurl, {
-            action: 'osc_add_afa_to_cart',
-            afa_nonce: '<?php echo wp_create_nonce('afa_registration_nonce'); ?>',
+        const formData = {
+            action: 'osc_process_afa_registration',
+            afa_nonce: nonce,
             full_name: $('#afa-full-name').val(),
             phone_number: $('#afa-phone-number').val(),
             ghana_card: $('#afa-ghana-card').val(),
             location: $('#afa-location').val(),
-            notes: $('#afa-notes').val()
-        }, function(response) {
-            if (response.success) {
-                feedback.css('color', 'green').text(response.data);
-                window.location.href = '<?php echo wc_get_checkout_url(); ?>';
+            notes: $('#afa-notes').val(),
+            method: paymentMethod
+        };
+
+        feedback.text('Processing...').show();
+        submitButton.prop('disabled', true);
+
+        $.post('<?php echo admin_url('admin-ajax.php'); ?>', formData, function(response) {
+            if (response.status === 'success') {
+                feedback.css('color', 'green').text(response.message);
+                setTimeout(() => window.location.reload(), 2000);
+            } else if (response.status === 'paystack') {
+                var handler = PaystackPop.setup({
+                    key: response.paystack_public,
+                    email: response.email,
+                    amount: response.amount * 100,
+                    ref: response.reference,
+                    currency: 'GHS', // Explicitly set currency
+                    callback: function(paystackResponse) {
+                        feedback.text('Payment successful! Verifying...').css('color', 'blue');
+                        $.post('<?php echo admin_url('admin-ajax.php'); ?>', {
+                            action: 'osc_verify_afa_paystack_payment',
+                            afa_nonce: nonce,
+                            reference: paystackResponse.reference
+                        }, function(verifyResponse) {
+                            if (verifyResponse.status === 'success') {
+                                feedback.css('color', 'green').text(verifyResponse.message);
+                                setTimeout(() => window.location.reload(), 2000);
+                            } else {
+                                feedback.css('color', 'red').text(verifyResponse.message);
+                                submitButton.prop('disabled', false);
+                            }
+                        }).fail(function() {
+                            feedback.css('color', 'red').text('Verification failed. Please contact support.');
+                            submitButton.prop('disabled', false);
+                        });
+                    },
+                    onClose: function() {
+                        feedback.text('Payment cancelled.').css('color', 'orange');
+                        submitButton.prop('disabled', false);
+                    }
+                });
+                handler.openIframe();
             } else {
-                feedback.css('color', 'red').text(response.data);
+                feedback.css('color', 'red').text(response.message);
                 submitButton.prop('disabled', false);
             }
         }).fail(function() {
@@ -2547,10 +2561,264 @@ return ob_get_clean();
 }
 
 /* ---------------------------
-AJAX handler to add AFA registration to cart
+AJAX handler for AFA Registration and Agent Upgrade
 --------------------------- */
 add_action('wp_ajax_osc_add_afa_to_cart', 'osc_add_afa_to_cart');
 add_action('wp_ajax_nopriv_osc_add_afa_to_cart', 'osc_add_afa_to_cart');
+add_action('wp_ajax_osc_process_afa_registration', 'osc_process_afa_registration');
+add_action('wp_ajax_nopriv_osc_process_afa_registration', 'osc_process_afa_registration');
+add_action('wp_ajax_osc_verify_afa_paystack_payment', 'osc_verify_afa_paystack_payment');
+add_action('wp_ajax_nopriv_osc_verify_afa_paystack_payment', 'osc_verify_afa_paystack_payment');
+add_action('wp_ajax_osc_process_agent_upgrade', 'osc_process_agent_upgrade');
+add_action('wp_ajax_osc_verify_agent_upgrade_payment', 'osc_verify_agent_upgrade_payment');
+
+
+function osc_process_agent_upgrade() {
+    if (!check_ajax_referer('osc_agent_upgrade_nonce', 'nonce', false)) {
+        osc_json_exit(['status' => 'error', 'message' => 'Security check failed.']);
+    }
+    if (!is_user_logged_in()) {
+        osc_json_exit(['status' => 'error', 'message' => 'You must be logged in to upgrade.']);
+    }
+
+    $user_id = get_current_user_id();
+    $upgrade_fee = floatval(get_option('osc_agent_fee', 10));
+    $method = sanitize_text_field($_POST['method']);
+
+    if ($method === 'wallet') {
+        if (!osc_deduct_wallet($user_id, $upgrade_fee, 'Agent Upgrade Fee')) {
+            osc_json_exit(['status' => 'error', 'message' => 'Insufficient wallet balance.']);
+        }
+
+        try {
+            $user = new WP_User($user_id);
+            $user->remove_role('ocean_service_customer');
+            $user->remove_role('customer');
+            $user->add_role('ocean_service_agent');
+        } catch (Exception $e) {
+            osc_credit_wallet($user_id, $upgrade_fee, 'Refund for failed agent upgrade.');
+            osc_api_log('agent_upgrade_error', $e->getMessage(), ['user_id' => $user_id]);
+            osc_json_exit(['status' => 'error', 'message' => 'Could not upgrade your account. The fee has been refunded.']);
+        }
+
+        osc_json_exit(['status' => 'success', 'message' => 'Congratulations! You are now an Ocean Service Agent.']);
+
+    } elseif ($method === 'paystack') {
+        $paystack_public = get_option('osc_paystack_public', '');
+        if (empty($paystack_public)) {
+            osc_json_exit(['status' => 'error', 'message' => 'Paystack is not configured.']);
+        }
+
+        $email = wp_get_current_user()->user_email;
+        $reference = 'agent_upgrade_' . $user_id . '_' . time();
+
+        // Store user ID in a transient for verification after payment
+        set_transient('agent_upgrade_' . $reference, $user_id, HOUR_IN_SECONDS);
+
+        osc_json_exit([
+            'status' => 'paystack',
+            'paystack_public' => $paystack_public,
+            'amount' => $upgrade_fee,
+            'email' => $email,
+            'reference' => $reference
+        ]);
+    }
+}
+
+function osc_verify_agent_upgrade_payment() {
+    if (!check_ajax_referer('osc_agent_upgrade_nonce', 'nonce', false)) {
+        osc_json_exit(['status' => 'error', 'message' => 'Security check failed.']);
+    }
+
+    $reference = sanitize_text_field($_POST['reference']);
+    $user_id = get_transient('agent_upgrade_' . $reference);
+
+    if (false === $user_id || !is_user_logged_in() || $user_id != get_current_user_id()) {
+        osc_json_exit(['status' => 'error', 'message' => 'Upgrade session is invalid or has expired.']);
+    }
+
+    $secret_key = get_option('osc_paystack_secret');
+    $response = wp_remote_get("https://api.paystack.co/transaction/verify/{$reference}", [
+        'headers' => ['Authorization' => 'Bearer ' . $secret_key]
+    ]);
+
+    if (is_wp_error($response) || json_decode(wp_remote_retrieve_body($response), true)['data']['status'] !== 'success') {
+        osc_json_exit(['status' => 'error', 'message' => 'Payment verification failed. Please contact support.']);
+    }
+
+    $user = new WP_User($user_id);
+    $user->remove_role('ocean_service_customer');
+    $user->remove_role('customer');
+    $user->add_role('ocean_service_agent');
+
+    delete_transient('agent_upgrade_' . $reference);
+
+    osc_json_exit(['status' => 'success', 'message' => 'Congratulations! Your account has been upgraded to an Ocean Service Agent.']);
+}
+
+function osc_verify_afa_paystack_payment() {
+    if (!wp_verify_nonce($_POST['afa_nonce'], 'afa_registration_nonce')) {
+        osc_json_exit(['status'=>'error','message'=>'Security verification failed.']);
+    }
+
+    $reference = sanitize_text_field($_POST['reference']);
+    if (empty($reference)) {
+        osc_json_exit(['status' => 'error', 'message' => 'Payment reference is missing.']);
+    }
+
+    // Retrieve registration data from transient
+    $registration_data = get_transient('afa_reg_' . $reference);
+    if (false === $registration_data) {
+        osc_json_exit(['status' => 'error', 'message' => 'Registration session expired or is invalid. Please try again.']);
+    }
+
+    // Verify transaction with Paystack
+    $secret_key = get_option('osc_paystack_secret');
+    $response = wp_remote_get("https://api.paystack.co/transaction/verify/{$reference}", [
+        'headers' => ['Authorization' => 'Bearer ' . $secret_key]
+    ]);
+
+    if (is_wp_error($response)) {
+        osc_json_exit(['status' => 'error', 'message' => 'Could not verify payment. Please contact support.']);
+    }
+
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+
+    if (!($body['status'] && $body['data']['status'] === 'success')) {
+        osc_json_exit(['status' => 'error', 'message' => 'Payment verification failed. Please contact support.']);
+    }
+
+    // All checks passed, create the order
+    try {
+        $product_id = get_option('osc_afa_product_id');
+        $product = wc_get_product($product_id);
+        $user_id = $registration_data['user_id'];
+        $order = wc_create_order(['customer_id' => $user_id]);
+        $order->add_product($product, 1);
+        $user = $user_id ? get_userdata($user_id) : null;
+        $order->set_address([
+            'first_name' => $user ? $user->first_name : $registration_data['full_name'],
+            'phone'      => $registration_data['phone_number'],
+            'address_1'  => $registration_data['location'],
+            'email'      => $user ? $user->user_email : 'guest@example.com',
+        ], 'billing');
+        $order->calculate_totals();
+
+        foreach ($registration_data as $key => $value) {
+            $order->update_meta_data('afa_' . $key, $value);
+        }
+        $default_status = get_option('osc_afa_order_status_default', 'completed');
+        $order->update_status($default_status, 'AFA registration paid via Paystack.', true);
+        $order_id = $order->get_id();
+
+        delete_transient('afa_reg_' . $reference); // Clean up
+
+    } catch (Exception $e) {
+        osc_api_log('afa_paystack_order_error', $e->getMessage(), $registration_data);
+        osc_json_exit(['status' => 'error', 'message' => 'Could not create your registration order after payment. Please contact support with reference: ' . $reference]);
+    }
+
+    osc_json_exit(['status' => 'success', 'message' => 'Registration and payment successful! Order ID: ' . $order_id]);
+}
+
+function osc_process_afa_registration(){
+    // Nonce is checked in the JS that calls this
+    if (!wp_verify_nonce($_POST['afa_nonce'], 'afa_registration_nonce')) {
+        osc_json_exit(['status'=>'error','message'=>'Security verification failed.']);
+    }
+
+    $full_name = sanitize_text_field($_POST['full_name'] ?? '');
+    $phone_number = sanitize_text_field($_POST['phone_number'] ?? '');
+    $ghana_card = sanitize_text_field($_POST['ghana_card'] ?? '');
+    $location = sanitize_text_field($_POST['location'] ?? '');
+    $notes = sanitize_textarea_field($_POST['notes'] ?? '');
+    $method = sanitize_text_field($_POST['method'] ?? 'wallet');
+
+    if (empty($full_name) || empty($phone_number) || empty($ghana_card) || empty($location)) {
+        osc_json_exit(['status' => 'error', 'message' => 'Please fill in all required fields.']);
+    }
+
+    $product_id = get_option('osc_afa_product_id');
+    $product = $product_id ? wc_get_product($product_id) : null;
+
+    if (!$product) {
+        osc_json_exit(['status' => 'error', 'message' => 'AFA registration product not configured.']);
+    }
+    $price = $product->get_price();
+    $user_id = get_current_user_id();
+
+    if ($method === 'wallet') {
+        if (!$user_id) {
+            osc_json_exit(['status' => 'error', 'message' => 'You must be logged in to pay with your wallet.']);
+        }
+        if (!osc_deduct_wallet($user_id, $price, 'AFA Registration Fee')) {
+            osc_json_exit(['status' => 'error', 'message' => 'Insufficient wallet balance.']);
+        }
+    } elseif ($method === 'paystack') {
+        $paystack_public = get_option('osc_paystack_public', '');
+        if (empty($paystack_public)) {
+            osc_json_exit(['status' => 'error', 'message' => 'Paystack is not configured.']);
+        }
+
+        $email = $user_id ? wp_get_current_user()->user_email : 'guest@example.com';
+        $reference = 'afa_' . time() . '_' . wp_rand(1000, 9999);
+
+        // Store registration data in a transient
+        $registration_data = [
+            'user_id' => $user_id,
+            'full_name' => $full_name,
+            'phone_number' => $phone_number,
+            'ghana_card' => $ghana_card,
+            'location' => $location,
+            'notes' => $notes,
+            'price' => $price
+        ];
+        set_transient('afa_reg_' . $reference, $registration_data, HOUR_IN_SECONDS);
+
+        osc_json_exit([
+            'status' => 'paystack',
+            'paystack_public' => $paystack_public,
+            'amount' => $price,
+            'email' => $email,
+            'reference' => $reference
+        ]);
+        return;
+    }
+
+    try {
+        $user = $user_id ? get_userdata($user_id) : null;
+        $order = wc_create_order(['customer_id' => $user_id]);
+        $order->add_product($product, 1);
+        $address = [
+            'first_name' => $user ? $user->first_name : $full_name,
+            'last_name' => $user ? $user->last_name : '',
+            'phone' => $phone_number,
+            'address_1' => $location,
+            'email' => $user ? $user->user_email : 'guest@example.com',
+        ];
+        $order->set_address($address, 'billing');
+        $order->calculate_totals();
+
+        $order->update_meta_data('afa_full_name', $full_name);
+        $order->update_meta_data('afa_phone_number', $phone_number);
+        $order->update_meta_data('afa_ghana_card', $ghana_card);
+        $order->update_meta_data('afa_location', $location);
+        $order->update_meta_data('afa_notes', $notes);
+
+        $default_status = get_option('osc_afa_order_status_default', 'completed');
+        $order->update_status($default_status, 'AFA registration paid via Wallet.', true);
+        $order_id = $order->get_id();
+
+    } catch (Exception $e) {
+        if ($method === 'wallet' && $user_id) {
+            osc_credit_wallet($user_id, $price, 'Refund for failed AFA registration order.');
+        }
+        osc_api_log('afa_order_create_error', $e->getMessage(), $_POST);
+        osc_json_exit(['status' => 'error', 'message' => 'Could not create your registration order. Please contact support.']);
+    }
+
+    osc_json_exit(['status' => 'success', 'message' => 'Registration successful! Order ID: ' . $order_id]);
+}
 function osc_add_afa_to_cart() {
 // Verify nonce
 if (!wp_verify_nonce($_POST['afa_nonce'], 'afa_registration_nonce')) {
@@ -2658,8 +2926,6 @@ add_options_page(
 
 function osc_afa_settings_page() {
 if (isset($_POST['submit_afa_settings'])) {
-update_option('osc_afa_registration_price', floatval($_POST['afa_price']));
-
 if (!empty($_POST['afa_product_id'])) {
 update_option('osc_afa_product_id', intval($_POST['afa_product_id']));
 }
@@ -2667,7 +2933,6 @@ update_option('osc_afa_product_id', intval($_POST['afa_product_id']));
 echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
 }
 
-$current_price = get_option('osc_afa_registration_price', 50.00);
 $current_product_id = get_option('osc_afa_product_id');
 $current_product = $current_product_id ? wc_get_product($current_product_id) : null;
 ?>
@@ -2676,10 +2941,6 @@ $current_product = $current_product_id ? wc_get_product($current_product_id) : n
 <div class="card">
 <form method="post">
 <table class="form-table">
-<tr>
-<th scope="row"><label for="afa-price">Registration Fee</label></th>
-<td><input type="number" step="0.01" name="afa_price" id="afa-price" value="<?php echo esc_attr($current_price); ?>"></td>
-</tr>
 <tr>
 <th scope="row"><label for="afa-product-id">Registration Product</label></th>
 <td>
